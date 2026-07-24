@@ -28,6 +28,14 @@ enum EventHelpers {
         return Int((end.timeIntervalSince(event.start) / 60).rounded())
     }
 
+    static func durationLabel(_ event: AgendaEvent) -> String {
+        guard let minutes = durationMin(event) else { return "" }
+        let hours = minutes / 60
+        let rest = minutes % 60
+        if hours == 0 { return "\(rest) min" }
+        return rest == 0 ? "\(hours) uur" : "\(hours) uur \(rest) min"
+    }
+
     static func sameDay(_ a: Date, _ b: Date, calendar: Calendar = .current) -> Bool {
         calendar.isDate(a, inSameDayAs: b)
     }

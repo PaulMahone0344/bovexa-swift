@@ -1,0 +1,44 @@
+import Foundation
+
+/// Statistiek-afleidingen voor het Vandaag-scherm.
+enum VandaagStats {
+    static func appointmentCount(_ events: [AgendaEvent]) -> Int {
+        events.count
+    }
+
+    static func plannedHours(_ events: [AgendaEvent]) -> Double {
+        let totalMinutes = events.reduce(0) { $0 + (EventHelpers.durationMin($1) ?? 0) }
+        return Double(totalMinutes) / 60.0
+    }
+
+    static func formatHours(_ hours: Double) -> String {
+        if hours == hours.rounded() {
+            return "\(Int(hours)) uur"
+        }
+        let formatter = NumberFormatter()
+        formatter.locale = Locale(identifier: "nl_NL")
+        formatter.minimumFractionDigits = 1
+        formatter.maximumFractionDigits = 1
+        formatter.roundingMode = .halfUp
+        return "\(formatter.string(from: NSNumber(value: hours)) ?? String(hours)) uur"
+    }
+
+    /// Aantal afspraken per dag deze week, maandag eerst (index 0 = maandag ... 6 = zondag).
+    static func weekBusyCounts(_ events: [AgendaEvent], referenceDate: Date, calendar: Calendar = .current) -> [Int] {
+        var mondayFirst = calendar
+        mondayFirst.firstWeekday = 2
+
+        guard let weekInterval = mondayFirst.dateInterval(of: .weekOfYear, for: referenceDate) else {
+            return Array(repeating: 0, count: 7)
+        }
+
+        var counts = Array(repeating: 0, count: 7)
+        for event in events {
+            guard event.start >= weekInterval.start, event.start < weekInterval.end else { continue }
+            let weekday = mondayFirst.component(.weekday, from: event.start) // 1=zo...7=za
+            let mondayFirstIndex = (weekday + 5) % 7
+            counts[mondayFirstIndex] += 1
+        }
+        return counts
+    }
+}

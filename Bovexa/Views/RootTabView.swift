@@ -38,7 +38,7 @@ struct RootTabView: View {
             Group {
                 switch selected {
                 case .vandaag:
-                    ComingSoonView(title: "Vandaag")
+                    VandaagView()
                 case .agenda:
                     ComingSoonView(title: "Agenda")
                 case .dagtaken:

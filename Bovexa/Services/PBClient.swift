@@ -1,5 +1,10 @@
 import Foundation
 
+/// Vaste server-locatie — PocketBase-backend blijft ongewijzigd voor deze milestone.
+enum PBEndpoint {
+    static let base = URL(string: "https://api.qawayahbase.com")!
+}
+
 /// Dunne PocketBase-client op URLSession — alleen wat deze milestone nodig heeft:
 /// authWithPassword, authRefresh, getFullList (filter/sort) en custom POST-routes.
 final class PBClient {
@@ -7,7 +12,7 @@ final class PBClient {
     private let session: URLSession
     private let decoder: JSONDecoder
 
-    init(baseURL: URL = URL(string: "https://api.qawayahbase.com")!, session: URLSession = .shared) {
+    init(baseURL: URL = PBEndpoint.base, session: URLSession = .shared) {
         self.baseURL = baseURL
         self.session = session
         self.decoder = JSONDecoder()
