@@ -46,7 +46,7 @@ struct RootTabView: View {
                 case .bedrijf:
                     ComingSoonView(title: "Bedrijf")
                 case .profiel:
-                    ComingSoonView(title: "Profiel")
+                    ProfielPlaceholderView()
                 }
             }
 

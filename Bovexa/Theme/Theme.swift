@@ -5,7 +5,7 @@ import SwiftUI
 /// (geen losse hexcodes buiten dit bestand).
 enum BovexaTheme {
 
-    enum Category: String, CaseIterable {
+    enum Category: String, CaseIterable, Decodable {
         case focus, work, social, body, afwezig
     }
 

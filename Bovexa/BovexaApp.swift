@@ -4,7 +4,7 @@ import SwiftUI
 struct BovexaApp: App {
     var body: some Scene {
         WindowGroup {
-            RootTabView()
+            RootRouterView()
                 .preferredColorScheme(.dark)
         }
     }

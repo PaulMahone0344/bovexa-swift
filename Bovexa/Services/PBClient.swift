@@ -1,0 +1,96 @@
+import Foundation
+
+/// Dunne PocketBase-client op URLSession — alleen wat deze milestone nodig heeft:
+/// authWithPassword, authRefresh, getFullList (filter/sort) en custom POST-routes.
+final class PBClient {
+    private let baseURL: URL
+    private let session: URLSession
+    private let decoder: JSONDecoder
+
+    init(baseURL: URL = URL(string: "https://api.qawayahbase.com")!, session: URLSession = .shared) {
+        self.baseURL = baseURL
+        self.session = session
+        self.decoder = JSONDecoder()
+    }
+
+    func authWithPassword(email: String, password: String) async throws -> AuthResponse {
+        var request = URLRequest(url: baseURL.appendingPathComponent("/api/collections/agenda_users/auth-with-password"))
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.httpBody = try JSONEncoder().encode(["identity": email, "password": password])
+        return try await send(request)
+    }
+
+    func authRefresh(token: String) async throws -> AuthResponse {
+        var request = URLRequest(url: baseURL.appendingPathComponent("/api/collections/agenda_users/auth-refresh"))
+        request.httpMethod = "POST"
+        request.setValue(token, forHTTPHeaderField: "Authorization")
+        return try await send(request)
+    }
+
+    func getFullList<T: Decodable>(_ type: T.Type, collection: String, filter: String, sort: String? = nil, token: String) async throws -> [T] {
+        var results: [T] = []
+        var page = 1
+        let perPage = 200
+
+        while true {
+            var components = URLComponents(url: baseURL.appendingPathComponent("/api/collections/\(collection)/records"), resolvingAgainstBaseURL: false)!
+            var query = [
+                URLQueryItem(name: "page", value: String(page)),
+                URLQueryItem(name: "perPage", value: String(perPage)),
+            ]
+            if !filter.isEmpty { query.append(URLQueryItem(name: "filter", value: filter)) }
+            if let sort { query.append(URLQueryItem(name: "sort", value: sort)) }
+            components.queryItems = query
+
+            var request = URLRequest(url: components.url!)
+            request.setValue(token, forHTTPHeaderField: "Authorization")
+            let pageResponse: ListResponse<T> = try await send(request)
+            results.append(contentsOf: pageResponse.items)
+
+            if pageResponse.items.isEmpty || page >= pageResponse.totalPages { break }
+            page += 1
+        }
+
+        return results
+    }
+
+    func postCustom<T: Decodable>(_ type: T.Type, path: String, token: String) async throws -> T {
+        var request = URLRequest(url: baseURL.appendingPathComponent(path))
+        request.httpMethod = "POST"
+        request.setValue(token, forHTTPHeaderField: "Authorization")
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.httpBody = Data("{}".utf8)
+        return try await send(request)
+    }
+
+    private func send<T: Decodable>(_ request: URLRequest) async throws -> T {
+        let data: Data
+        let response: URLResponse
+        do {
+            (data, response) = try await session.data(for: request)
+        } catch {
+            throw PBError.network
+        }
+
+        guard let http = response as? HTTPURLResponse else { throw PBError.network }
+        guard (200..<300).contains(http.statusCode) else {
+            let message = (try? decoder.decode(PBErrorBody.self, from: data))?.message ?? "Er ging iets mis."
+            throw PBError.server(status: http.statusCode, message: message)
+        }
+
+        do {
+            return try decoder.decode(T.self, from: data)
+        } catch {
+            throw PBError.decoding
+        }
+    }
+}
+
+private struct ListResponse<T: Decodable>: Decodable {
+    let items: [T]
+    let page: Int
+    let perPage: Int
+    let totalItems: Int
+    let totalPages: Int
+}
