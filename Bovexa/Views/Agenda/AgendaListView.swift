@@ -5,14 +5,19 @@ struct AgendaListView: View {
     @ObservedObject var viewModel: AgendaViewModel
     let currentUserId: String
     let now: () -> Date
-    @Binding var selectedEventId: String?
+    @Binding var selectedEvent: AgendaEvent?
 
     var body: some View {
         ScrollView {
             let groups = ListViewGrouping.upcomingGroupedByDay(viewModel.events, from: now())
 
             VStack(alignment: .leading, spacing: BovexaTheme.Space.lg) {
-                if groups.isEmpty {
+                if !viewModel.hasLoadedOnce {
+                    ProgressView()
+                        .tint(BovexaTheme.Colors.teal)
+                        .frame(maxWidth: .infinity, alignment: .center)
+                        .padding(.top, BovexaTheme.Space.xxl)
+                } else if groups.isEmpty {
                     Text("Geen komende afspraken.")
                         .font(.system(size: BovexaTheme.TypeScale.body))
                         .foregroundStyle(BovexaTheme.Colors.muted)
@@ -28,7 +33,7 @@ struct AgendaListView: View {
                                 VStack(spacing: 0) {
                                     ForEach(group.events) { event in
                                         Button {
-                                            selectedEventId = EventHelpers.eventRecordId(event)
+                                            selectedEvent = event
                                         } label: {
                                             AppointmentRow(event: event, currentUserId: currentUserId, memberColors: viewModel.memberColors)
                                         }

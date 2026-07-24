@@ -3,7 +3,7 @@ import SwiftUI
 struct AgendaView: View {
     @EnvironmentObject private var authStore: AuthStore
     @StateObject private var viewModel = AgendaViewModel()
-    @State private var selectedEventId: String?
+    @State private var selectedEvent: AgendaEvent?
 
     private var currentUser: AgendaUser? {
         if case .loggedIn(let user) = authStore.phase { return user }
@@ -32,9 +32,9 @@ struct AgendaView: View {
                     currentUserId: userId,
                     memberColors: viewModel.memberColors,
                     onOpenDay: { viewModel.openDayView(target.day) },
-                    onSelectEvent: { id in
+                    onSelectEvent: { event in
                         viewModel.closeDaySheet()
-                        selectedEventId = id
+                        selectedEvent = event
                     }
                 )
             }
@@ -51,7 +51,7 @@ struct AgendaView: View {
                     header
 
                     if viewModel.viewKind == .lijst, let userId = currentUser?.id {
-                        AgendaListView(viewModel: viewModel, currentUserId: userId, now: Date.init, selectedEventId: $selectedEventId)
+                        AgendaListView(viewModel: viewModel, currentUserId: userId, now: Date.init, selectedEvent: $selectedEvent)
                     } else {
                         ScrollView {
                             MonthGridView(viewModel: viewModel)
@@ -60,8 +60,10 @@ struct AgendaView: View {
                     }
                 }
             }
-            .navigationDestination(item: $selectedEventId) { id in
-                EventDetailPlaceholderView(eventId: id)
+            .navigationDestination(item: $selectedEvent) { event in
+                if let userId = currentUser?.id {
+                    EventDetailView(event: event, currentUserId: userId, memberColors: viewModel.memberColors)
+                }
             }
         }
     }

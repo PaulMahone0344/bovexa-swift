@@ -3,7 +3,7 @@ import SwiftUI
 struct VandaagView: View {
     @EnvironmentObject private var authStore: AuthStore
     @StateObject private var viewModel = VandaagViewModel()
-    @State private var selectedEventId: String?
+    @State private var selectedEvent: AgendaEvent?
 
     private var currentUser: AgendaUser? {
         if case .loggedIn(let user) = authStore.phase { return user }
@@ -42,7 +42,7 @@ struct VandaagView: View {
 
                                 GlassCard {
                                     Button {
-                                        selectedEventId = EventHelpers.eventRecordId(next)
+                                        selectedEvent = next
                                     } label: {
                                         AppointmentRow(event: next, currentUserId: userId, memberColors: viewModel.memberColors)
                                     }
@@ -58,7 +58,11 @@ struct VandaagView: View {
                                 .frame(maxWidth: .infinity, alignment: .leading)
 
                             GlassCard {
-                                if viewModel.todayEvents.isEmpty {
+                                if !viewModel.hasLoadedOnce {
+                                    ProgressView()
+                                        .tint(BovexaTheme.Colors.teal)
+                                        .frame(maxWidth: .infinity, alignment: .center)
+                                } else if viewModel.todayEvents.isEmpty {
                                     Text("Nog niks gepland vandaag…")
                                         .font(.system(size: BovexaTheme.TypeScale.body))
                                         .foregroundStyle(BovexaTheme.Colors.muted)
@@ -67,7 +71,7 @@ struct VandaagView: View {
                                     VStack(spacing: 0) {
                                         ForEach(viewModel.todayEvents) { event in
                                             Button {
-                                                selectedEventId = EventHelpers.eventRecordId(event)
+                                                selectedEvent = event
                                             } label: {
                                                 AppointmentRow(event: event, currentUserId: userId, memberColors: viewModel.memberColors)
                                             }
@@ -88,8 +92,10 @@ struct VandaagView: View {
                     .padding(.bottom, 90) // ruimte voor de zwevende tabbalk
                 }
             }
-            .navigationDestination(item: $selectedEventId) { id in
-                EventDetailPlaceholderView(eventId: id)
+            .navigationDestination(item: $selectedEvent) { event in
+                if let userId = currentUser?.id {
+                    EventDetailView(event: event, currentUserId: userId, memberColors: viewModel.memberColors)
+                }
             }
         }
         .task {

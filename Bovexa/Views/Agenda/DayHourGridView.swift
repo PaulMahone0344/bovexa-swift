@@ -7,7 +7,7 @@ struct DayHourGridView: View {
     let events: [AgendaEvent]
     let currentUserId: String
     @ObservedObject var memberColors: MemberColors
-    let onSelectEvent: (String) -> Void
+    let onSelectEvent: (AgendaEvent) -> Void
 
     private let hourHeight: CGFloat = 60
     private let gutterWidth: CGFloat = 40
@@ -44,7 +44,7 @@ struct DayHourGridView: View {
             HStack(spacing: BovexaTheme.Space.xs) {
                 ForEach(allDayEvents) { event in
                     Button {
-                        onSelectEvent(EventHelpers.eventRecordId(event))
+                        onSelectEvent(event)
                     } label: {
                         Text(event.title)
                             .font(.system(size: BovexaTheme.TypeScale.small, weight: .medium))
@@ -90,7 +90,7 @@ struct DayHourGridView: View {
             let columnWidth = safeWidth / CGFloat(item.columnCount)
 
             Button {
-                onSelectEvent(EventHelpers.eventRecordId(item.event))
+                onSelectEvent(item.event)
             } label: {
                 EventBlockView(event: item.event, currentUserId: currentUserId, memberColors: memberColors)
             }

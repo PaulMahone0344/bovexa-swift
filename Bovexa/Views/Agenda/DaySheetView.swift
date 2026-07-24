@@ -8,7 +8,7 @@ struct DaySheetView: View {
     let currentUserId: String
     @ObservedObject var memberColors: MemberColors
     let onOpenDay: () -> Void
-    let onSelectEvent: (String) -> Void
+    let onSelectEvent: (AgendaEvent) -> Void
 
     var body: some View {
         NavigationStack {
@@ -38,7 +38,7 @@ struct DaySheetView: View {
                                 VStack(spacing: 0) {
                                     ForEach(events.sorted { $0.start < $1.start }) { event in
                                         Button {
-                                            onSelectEvent(EventHelpers.eventRecordId(event))
+                                            onSelectEvent(event)
                                         } label: {
                                             AppointmentRow(event: event, currentUserId: currentUserId, memberColors: memberColors)
                                         }

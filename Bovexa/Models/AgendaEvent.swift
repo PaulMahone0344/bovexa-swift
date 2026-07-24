@@ -2,7 +2,10 @@ import Foundation
 
 /// agenda_events — alleen velden die milestone 1 gebruikt (Vandaag/Agenda/detail).
 /// Defensief decoderen (valkuil B): oude/afwijkende server-vormen mogen nooit crashen.
-struct AgendaEvent: Decodable, Identifiable, Equatable {
+/// Gelijkheid/hash op id: na recurrence-expansie is dat de synthetische
+/// "recordId:YYYY-MM-DD" (valkuil A) — al uniek per bezetting, geen dictionary-
+/// vergelijking nodig (assigneeStatus is geen Hashable).
+struct AgendaEvent: Decodable, Identifiable {
     let id: String
     let owner: String
     let calendar: String?
@@ -88,5 +91,15 @@ struct AgendaEvent: Decodable, Identifiable, Equatable {
     /// Ontbrekende sleutel, null, of een onverwacht type → nil in plaats van crash.
     private static func decodeOptional<T: Decodable>(_ c: KeyedDecodingContainer<CodingKeys>, _ key: CodingKeys, as type: T.Type = T.self) -> T? {
         (try? c.decodeIfPresent(T.self, forKey: key)) ?? nil
+    }
+}
+
+extension AgendaEvent: Hashable {
+    static func == (lhs: AgendaEvent, rhs: AgendaEvent) -> Bool {
+        lhs.id == rhs.id
+    }
+
+    func hash(into hasher: inout Hasher) {
+        hasher.combine(id)
     }
 }

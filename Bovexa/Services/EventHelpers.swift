@@ -36,6 +36,14 @@ enum EventHelpers {
         return rest == 0 ? "\(hours) uur" : "\(hours) uur \(rest) min"
     }
 
+    /// Tijdregel voor het afspraak-detail: "Hele dag", "09:00" of "09:00 · 1 uur 30 min".
+    static func detailTimeText(_ event: AgendaEvent) -> String {
+        if event.allDay { return "Hele dag" }
+        let start = fmtTime(event.start)
+        guard event.end != nil else { return start }
+        return "\(start) · \(durationLabel(event))"
+    }
+
     static func sameDay(_ a: Date, _ b: Date, calendar: Calendar = .current) -> Bool {
         calendar.isDate(a, inSameDayAs: b)
     }

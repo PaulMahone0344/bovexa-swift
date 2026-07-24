@@ -12,6 +12,7 @@ final class AgendaViewModel: ObservableObject {
     @Published private(set) var viewKind: AgendaViewKind
     @Published private(set) var events: [AgendaEvent] = []
     @Published private(set) var isLoading = false
+    @Published private(set) var hasLoadedOnce = false
     @Published var displayedMonth: Date
     @Published var daySheetTarget: DaySheetTarget?
     @Published var dayViewFocusDate: Date
@@ -45,7 +46,10 @@ final class AgendaViewModel: ObservableObject {
 
     func load(userId: String, orgId: String?, token: String) async {
         isLoading = true
-        defer { isLoading = false }
+        defer {
+            isLoading = false
+            hasLoadedOnce = true
+        }
 
         async let eventsResult = try? repository.fetchAllEvents(userId: userId, orgId: orgId, token: token)
         async let membersResult = repository.listMembers(token: token)

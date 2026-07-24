@@ -8,7 +8,7 @@ struct DayView: View {
 
     @State private var days: [Date] = []
     @State private var scrollDay: Date?
-    @State private var selectedEventId: String?
+    @State private var selectedEvent: AgendaEvent?
 
     var body: some View {
         NavigationStack {
@@ -25,7 +25,7 @@ struct DayView: View {
                                     events: viewModel.eventsOnDay(day),
                                     currentUserId: currentUserId,
                                     memberColors: viewModel.memberColors,
-                                    onSelectEvent: { selectedEventId = $0 }
+                                    onSelectEvent: { selectedEvent = $0 }
                                 )
                                 .containerRelativeFrame(.horizontal)
                                 .id(day)
@@ -37,8 +37,8 @@ struct DayView: View {
                     .scrollPosition(id: $scrollDay)
                 }
             }
-            .navigationDestination(item: $selectedEventId) { id in
-                EventDetailPlaceholderView(eventId: id)
+            .navigationDestination(item: $selectedEvent) { event in
+                EventDetailView(event: event, currentUserId: currentUserId, memberColors: viewModel.memberColors)
             }
         }
         .onAppear {
