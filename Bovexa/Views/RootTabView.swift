@@ -40,7 +40,7 @@ struct RootTabView: View {
                 case .vandaag:
                     VandaagView()
                 case .agenda:
-                    ComingSoonView(title: "Agenda")
+                    AgendaView()
                 case .dagtaken:
                     ComingSoonView(title: "Dagtaken")
                 case .bedrijf:

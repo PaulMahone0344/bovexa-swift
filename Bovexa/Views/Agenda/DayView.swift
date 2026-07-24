@@ -1,0 +1,86 @@
+import SwiftUI
+
+/// Dagweergave: horizontale dagcarousel + uurgrid, "‹ maand"-pill terug naar
+/// de maandweergave die actief was vóór het openen van deze dag.
+struct DayView: View {
+    @ObservedObject var viewModel: AgendaViewModel
+    let currentUserId: String
+
+    @State private var days: [Date] = []
+    @State private var scrollDay: Date?
+    @State private var selectedEventId: String?
+
+    var body: some View {
+        NavigationStack {
+            ZStack {
+                AppBackground()
+                VStack(spacing: BovexaTheme.Space.md) {
+                    header
+
+                    ScrollView(.horizontal) {
+                        LazyHStack(spacing: 0) {
+                            ForEach(days, id: \.self) { day in
+                                DayHourGridView(
+                                    day: day,
+                                    events: viewModel.eventsOnDay(day),
+                                    currentUserId: currentUserId,
+                                    memberColors: viewModel.memberColors,
+                                    onSelectEvent: { selectedEventId = $0 }
+                                )
+                                .containerRelativeFrame(.horizontal)
+                                .id(day)
+                            }
+                        }
+                        .scrollTargetLayout()
+                    }
+                    .scrollTargetBehavior(.paging)
+                    .scrollPosition(id: $scrollDay)
+                }
+            }
+            .navigationDestination(item: $selectedEventId) { id in
+                EventDetailPlaceholderView(eventId: id)
+            }
+        }
+        .onAppear {
+            if days.isEmpty {
+                days = Self.buildWindow(around: viewModel.dayViewFocusDate)
+            }
+            scrollDay = viewModel.dayViewFocusDate
+        }
+        .onChange(of: scrollDay) { _, newValue in
+            if let newValue { viewModel.dayViewFocusDate = newValue }
+        }
+    }
+
+    private var header: some View {
+        HStack {
+            Button {
+                viewModel.backToMonth()
+            } label: {
+                Label(monthAbbreviation, systemImage: "chevron.left")
+                    .font(.system(size: BovexaTheme.TypeScale.small, weight: .semibold))
+            }
+            .foregroundStyle(BovexaTheme.Colors.accent)
+
+            Spacer()
+
+            Text(EventHelpers.longDay(scrollDay ?? viewModel.dayViewFocusDate))
+                .font(.system(size: BovexaTheme.TypeScale.small, weight: .medium))
+                .foregroundStyle(BovexaTheme.Colors.muted)
+        }
+        .padding(.horizontal, BovexaTheme.Space.lg)
+        .padding(.top, BovexaTheme.Space.sm)
+    }
+
+    private var monthAbbreviation: String {
+        let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: "nl_NL")
+        formatter.dateFormat = "MMM"
+        return formatter.string(from: viewModel.dayViewFocusDate).capitalized
+    }
+
+    private static func buildWindow(around center: Date, radius: Int = 60, calendar: Calendar = .current) -> [Date] {
+        let start = calendar.startOfDay(for: center)
+        return (-radius...radius).compactMap { calendar.date(byAdding: .day, value: $0, to: start) }
+    }
+}
