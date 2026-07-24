@@ -1,0 +1,41 @@
+name: Bovexa
+options:
+  bundleIdPrefix: com.bovexa
+  deploymentTarget:
+    iOS: "17.0"
+  createIntermediateGroups: true
+targets:
+  Bovexa:
+    type: application
+    platform: iOS
+    sources: [Bovexa]
+    info:
+      path: Bovexa/Info.plist
+      properties:
+        CFBundleDisplayName: Bovexa Flow
+        CFBundleIdentifier: com.bovexa.flow-native
+        UILaunchScreen: {}
+        UISupportedInterfaceOrientations: [UIInterfaceOrientationPortrait]
+    settings:
+      base:
+        SWIFT_VERSION: "5.0"
+        TARGETED_DEVICE_FAMILY: "1"
+        DEVELOPMENT_TEAM: R7V2WLVDDF
+        CODE_SIGN_STYLE: Automatic
+  BovexaTests:
+    type: bundle.unit-test
+    platform: iOS
+    sources: [BovexaTests]
+    dependencies:
+      - target: Bovexa
+    settings:
+      base:
+        GENERATE_INFOPLIST_FILE: "YES"
+schemes:
+  Bovexa:
+    build:
+      targets:
+        Bovexa: all
+        BovexaTests: [test]
+    test:
+      targets: [BovexaTests]
