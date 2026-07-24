@@ -16,8 +16,42 @@ struct AgendaEvent: Decodable, Identifiable, Equatable {
     let notes: String?
     let klantNaam: String?
     let assigneeStatus: [String: String]
-    var seriesId: String?
-    var occurrenceDate: String?
+    let seriesId: String?
+    let occurrenceDate: String?
+
+    init(
+        id: String, owner: String, calendar: String?, category: BovexaTheme.Category?,
+        title: String, start: Date, end: Date?, allDay: Bool, recurrence: String?,
+        location: String?, notes: String?, klantNaam: String?,
+        assigneeStatus: [String: String], seriesId: String?, occurrenceDate: String?
+    ) {
+        self.id = id
+        self.owner = owner
+        self.calendar = calendar
+        self.category = category
+        self.title = title
+        self.start = start
+        self.end = end
+        self.allDay = allDay
+        self.recurrence = recurrence
+        self.location = location
+        self.notes = notes
+        self.klantNaam = klantNaam
+        self.assigneeStatus = assigneeStatus
+        self.seriesId = seriesId
+        self.occurrenceDate = occurrenceDate
+    }
+
+    /// Kopie met andere id/tijd/serie — gebruikt door RecurrenceExpander om een
+    /// uitgeklapte losse dag te maken zonder de rest van de afspraak te herhalen.
+    func withOccurrence(id: String, start: Date, end: Date?, seriesId: String, occurrenceDate: String) -> AgendaEvent {
+        AgendaEvent(
+            id: id, owner: owner, calendar: calendar, category: category, title: title,
+            start: start, end: end, allDay: allDay, recurrence: recurrence, location: location,
+            notes: notes, klantNaam: klantNaam, assigneeStatus: assigneeStatus,
+            seriesId: seriesId, occurrenceDate: occurrenceDate
+        )
+    }
 
     enum CodingKeys: String, CodingKey {
         case id, owner, calendar, category, title, start, end

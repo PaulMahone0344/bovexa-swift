@@ -1,0 +1,57 @@
+import SwiftUI
+
+/// Tijd/duur/kleur-helpers voor AgendaEvent — geport uit ~/Desktop/agenda-app/src/lib/events.ts.
+enum EventHelpers {
+    private static let dutchWeekdays = ["Zondag", "Maandag", "Dinsdag", "Woensdag", "Donderdag", "Vrijdag", "Zaterdag"]
+    private static let dutchMonths = [
+        "januari", "februari", "maart", "april", "mei", "juni",
+        "juli", "augustus", "september", "oktober", "november", "december",
+    ]
+
+    static func eventColor(_ event: AgendaEvent) -> Color {
+        if let category = event.category {
+            return BovexaTheme.categoryColor(for: category)
+        }
+        return event.calendar == "private" ? BovexaTheme.Colors.categoryBlue : BovexaTheme.Colors.teal
+    }
+
+    static func fmtTime(_ date: Date?) -> String {
+        guard let date else { return "" }
+        let formatter = DateFormatter()
+        formatter.dateFormat = "HH:mm"
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        return formatter.string(from: date)
+    }
+
+    static func durationMin(_ event: AgendaEvent) -> Int? {
+        guard let end = event.end else { return nil }
+        return Int((end.timeIntervalSince(event.start) / 60).rounded())
+    }
+
+    static func sameDay(_ a: Date, _ b: Date, calendar: Calendar = .current) -> Bool {
+        calendar.isDate(a, inSameDayAs: b)
+    }
+
+    static func eventsOnDay(_ events: [AgendaEvent], day: Date, calendar: Calendar = .current) -> [AgendaEvent] {
+        events.filter { sameDay($0.start, day, calendar: calendar) }
+    }
+
+    /// Echte record-id — na uitklappen van een herhaling is dat de series_id (valkuil A).
+    static func eventRecordId(_ event: AgendaEvent) -> String {
+        event.seriesId ?? event.id
+    }
+
+    static func nextUpcoming(_ events: [AgendaEvent], now: Date = Date()) -> AgendaEvent? {
+        events
+            .filter { ($0.end ?? $0.start) >= now }
+            .sorted { $0.start < $1.start }
+            .first
+    }
+
+    static func longDay(_ day: Date, calendar: Calendar = .current) -> String {
+        let comps = calendar.dateComponents([.weekday, .day, .month], from: day)
+        let weekday = dutchWeekdays[(comps.weekday ?? 1) - 1]
+        let month = dutchMonths[(comps.month ?? 1) - 1]
+        return "\(weekday) \(comps.day ?? 0) \(month)"
+    }
+}
