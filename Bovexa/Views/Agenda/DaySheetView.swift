@@ -27,10 +27,7 @@ struct DaySheetView: View {
                     }
 
                     if events.isEmpty {
-                        Text("Geen afspraken.")
-                            .font(BovexaTheme.TypeStyle.body)
-                            .foregroundStyle(BovexaTheme.Colors.muted)
-                            .frame(maxWidth: .infinity, alignment: .leading)
+                        EmptyStateView(systemImage: "calendar", text: "Geen afspraken.")
                         Spacer()
                     } else {
                         ScrollView {

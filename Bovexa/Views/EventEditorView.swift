@@ -36,7 +36,9 @@ struct EventEditorView: View {
                         .textFieldStyle(EditorFieldStyle())
 
                     fieldLabel("Categorie")
-                    chipRow(Self.categories, isActive: { $0 == viewModel.category }) { viewModel.category = $0 }
+                    chipRow(Self.categories, isActive: { $0 == viewModel.category }) { value in
+                        withAnimation(.snappy) { viewModel.category = value }
+                    }
 
                     fieldLabel("Datum")
                     StepperRow(value: EventHelpers.longDay(viewModel.start), onMinus: { viewModel.shiftDay(-1) }, onPlus: { viewModel.shiftDay(1) })
@@ -91,7 +93,10 @@ struct EventEditorView: View {
             Button("Aanpassen", role: .cancel) {}
             Button("Toch plannen") {
                 Task {
-                    if let updated = await viewModel.saveConfirmed() { onSaved(updated) }
+                    if let updated = await viewModel.saveConfirmed() {
+                        Haptics.success()
+                        onSaved(updated)
+                    }
                 }
             }
         } message: {
@@ -105,18 +110,18 @@ struct EventEditorView: View {
         HStack(spacing: BovexaTheme.Space.sm) {
             Button(action: onCancel) {
                 Text("Annuleren")
-                    .font(.system(size: BovexaTheme.TypeScale.body, weight: .bold))
-                    .foregroundStyle(BovexaTheme.Colors.accent)
+                    .font(BovexaTheme.TypeStyle.headline)
                     .frame(maxWidth: .infinity, minHeight: 50)
-                    .background(BovexaTheme.Colors.glass)
-                    .overlay(Capsule().strokeBorder(BovexaTheme.Colors.edge, lineWidth: 1))
-                    .clipShape(Capsule())
             }
+            .buttonStyle(.glassSecondaryBrand)
             .disabled(viewModel.isSaving)
 
             Button {
                 Task {
-                    if let updated = await viewModel.save() { onSaved(updated) }
+                    if let updated = await viewModel.save() {
+                        Haptics.success()
+                        onSaved(updated)
+                    }
                 }
             } label: {
                 Group {
@@ -124,21 +129,19 @@ struct EventEditorView: View {
                         ProgressView().tint(BovexaTheme.Colors.white)
                     } else {
                         Text("Opslaan")
-                            .font(.system(size: BovexaTheme.TypeScale.body, weight: .bold))
+                            .font(BovexaTheme.TypeStyle.headline)
                     }
                 }
-                .foregroundStyle(BovexaTheme.Colors.white)
                 .frame(maxWidth: .infinity, minHeight: 50)
-                .background(BovexaTheme.Colors.tealDark)
-                .clipShape(Capsule())
             }
+            .buttonStyle(.glassProminentBrand)
             .disabled(viewModel.isSaving)
         }
     }
 
     private func fieldLabel(_ text: String) -> some View {
         Text(text)
-            .font(.system(size: BovexaTheme.TypeScale.tiny, weight: .bold))
+            .font(BovexaTheme.TypeStyle.caption.weight(.bold))
             .foregroundStyle(BovexaTheme.Colors.accent)
             .textCase(.uppercase)
             .tracking(0.3)
@@ -152,7 +155,7 @@ struct EventEditorView: View {
                     onSelect(value)
                 } label: {
                     Text(label)
-                        .font(.system(size: BovexaTheme.TypeScale.small, weight: .bold))
+                        .font(BovexaTheme.TypeStyle.subheadline.weight(.bold))
                         .foregroundStyle(active ? BovexaTheme.Colors.white : BovexaTheme.Colors.muted)
                         .padding(.horizontal, BovexaTheme.Space.md)
                         .frame(minHeight: 40)
@@ -195,7 +198,7 @@ private struct StepperRow: View {
             }
             Spacer()
             Text(value)
-                .font(.system(size: BovexaTheme.TypeScale.body, weight: .bold))
+                .font(BovexaTheme.TypeStyle.headline)
                 .foregroundStyle(BovexaTheme.Colors.ink)
             Spacer()
             Button(action: onPlus) {

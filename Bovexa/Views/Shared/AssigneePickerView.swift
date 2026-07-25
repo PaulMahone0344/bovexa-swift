@@ -37,7 +37,7 @@ struct AssigneePickerView: View {
         Button { isOpen.toggle() } label: {
             HStack {
                 Text(summary)
-                    .font(.system(size: BovexaTheme.TypeScale.body, weight: .semibold))
+                    .font(BovexaTheme.TypeStyle.body.weight(.semibold))
                     .foregroundStyle(BovexaTheme.Colors.ink)
                     .lineLimit(1)
                 Spacer()
@@ -59,9 +59,7 @@ struct AssigneePickerView: View {
     @ViewBuilder
     private var expandedList: some View {
         if members.isEmpty {
-            Text("Nog geen collega's in je bedrijf.")
-                .font(.system(size: BovexaTheme.TypeScale.small))
-                .foregroundStyle(BovexaTheme.Colors.muted)
+            EmptyStateView(systemImage: "person.2", text: "Nog geen collega's in je bedrijf.")
         } else {
             VStack(alignment: .leading, spacing: BovexaTheme.Space.xs) {
                 if members.count >= Self.searchFrom { searchField }
@@ -72,7 +70,7 @@ struct AssigneePickerView: View {
 
                 if shown.isEmpty {
                     Text("Geen collega gevonden.")
-                        .font(.system(size: BovexaTheme.TypeScale.small))
+                        .font(BovexaTheme.TypeStyle.subheadline)
                         .foregroundStyle(BovexaTheme.Colors.muted)
                 } else {
                     ForEach(shown, id: \.userId) { member in
@@ -108,6 +106,7 @@ struct AssigneePickerView: View {
     }
 
     private func toggle(_ userId: String) {
+        Haptics.selection()
         selectedIds = selectedIds.contains(userId) ? selectedIds.filter { $0 != userId } : selectedIds + [userId]
     }
 
@@ -136,7 +135,7 @@ struct AssigneePickerView: View {
                         }
                     }
                     Text(label)
-                        .font(.system(size: BovexaTheme.TypeScale.body, weight: .medium))
+                        .font(BovexaTheme.TypeStyle.body.weight(.medium))
                         .foregroundStyle(BovexaTheme.Colors.ink)
                         .lineLimit(1)
                     Spacer()

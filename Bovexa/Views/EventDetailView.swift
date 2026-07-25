@@ -87,7 +87,10 @@ struct EventDetailView: View {
             Button("Verwijder", role: .destructive) {
                 Task {
                     isDeleting = true
-                    if await viewModel.delete() { dismiss() }
+                    if await viewModel.delete() {
+                        Haptics.warning()
+                        dismiss()
+                    }
                     isDeleting = false
                 }
             }
@@ -119,17 +122,17 @@ struct EventDetailView: View {
                         .fill(EventHelpers.eventColor(event))
                         .frame(width: 12, height: 12)
                     Text(event.title)
-                        .font(.system(size: BovexaTheme.TypeScale.h2, weight: .bold))
+                        .font(BovexaTheme.TypeStyle.title2)
                         .foregroundStyle(BovexaTheme.Colors.ink)
                 }
 
                 if isColleague, let firstName = memberColors.firstName(for: event.owner) {
                     Text("Van \(firstName)")
-                        .font(.system(size: BovexaTheme.TypeScale.small, weight: .medium))
+                        .font(BovexaTheme.TypeStyle.footnote.weight(.medium))
                         .foregroundStyle(memberColors.color(for: event.owner))
                 }
 
-                Divider().overlay(BovexaTheme.Colors.edge)
+                Divider().overlay(BovexaTheme.Colors.edgeSoft)
 
                 detailRow(icon: "calendar", text: EventHelpers.longDay(event.start))
                 detailRow(icon: "clock", text: EventHelpers.detailTimeText(event))
@@ -143,9 +146,9 @@ struct EventDetailView: View {
                 }
 
                 if let notes = event.notes, !notes.isEmpty {
-                    Divider().overlay(BovexaTheme.Colors.edge)
+                    Divider().overlay(BovexaTheme.Colors.edgeSoft)
                     Text(notes)
-                        .font(.system(size: BovexaTheme.TypeScale.body))
+                        .font(BovexaTheme.TypeStyle.body)
                         .foregroundStyle(BovexaTheme.Colors.inkSoft)
                 }
             }
@@ -158,13 +161,13 @@ struct EventDetailView: View {
             VStack(alignment: .leading, spacing: BovexaTheme.Space.md) {
                 HStack {
                     Text("TOEGEWEZEN AAN")
-                        .font(.system(size: BovexaTheme.TypeScale.tiny, weight: .bold))
+                        .font(BovexaTheme.TypeStyle.caption.weight(.bold))
                         .foregroundStyle(BovexaTheme.Colors.accent)
                         .tracking(0.3)
                     Spacer()
                     if viewModel.isAssignedToMe {
                         Text("Aan jou")
-                            .font(.system(size: BovexaTheme.TypeScale.tiny, weight: .bold))
+                            .font(BovexaTheme.TypeStyle.caption.weight(.bold))
                             .foregroundStyle(BovexaTheme.Colors.white)
                             .padding(.horizontal, BovexaTheme.Space.sm)
                             .padding(.vertical, 4)
@@ -202,11 +205,11 @@ struct EventDetailView: View {
                         .foregroundStyle(BovexaTheme.Colors.white)
                 )
             Text(memberColors.firstName(for: userId) ?? "collega")
-                .font(.system(size: BovexaTheme.TypeScale.small, weight: .semibold))
+                .font(BovexaTheme.TypeStyle.subheadline.weight(.semibold))
                 .foregroundStyle(BovexaTheme.Colors.ink)
             if status != "accepted" {
                 Text(status == "declined" ? "geweigerd" : "wacht")
-                    .font(.system(size: BovexaTheme.TypeScale.tiny, weight: .semibold))
+                    .font(BovexaTheme.TypeStyle.caption.weight(.semibold))
                     .foregroundStyle(BovexaTheme.Colors.muted)
             }
         }
@@ -222,31 +225,35 @@ struct EventDetailView: View {
             Button {
                 Task {
                     await viewModel.respond("declined")
-                    if !viewModel.respondFailedAlert { dismiss() }
+                    if viewModel.respondFailedAlert {
+                        Haptics.warning()
+                    } else {
+                        dismiss()
+                    }
                 }
             } label: {
                 Text("Weigeren")
-                    .font(.system(size: BovexaTheme.TypeScale.body, weight: .bold))
+                    .font(BovexaTheme.TypeStyle.headline)
                     .foregroundStyle(BovexaTheme.Colors.inkSoft)
                     .frame(maxWidth: .infinity, minHeight: 42)
-                    .background(BovexaTheme.Colors.glass)
-                    .overlay(
-                        RoundedRectangle(cornerRadius: BovexaTheme.Radius.md, style: .continuous)
-                            .strokeBorder(BovexaTheme.Colors.edge, lineWidth: 1)
-                    )
-                    .clipShape(RoundedRectangle(cornerRadius: BovexaTheme.Radius.md, style: .continuous))
             }
+            .buttonStyle(.glassSecondaryBrand)
 
             Button {
-                Task { await viewModel.respond("accepted") }
+                Task {
+                    await viewModel.respond("accepted")
+                    if viewModel.respondFailedAlert {
+                        Haptics.warning()
+                    } else {
+                        Haptics.success()
+                    }
+                }
             } label: {
                 Text("Accepteren")
-                    .font(.system(size: BovexaTheme.TypeScale.body, weight: .bold))
-                    .foregroundStyle(BovexaTheme.Colors.white)
+                    .font(BovexaTheme.TypeStyle.headline)
                     .frame(maxWidth: .infinity, minHeight: 42)
-                    .background(BovexaTheme.Colors.tealDark)
-                    .clipShape(RoundedRectangle(cornerRadius: BovexaTheme.Radius.md, style: .continuous))
             }
+            .buttonStyle(.glassProminentBrand)
         }
     }
 
@@ -256,7 +263,7 @@ struct EventDetailView: View {
                 .foregroundStyle(BovexaTheme.Colors.muted)
                 .frame(width: 20)
             Text(text)
-                .font(.system(size: BovexaTheme.TypeScale.body))
+                .font(BovexaTheme.TypeStyle.body)
                 .foregroundStyle(BovexaTheme.Colors.ink)
         }
     }

@@ -18,10 +18,11 @@ struct ReminderChipsView: View {
     private func chip(_ option: ReminderOption) -> some View {
         let active = minutesBefore == option.minutes
         return Button {
-            minutesBefore = option.minutes
+            Haptics.selection()
+            withAnimation(.snappy) { minutesBefore = option.minutes }
         } label: {
             Text(option.label)
-                .font(.system(size: BovexaTheme.TypeScale.small, weight: .bold))
+                .font(BovexaTheme.TypeStyle.subheadline.weight(.bold))
                 .foregroundStyle(active ? BovexaTheme.Colors.white : BovexaTheme.Colors.muted)
                 .padding(.horizontal, BovexaTheme.Space.md)
                 .frame(minHeight: 36)

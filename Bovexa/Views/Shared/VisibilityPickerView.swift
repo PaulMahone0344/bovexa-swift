@@ -18,7 +18,7 @@ struct VisibilityPickerView: View {
         GlassCard {
             VStack(alignment: .leading, spacing: BovexaTheme.Space.md) {
                 Text("Wie kan dit zien?")
-                    .font(.system(size: BovexaTheme.TypeScale.tiny, weight: .bold))
+                    .font(BovexaTheme.TypeStyle.caption.weight(.bold))
                     .foregroundStyle(BovexaTheme.Colors.accent)
                     .textCase(.uppercase)
                     .tracking(0.3)
@@ -35,13 +35,14 @@ struct VisibilityPickerView: View {
     private func segmentButton(_ segment: (value: String, label: String, icon: String)) -> some View {
         let active = value == segment.value
         return Button {
-            onChange(segment.value)
+            Haptics.selection()
+            withAnimation(.snappy) { onChange(segment.value) }
         } label: {
             HStack(spacing: 6) {
                 Image(systemName: segment.icon)
                     .font(.system(size: 14, weight: .medium))
                 Text(segment.label)
-                    .font(.system(size: BovexaTheme.TypeScale.small, weight: .bold))
+                    .font(BovexaTheme.TypeStyle.subheadline.weight(.bold))
                     .lineLimit(1)
                     .truncationMode(.tail)
             }

@@ -73,22 +73,17 @@ struct SearchView: View {
     private var resultsList: some View {
         let trimmed = viewModel.query.trimmingCharacters(in: .whitespacesAndNewlines)
         if trimmed.isEmpty {
-            Text("Typ om te zoeken in al je afspraken.")
-                .font(.system(size: BovexaTheme.TypeScale.small))
-                .foregroundStyle(BovexaTheme.Colors.muted)
-                .multilineTextAlignment(.center)
-                .padding(.top, BovexaTheme.Space.xxl)
+            EmptyStateView(systemImage: "magnifyingglass", text: "Typ om te zoeken in al je afspraken.")
+                .padding(.top, BovexaTheme.Space.xl)
         } else if viewModel.results.isEmpty {
-            Text("Niks gevonden voor \u{201C}\(trimmed)\u{201D}.")
-                .font(.system(size: BovexaTheme.TypeScale.small))
-                .foregroundStyle(BovexaTheme.Colors.muted)
-                .multilineTextAlignment(.center)
-                .padding(.top, BovexaTheme.Space.xxl)
+            EmptyStateView(systemImage: "magnifyingglass", text: "Niks gevonden voor \u{201C}\(trimmed)\u{201D}.")
+                .padding(.top, BovexaTheme.Space.xl)
         } else {
             ScrollView {
                 VStack(spacing: BovexaTheme.Space.sm) {
                     ForEach(viewModel.results) { event in
                         Button {
+                            Haptics.selection()
                             selectedEvent = event
                         } label: {
                             resultRow(event)
@@ -107,11 +102,11 @@ struct SearchView: View {
                     .frame(width: 9, height: 9)
                 VStack(alignment: .leading, spacing: 2) {
                     Text(event.title)
-                        .font(.system(size: BovexaTheme.TypeScale.small, weight: .bold))
+                        .font(BovexaTheme.TypeStyle.subheadline.weight(.bold))
                         .foregroundStyle(BovexaTheme.Colors.ink)
                         .lineLimit(1)
                     Text(metaText(event))
-                        .font(.system(size: BovexaTheme.TypeScale.tiny))
+                        .font(BovexaTheme.TypeStyle.caption)
                         .foregroundStyle(BovexaTheme.Colors.muted)
                 }
                 Spacer()

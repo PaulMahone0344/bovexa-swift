@@ -80,10 +80,7 @@ struct VandaagView: View {
                                         .tint(BovexaTheme.Colors.teal)
                                         .frame(maxWidth: .infinity, alignment: .center)
                                 } else if viewModel.todayEvents.isEmpty {
-                                    Text("Nog niks gepland vandaag…")
-                                        .font(BovexaTheme.TypeStyle.body)
-                                        .foregroundStyle(BovexaTheme.Colors.muted)
-                                        .frame(maxWidth: .infinity, alignment: .leading)
+                                    EmptyStateView(systemImage: "calendar", text: "Nog niks gepland vandaag…")
                                 } else if let userId = currentUser?.id {
                                     VStack(spacing: 0) {
                                         ForEach(viewModel.todayEvents) { event in

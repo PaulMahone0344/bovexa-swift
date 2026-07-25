@@ -57,19 +57,19 @@ struct YearOverviewView: View {
 
     private var yearHeader: some View {
         HStack(spacing: BovexaTheme.Space.xl) {
-            Button { viewModel.goToPreviousYear() } label: {
+            Button { withAnimation(.snappy) { viewModel.goToPreviousYear() } } label: {
                 Image(systemName: "chevron.left")
                     .font(.system(size: 22, weight: .semibold))
             }
             VStack(spacing: 2) {
                 Text(String(viewModel.year))
-                    .font(.system(size: BovexaTheme.TypeScale.h2, weight: .bold))
+                    .font(BovexaTheme.TypeStyle.title2)
                 Text("\(viewModel.totalDaysPlannedThisYear) dagen gepland")
-                    .font(.system(size: BovexaTheme.TypeScale.tiny, weight: .semibold))
+                    .font(BovexaTheme.TypeStyle.caption.weight(.semibold))
                     .foregroundStyle(BovexaTheme.Colors.muted)
             }
             .frame(minWidth: 120)
-            Button { viewModel.goToNextYear() } label: {
+            Button { withAnimation(.snappy) { viewModel.goToNextYear() } } label: {
                 Image(systemName: "chevron.right")
                     .font(.system(size: 22, weight: .semibold))
             }
@@ -119,7 +119,7 @@ private struct MiniMonthView: View {
     private var header: some View {
         HStack {
             Text(shortName)
-                .font(.system(size: BovexaTheme.TypeScale.small, weight: .bold))
+                .font(BovexaTheme.TypeStyle.subheadline.weight(.bold))
                 .foregroundStyle(isCurrentMonth ? BovexaTheme.Colors.accent : BovexaTheme.Colors.ink)
             Spacer()
             if count > 0 {
@@ -151,6 +151,7 @@ private struct MiniMonthView: View {
             let isToday = Self.isToday(year: year, month: month, day: day)
             let has = hasEvents(day)
             Button {
+                Haptics.selection()
                 onPick(day)
             } label: {
                 Text("\(day)")
