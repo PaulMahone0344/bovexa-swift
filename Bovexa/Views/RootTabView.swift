@@ -66,7 +66,7 @@ struct RootTabView: View {
             }
 
             Tab(BovexaTab.profiel.label, systemImage: BovexaTab.profiel.icon, value: .profiel) {
-                ProfielPlaceholderView()
+                ProfielView()
             }
         }
         .tint(BovexaTheme.Colors.teal)

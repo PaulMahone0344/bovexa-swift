@@ -192,4 +192,32 @@ struct AuthStoreTests {
         let success = await store.requestPasswordReset(email: "onbekend@b.nl")
         #expect(!success)
     }
+
+    // MARK: - Account verwijderen (valkuil I)
+
+    @Test func deleteAccountSendsDeleteThenSignsOut() async {
+        let tokenStore = InMemoryTokenStore()
+        tokenStore.save("tok")
+        URLProtocolStub.requestHandler = { request in
+            #expect(request.httpMethod == "DELETE")
+            #expect(request.url!.path == "/api/collections/agenda_users/records/u1")
+            return (204, Data())
+        }
+        let store = AuthStore(client: makeClient(), tokenStore: tokenStore)
+        // In loggedIn komen via een geslaagde signIn.
+        URLProtocolStub.requestHandler = { _ in
+            (200, """
+            {"token":"tok-1","record":{"id":"u1","email":"a@b.nl","naam":"Ibrahim"}}
+            """.data(using: .utf8)!)
+        }
+        await store.signIn(email: "a@b.nl", password: "geheim123")
+        URLProtocolStub.requestHandler = { request in
+            #expect(request.httpMethod == "DELETE")
+            #expect(request.url!.path == "/api/collections/agenda_users/records/u1")
+            return (204, Data())
+        }
+        try? await store.deleteAccount()
+        #expect(store.phase == .loggedOut(errorMessage: nil))
+        #expect(tokenStore.load() == nil)
+    }
 }

@@ -106,6 +106,13 @@ final class AuthStore: ObservableObject {
         }
     }
 
+    /// Valkuil I: onomkeerbaar. De view vraagt zelf om bevestiging vóórdat dit aangeroepen wordt.
+    func deleteAccount() async throws {
+        guard case .loggedIn(let user) = phase, let token else { return }
+        try await client.deleteAccount(id: user.id, token: token)
+        signOut()
+    }
+
     private static func dutchMessage(for error: Error) -> String {
         guard let pbError = error as? PBError else { return "Er ging iets mis. Probeer het opnieuw." }
         switch pbError {

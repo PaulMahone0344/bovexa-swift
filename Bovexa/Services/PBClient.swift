@@ -137,6 +137,12 @@ final class PBClient {
         return try await send(request)
     }
 
+    /// Valkuil I: verwijderen is onomkeerbaar — de server ruimt gekoppelde data
+    /// op via cascade, hier alleen de aanroep zelf.
+    func deleteAccount(id: String, token: String) async throws {
+        try await deleteRecord(collection: "agenda_users", id: id, token: token)
+    }
+
     func deleteRecord(collection: String, id: String, token: String) async throws {
         var request = URLRequest(url: baseURL.appendingPathComponent("/api/collections/\(collection)/records/\(id)"))
         request.httpMethod = "DELETE"

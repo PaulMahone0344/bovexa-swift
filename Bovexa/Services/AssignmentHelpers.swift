@@ -19,4 +19,9 @@ enum AssignmentHelpers {
         guard assignees.contains(userId) else { return nil }
         return statusMap[userId] ?? "pending"
     }
+
+    /// Aantal toewijzingen dat op jouw akkoord wacht (m6, Profiel-teller/-stip).
+    static func pendingCount(_ events: [AgendaEvent], userId: String) -> Int {
+        events.filter { assignmentStatus(assignees: $0.assignee, statusMap: $0.assigneeStatus, userId: userId) == "pending" }.count
+    }
 }

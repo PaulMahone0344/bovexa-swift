@@ -61,4 +61,29 @@ struct AssignmentHelpersTests {
         )
         #expect(status == "declined")
     }
+
+    // MARK: - pendingCount (m6, Profiel-teller)
+
+    private func event(id: String, assignee: [String], status: [String: String]) -> AgendaEvent {
+        AgendaEvent(
+            id: id, owner: "iemand-anders", calendar: nil, category: nil, title: "Afspraak",
+            start: Date(), end: nil, allDay: false, recurrence: nil, location: nil, notes: nil,
+            klantNaam: nil, assigneeStatus: status, seriesId: nil, occurrenceDate: nil,
+            assignee: assignee
+        )
+    }
+
+    @Test func pendingCountCountsOnlyPendingAssignmentsForUser() {
+        let events = [
+            event(id: "a", assignee: ["me"], status: [:]),
+            event(id: "b", assignee: ["me"], status: ["me": "accepted"]),
+            event(id: "c", assignee: ["me"], status: ["me": "declined"]),
+            event(id: "d", assignee: ["collega"], status: [:]),
+        ]
+        #expect(AssignmentHelpers.pendingCount(events, userId: "me") == 1)
+    }
+
+    @Test func pendingCountIsZeroWithoutAssignments() {
+        #expect(AssignmentHelpers.pendingCount([], userId: "me") == 0)
+    }
 }
