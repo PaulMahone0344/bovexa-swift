@@ -12,7 +12,7 @@ struct MonthDayCellView: View {
         Button(action: onTap) {
             VStack(spacing: 4) {
                 Text("\(Calendar.current.component(.day, from: cell.date))")
-                    .font(.system(size: BovexaTheme.TypeScale.small, weight: cell.isToday ? .bold : .regular))
+                    .font(BovexaTheme.TypeStyle.footnote.weight(cell.isToday ? .bold : .regular))
                     .foregroundStyle(textColor)
                     .frame(width: 22, height: 22)
                     .background(cell.isToday ? BovexaTheme.Colors.teal : Color.clear)

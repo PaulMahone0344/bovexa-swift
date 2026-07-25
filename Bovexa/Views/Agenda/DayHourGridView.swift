@@ -44,15 +44,15 @@ struct DayHourGridView: View {
             HStack(spacing: BovexaTheme.Space.xs) {
                 ForEach(allDayEvents) { event in
                     Button {
+                        Haptics.selection()
                         onSelectEvent(event)
                     } label: {
                         Text(event.title)
-                            .font(.system(size: BovexaTheme.TypeScale.small, weight: .medium))
+                            .font(BovexaTheme.TypeStyle.footnote.weight(.medium))
                             .foregroundStyle(BovexaTheme.Colors.ink)
                             .padding(.horizontal, BovexaTheme.Space.sm)
                             .padding(.vertical, 4)
-                            .background(EventHelpers.eventColor(event).opacity(0.28))
-                            .clipShape(Capsule())
+                            .glassEffect(.regular.tint(EventHelpers.eventColor(event).opacity(0.35)), in: .capsule)
                     }
                     .buttonStyle(.plain)
                 }
@@ -90,6 +90,7 @@ struct DayHourGridView: View {
             let columnWidth = safeWidth / CGFloat(item.columnCount)
 
             Button {
+                Haptics.selection()
                 onSelectEvent(item.event)
             } label: {
                 EventBlockView(event: item.event, currentUserId: currentUserId, memberColors: memberColors)
@@ -127,7 +128,10 @@ private struct EventBlockView: View {
         .foregroundStyle(BovexaTheme.Colors.ink)
         .padding(4)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-        .background(EventHelpers.eventColor(event).opacity(0.28))
+        .glassEffect(
+            .regular.tint(EventHelpers.eventColor(event).opacity(0.35)),
+            in: RoundedRectangle(cornerRadius: 6, style: .continuous)
+        )
         .overlay(
             RoundedRectangle(cornerRadius: 6, style: .continuous)
                 .strokeBorder(
@@ -135,6 +139,5 @@ private struct EventBlockView: View {
                     lineWidth: isColleague ? 2 : 1
                 )
         )
-        .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
     }
 }

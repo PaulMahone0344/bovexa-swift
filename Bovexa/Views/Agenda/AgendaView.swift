@@ -49,16 +49,40 @@ struct AgendaView: View {
             ZStack {
                 AppBackground()
 
-                VStack(spacing: BovexaTheme.Space.lg) {
-                    header
-
-                    if viewModel.viewKind == .lijst, let userId = currentUser?.id {
-                        AgendaListView(viewModel: viewModel, currentUserId: userId, now: Date.init, selectedEvent: $selectedEvent)
-                    } else {
-                        ScrollView {
-                            MonthGridView(viewModel: viewModel, onYearTap: { showYearOverview = true })
-                                .padding(BovexaTheme.Space.xl)
+                if viewModel.viewKind == .lijst, let userId = currentUser?.id {
+                    AgendaListView(viewModel: viewModel, currentUserId: userId, now: Date.init, selectedEvent: $selectedEvent)
+                } else {
+                    ScrollView {
+                        MonthGridView(viewModel: viewModel, onYearTap: { showYearOverview = true })
+                            .padding(BovexaTheme.Space.xl)
+                    }
+                }
+            }
+            .navigationTitle("Agenda")
+            .navigationBarTitleDisplayMode(.large)
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button {
+                        showSearch = true
+                    } label: {
+                        Image(systemName: "magnifyingglass")
+                    }
+                }
+                ToolbarItem(placement: .topBarTrailing) {
+                    Menu {
+                        ForEach(AgendaViewKind.allCases.filter { $0 != .dag }, id: \.self) { kind in
+                            Button {
+                                withAnimation(.snappy) { viewModel.setViewKind(kind) }
+                            } label: {
+                                if viewModel.viewKind == kind {
+                                    Label(kind.label, systemImage: "checkmark")
+                                } else {
+                                    Text(kind.label)
+                                }
+                            }
                         }
+                    } label: {
+                        Image(systemName: "square.3.layers.3d")
                     }
                 }
             }
@@ -87,45 +111,6 @@ struct AgendaView: View {
                 }
             }
         }
-    }
-
-    private var header: some View {
-        HStack {
-            Text("Agenda")
-                .font(.system(size: BovexaTheme.TypeScale.h2, weight: .bold))
-                .foregroundStyle(BovexaTheme.Colors.ink)
-
-            Spacer()
-
-            Button {
-                showSearch = true
-            } label: {
-                Image(systemName: "magnifyingglass")
-                    .font(.system(size: 20, weight: .medium))
-                    .foregroundStyle(BovexaTheme.Colors.ink)
-            }
-            .padding(.trailing, BovexaTheme.Space.md)
-
-            Menu {
-                ForEach(AgendaViewKind.allCases.filter { $0 != .dag }, id: \.self) { kind in
-                    Button {
-                        viewModel.setViewKind(kind)
-                    } label: {
-                        if viewModel.viewKind == kind {
-                            Label(kind.label, systemImage: "checkmark")
-                        } else {
-                            Text(kind.label)
-                        }
-                    }
-                }
-            } label: {
-                Image(systemName: "square.3.layers.3d")
-                    .font(.system(size: 20, weight: .medium))
-                    .foregroundStyle(BovexaTheme.Colors.ink)
-            }
-        }
-        .padding(.horizontal, BovexaTheme.Space.xl)
-        .padding(.top, BovexaTheme.Space.lg)
     }
 
     private func refresh() async {

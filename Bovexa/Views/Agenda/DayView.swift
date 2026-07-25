@@ -67,14 +67,15 @@ struct DayView: View {
                 viewModel.backToMonth()
             } label: {
                 Label(monthAbbreviation, systemImage: "chevron.left")
-                    .font(.system(size: BovexaTheme.TypeScale.small, weight: .semibold))
+                    .font(BovexaTheme.TypeStyle.footnote.weight(.semibold))
             }
-            .foregroundStyle(BovexaTheme.Colors.accent)
+            .buttonStyle(.glassSecondaryBrand)
+            .tint(BovexaTheme.Colors.accent)
 
             Spacer()
 
             Text(EventHelpers.longDay(scrollDay ?? viewModel.dayViewFocusDate))
-                .font(.system(size: BovexaTheme.TypeScale.small, weight: .medium))
+                .font(BovexaTheme.TypeStyle.subheadline)
                 .foregroundStyle(BovexaTheme.Colors.muted)
         }
         .padding(.horizontal, BovexaTheme.Space.lg)

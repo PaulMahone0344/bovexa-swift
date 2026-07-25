@@ -18,17 +18,17 @@ struct DaySheetView: View {
                 VStack(spacing: BovexaTheme.Space.lg) {
                     HStack {
                         Text(EventHelpers.longDay(day))
-                            .font(.system(size: BovexaTheme.TypeScale.title, weight: .semibold))
+                            .font(BovexaTheme.TypeStyle.headline)
                             .foregroundStyle(BovexaTheme.Colors.ink)
                         Spacer()
                         Button("Open dag", action: onOpenDay)
-                            .font(.system(size: BovexaTheme.TypeScale.small, weight: .semibold))
+                            .font(BovexaTheme.TypeStyle.footnote.weight(.semibold))
                             .foregroundStyle(BovexaTheme.Colors.accent)
                     }
 
                     if events.isEmpty {
                         Text("Geen afspraken.")
-                            .font(.system(size: BovexaTheme.TypeScale.body))
+                            .font(BovexaTheme.TypeStyle.body)
                             .foregroundStyle(BovexaTheme.Colors.muted)
                             .frame(maxWidth: .infinity, alignment: .leading)
                         Spacer()
@@ -38,6 +38,7 @@ struct DaySheetView: View {
                                 VStack(spacing: 0) {
                                     ForEach(events.sorted { $0.start < $1.start }) { event in
                                         Button {
+                                            Haptics.selection()
                                             onSelectEvent(event)
                                         } label: {
                                             AppointmentRow(event: event, currentUserId: currentUserId, memberColors: memberColors)
@@ -45,7 +46,7 @@ struct DaySheetView: View {
                                         .buttonStyle(.plain)
 
                                         if event.id != events.last?.id {
-                                            Divider().overlay(BovexaTheme.Colors.edge)
+                                            Divider().overlay(BovexaTheme.Colors.edgeSoft)
                                         }
                                     }
                                 }

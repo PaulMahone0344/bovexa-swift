@@ -19,20 +19,21 @@ struct AgendaListView: View {
                         .padding(.top, BovexaTheme.Space.xxl)
                 } else if groups.isEmpty {
                     Text("Geen komende afspraken.")
-                        .font(.system(size: BovexaTheme.TypeScale.body))
+                        .font(BovexaTheme.TypeStyle.body)
                         .foregroundStyle(BovexaTheme.Colors.muted)
                         .frame(maxWidth: .infinity, alignment: .leading)
                 } else {
                     ForEach(groups) { group in
                         VStack(alignment: .leading, spacing: BovexaTheme.Space.sm) {
                             Text(EventHelpers.longDay(group.day))
-                                .font(.system(size: BovexaTheme.TypeScale.title, weight: .semibold))
+                                .font(BovexaTheme.TypeStyle.headline)
                                 .foregroundStyle(BovexaTheme.Colors.ink)
 
                             GlassCard {
                                 VStack(spacing: 0) {
                                     ForEach(group.events) { event in
                                         Button {
+                                            Haptics.selection()
                                             selectedEvent = event
                                         } label: {
                                             AppointmentRow(event: event, currentUserId: currentUserId, memberColors: viewModel.memberColors)
@@ -40,7 +41,7 @@ struct AgendaListView: View {
                                         .buttonStyle(.plain)
 
                                         if event.id != group.events.last?.id {
-                                            Divider().overlay(BovexaTheme.Colors.edge)
+                                            Divider().overlay(BovexaTheme.Colors.edgeSoft)
                                         }
                                     }
                                 }

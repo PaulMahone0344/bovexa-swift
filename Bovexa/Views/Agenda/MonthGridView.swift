@@ -16,7 +16,7 @@ struct MonthGridView: View {
             HStack(spacing: 2) {
                 ForEach(weekdayLabels, id: \.self) { label in
                     Text(label)
-                        .font(.system(size: BovexaTheme.TypeScale.tiny, weight: .medium))
+                        .font(BovexaTheme.TypeStyle.caption.weight(.medium))
                         .foregroundStyle(BovexaTheme.Colors.muted)
                         .frame(maxWidth: .infinity)
                 }
@@ -28,17 +28,21 @@ struct MonthGridView: View {
                         cell: cell,
                         events: viewModel.eventsOnDay(cell.date),
                         density: viewModel.viewKind,
-                        onTap: { viewModel.openDaySheet(cell.date) }
+                        onTap: {
+                            Haptics.selection()
+                            viewModel.openDaySheet(cell.date)
+                        }
                     )
                 }
             }
+            .animation(.snappy, value: viewModel.displayedMonth)
             .gesture(
                 DragGesture(minimumDistance: 30)
                     .onEnded { value in
                         if value.translation.width < -40 {
-                            viewModel.goToNextMonth()
+                            withAnimation(.snappy) { viewModel.goToNextMonth() }
                         } else if value.translation.width > 40 {
-                            viewModel.goToPreviousMonth()
+                            withAnimation(.snappy) { viewModel.goToPreviousMonth() }
                         }
                     }
             )
@@ -48,7 +52,7 @@ struct MonthGridView: View {
     private var monthHeader: some View {
         HStack {
             Button {
-                viewModel.goToPreviousMonth()
+                withAnimation(.snappy) { viewModel.goToPreviousMonth() }
             } label: {
                 Image(systemName: "chevron.left")
             }
@@ -61,13 +65,13 @@ struct MonthGridView: View {
                     Text(yearText).underline()
                 }
             }
-            .font(.system(size: BovexaTheme.TypeScale.title, weight: .semibold))
+            .font(BovexaTheme.TypeStyle.headline)
             .foregroundStyle(BovexaTheme.Colors.ink)
 
             Spacer()
 
             Button {
-                viewModel.goToNextMonth()
+                withAnimation(.snappy) { viewModel.goToNextMonth() }
             } label: {
                 Image(systemName: "chevron.right")
             }
