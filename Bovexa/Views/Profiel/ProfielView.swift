@@ -1,9 +1,8 @@
 import SwiftUI
 
 /// Profiel-tab: begroeting, gebruikerskaart en navigatierijen. Vervangt
-/// `ProfielPlaceholderView`. Mijn klanten wijst nog naar een placeholder
-/// (`ComingSoonView`) tot plak 6. Meldingen, Profiel bewerken, wachtwoord
-/// wijzigen en account verwijderen zijn al echt.
+/// `ProfielPlaceholderView`. Alle rijen zijn echt: Meldingen, Mijn klanten,
+/// Profiel bewerken, wachtwoord wijzigen en account verwijderen.
 struct ProfielView: View {
     @EnvironmentObject private var authStore: AuthStore
     @StateObject private var viewModel = ProfielViewModel()
@@ -145,7 +144,9 @@ struct ProfielView: View {
             }
         }
         .sheet(isPresented: $showKlanten) {
-            ComingSoonView(title: "Mijn klanten")
+            if let user = currentUser {
+                KlantenView(userId: user.id, orgId: user.defaultOrg, token: authStore.token ?? "")
+            }
         }
         .sheet(isPresented: $showProfielBewerken) {
             if let user = currentUser {
