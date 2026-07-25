@@ -3,11 +3,18 @@ import Foundation
 /// Netwerk-stub voor tests: geen enkel verzoek verlaat het toestel.
 final class URLProtocolStub: URLProtocol {
     static var requestHandler: ((URLRequest) -> (Int, Data))?
+    /// Voor het testen van netwerk-foutpaden (timeout, geen verbinding) zonder een
+    /// echte (trage) request — geeft voorrang boven `requestHandler`.
+    static var errorHandler: ((URLRequest) -> Error)?
 
     override class func canInit(with request: URLRequest) -> Bool { true }
     override class func canonicalRequest(for request: URLRequest) -> URLRequest { request }
 
     override func startLoading() {
+        if let errorHandler = URLProtocolStub.errorHandler {
+            client?.urlProtocol(self, didFailWithError: errorHandler(request))
+            return
+        }
         guard let handler = URLProtocolStub.requestHandler else {
             client?.urlProtocol(self, didFailWithError: URLError(.badURL))
             return
