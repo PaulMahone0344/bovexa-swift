@@ -228,7 +228,7 @@ final class PlannerViewModel: ObservableObject {
                     appointment: appointment, ownerId: userId, rawInput: rawInput.isEmpty ? appointment.title : rawInput,
                     org: org, visibility: visibility, viewers: viewers, assignees: effectiveAssignees, reminderMin: reminderMin
                 )
-                let created = try await repository.createEvent(payload: payload, token: token)
+                let created = try await repository.createEvent(body: payload.requestBody, token: token)
                 if reminderMin > 0 {
                     await reminderService.schedule(eventId: created.id, title: created.title, start: created.start, minutesBefore: reminderMin)
                 }

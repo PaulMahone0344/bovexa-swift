@@ -37,9 +37,11 @@ final class EventRepository {
 
     private static let collection = "agenda_events"
 
-    /// AI-planner: creëer een afspraak uit een bevestigd voorstel (valkuil A).
-    func createEvent(payload: AppointmentCreatePayload, token: String) async throws -> AgendaEvent {
-        try await client.createRecord(AgendaEvent.self, collection: Self.collection, body: payload.requestBody, token: token)
+    /// Creëer een event uit een kant-en-klare payload-body — gebruikt door zowel
+    /// AppointmentCreatePayload (AI-planner, valkuil A) als AfwezigCreatePayload
+    /// (valkuil I), die elk hun eigen requestBody bouwen.
+    func createEvent(body: [String: Any], token: String) async throws -> AgendaEvent {
+        try await client.createRecord(AgendaEvent.self, collection: Self.collection, body: body, token: token)
     }
 
     /// Valkuil E: payload bevat exact de toegestane velden, nooit "source".

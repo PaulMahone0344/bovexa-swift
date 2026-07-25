@@ -1,9 +1,17 @@
 import SwiftUI
 
 /// Profiel-placeholder met de tijdelijke uitlog-knop (plan plak 2: anders kom je
-/// nooit meer uit een account tot het echte Profiel-scherm er is).
+/// nooit meer uit een account tot het echte Profiel-scherm er is). Plak 5 voegt de
+/// rij "Beschikbaarheid doorgeven" toe — de rest van Profiel blijft placeholder tot
+/// milestone 6.
 struct ProfielPlaceholderView: View {
     @EnvironmentObject private var authStore: AuthStore
+    @State private var showAfwezig = false
+
+    private var currentUser: AgendaUser? {
+        if case .loggedIn(let user) = authStore.phase { return user }
+        return nil
+    }
 
     var body: some View {
         ZStack {
@@ -20,6 +28,23 @@ struct ProfielPlaceholderView: View {
                     }
                 }
 
+                Button {
+                    Haptics.selection()
+                    showAfwezig = true
+                } label: {
+                    HStack {
+                        Text("Beschikbaarheid doorgeven")
+                        Spacer()
+                        Image(systemName: "chevron.right")
+                    }
+                }
+                .font(.system(size: BovexaTheme.TypeScale.body, weight: .semibold))
+                .foregroundStyle(BovexaTheme.Colors.ink)
+                .padding(.vertical, BovexaTheme.Space.sm)
+                .padding(.horizontal, BovexaTheme.Space.xl)
+                .background(BovexaTheme.Colors.glassSoft)
+                .clipShape(RoundedRectangle(cornerRadius: BovexaTheme.Radius.pill, style: .continuous))
+
                 Button("Uitloggen") {
                     authStore.signOut()
                 }
@@ -31,6 +56,11 @@ struct ProfielPlaceholderView: View {
                 .clipShape(RoundedRectangle(cornerRadius: BovexaTheme.Radius.pill, style: .continuous))
             }
             .padding(BovexaTheme.Space.xl)
+        }
+        .sheet(isPresented: $showAfwezig) {
+            if let user = currentUser {
+                AfwezigView(userId: user.id, org: user.defaultOrg, token: authStore.token ?? "")
+            }
         }
     }
 }
