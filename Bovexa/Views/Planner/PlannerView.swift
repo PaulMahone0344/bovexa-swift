@@ -2,14 +2,17 @@ import SwiftUI
 
 /// AI-planner chatscherm — geport uit planner.tsx. Startkaart met voorbeeld-chips,
 /// chat-thread, quick-reply-chips, concept-kaarten, "Even kijken…", "Opnieuw proberen",
-/// reset. Bevestig-blok (visibility/toewijzen/herinnering/"Zet in agenda") komt in
-/// plak 3; mic-knop in plak 4 — de composer hieronder is voorlopig tekst-only.
+/// reset, en het bevestig-blok (zichtbaarheid/toewijzen/herinnering/"Zet in agenda").
+/// Mic-knop komt in plak 4 — de composer hieronder is voorlopig tekst-only.
 struct PlannerView: View {
     @StateObject private var viewModel: PlannerViewModel
+    @ObservedObject var memberColors: MemberColors
     @Environment(\.dismiss) private var dismiss
     @State private var input = ""
 
+    private let hasOrg: Bool
     private let seed: String?
+    private let onConfirmed: (Date) -> Void
 
     private static let examples = [
         "Morgen 15:00 tandarts",
@@ -17,9 +20,19 @@ struct PlannerView: View {
         "Volgende week lunch met Oby",
     ]
 
-    init(userId: String, token: String, seed: String? = nil) {
-        _viewModel = StateObject(wrappedValue: PlannerViewModel(userId: userId, token: token))
+    init(
+        userId: String, token: String, org: String?, memberColors: MemberColors,
+        seed: String? = nil, onConfirmed: @escaping (Date) -> Void = { _ in }
+    ) {
+        _viewModel = StateObject(wrappedValue: PlannerViewModel(userId: userId, token: token, org: org))
+        self.memberColors = memberColors
+        self.hasOrg = org != nil
         self.seed = seed
+        self.onConfirmed = onConfirmed
+    }
+
+    private var overlapPresented: Binding<Bool> {
+        Binding(get: { viewModel.overlapEvent != nil }, set: { if !$0 { viewModel.cancelOverlap() } })
     }
 
     var body: some View {
@@ -34,6 +47,9 @@ struct PlannerView: View {
                                     startCard
                                 }
                                 threadContent
+                                if viewModel.ready != nil {
+                                    confirmBlock
+                                }
                             }
                             .padding(BovexaTheme.Space.xl)
                         }
@@ -68,11 +84,33 @@ struct PlannerView: View {
                     }
                 }
             }
+            .alert("Dubbele boeking", isPresented: overlapPresented) {
+                Button("Aanpassen", role: .cancel) { viewModel.cancelOverlap() }
+                Button("Toch plannen") {
+                    Task { await viewModel.proceedPastOverlap() }
+                }
+            } message: {
+                if let overlap = viewModel.overlapEvent {
+                    Text("Je staat al \(EventHelpers.fmtTime(overlap.start))–\(EventHelpers.fmtTime(overlap.end)) op \"\(overlap.title)\". Toch plannen?")
+                }
+            }
+            .alert("Mislukt", isPresented: $viewModel.saveFailedAlert) {
+                Button("Oké", role: .cancel) {}
+            } message: {
+                Text("Kon de afspraak niet opslaan. Probeer het nog een keer.")
+            }
         }
         .task {
             viewModel.hydrate()
             if let seed, !seed.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty, viewModel.thread.isEmpty {
                 await viewModel.sendText(seed)
+            }
+        }
+        .onChange(of: viewModel.confirmedDate) { _, date in
+            if let date {
+                Haptics.success()
+                onConfirmed(date)
+                dismiss()
             }
         }
     }
@@ -187,6 +225,47 @@ struct PlannerView: View {
         }
     }
 
+    @ViewBuilder
+    private var confirmBlock: some View {
+        VStack(alignment: .leading, spacing: BovexaTheme.Space.md) {
+            if hasOrg {
+                VisibilityPickerView(value: viewModel.visibility, companyName: memberColors.orgName ?? "Bedrijf") { value in
+                    viewModel.visibility = value
+                }
+
+                GlassCard {
+                    VStack(alignment: .leading, spacing: BovexaTheme.Space.sm) {
+                        Text("TOEGEWEZEN AAN")
+                            .font(BovexaTheme.TypeStyle.caption.weight(.bold))
+                            .foregroundStyle(BovexaTheme.Colors.accent)
+                            .tracking(0.3)
+                        AssigneePickerView(members: memberColors.members, currentUserId: viewModel.ownerId, selectedIds: $viewModel.assignee)
+                        if viewModel.visibility == "private" && !viewModel.assignee.isEmpty {
+                            Text("Privé betekent nu: alleen jij + toegewezenen.")
+                                .font(BovexaTheme.TypeStyle.caption)
+                                .foregroundStyle(BovexaTheme.Colors.muted)
+                        }
+                    }
+                }
+            }
+
+            ReminderChipsView(minutesBefore: $viewModel.reminderMin)
+
+            Button {
+                Task { await viewModel.confirm() }
+            } label: {
+                if viewModel.saving {
+                    ProgressView().tint(BovexaTheme.Colors.white)
+                } else {
+                    Text("Zet in agenda")
+                }
+            }
+            .buttonStyle(.glassProminentBrand)
+            .frame(maxWidth: .infinity)
+            .disabled(viewModel.saving)
+        }
+    }
+
     private var composer: some View {
         HStack(alignment: .bottom, spacing: BovexaTheme.Space.sm) {
             TextField("Typ je bericht…", text: $input, axis: .vertical)
@@ -227,5 +306,5 @@ struct PlannerView: View {
 }
 
 #Preview {
-    PlannerView(userId: "u1", token: "tok")
+    PlannerView(userId: "u1", token: "tok", org: "org1", memberColors: MemberColors())
 }

@@ -49,7 +49,11 @@ struct AgendaView: View {
         }
         .sheet(isPresented: $showPlanner) {
             if let userId = currentUser?.id {
-                PlannerView(userId: userId, token: authStore.token ?? "", seed: plannerSeed)
+                PlannerView(
+                    userId: userId, token: authStore.token ?? "", org: currentUser?.defaultOrg,
+                    memberColors: viewModel.memberColors, seed: plannerSeed,
+                    onConfirmed: { date in viewModel.openDayView(date) }
+                )
             }
         }
     }

@@ -1,19 +1,40 @@
 import Foundation
 
-/// Gespreks-state voor de AI-planner — geport uit useAiPlanner.ts (chatdeel; het
-/// bevestig-blok/confirm() komt in plak 3). Stuurt elke beurt de volledige historie
-/// naar de backend en mapt het antwoord naar een chat-thread. De thread overleeft
-/// het scherm: hydrate/persist via PlannerThreadStore, gedebouncet (valkuil F).
+/// Gespreks- en bevestig-state voor de AI-planner — geport uit useAiPlanner.ts. Stuurt
+/// elke beurt de volledige historie naar de backend en mapt het antwoord naar een
+/// chat-thread. De thread overleeft het scherm: hydrate/persist via PlannerThreadStore,
+/// gedebouncet (valkuil F). confirm() doet de dubbele-boeking-check (valkuil G),
+/// creëert de voorstellen (valkuilen A/C/D/E), plant herinneringen en synct optioneel
+/// naar de iPhone Agenda (valkuil H).
 @MainActor
 final class PlannerViewModel: ObservableObject {
     @Published private(set) var thread: [ThreadItem] = []
     @Published private(set) var loading = false
     @Published private(set) var ready: [ProposedAppointment]?
 
+    /// Zichtbaarheid bij bevestigen (alleen relevant met een org): "private"/"company".
+    @Published var visibility = "private"
+    @Published var viewers: [String] = []
+    @Published var reminderMin = 0
+    @Published var assignee: [String] = []
+
+    @Published private(set) var saving = false
+    /// Niet-nil ⇒ caller toont "Dubbele boeking"-alert; proceedPastOverlap() gaat door,
+    /// cancelOverlap() breekt de hele bevestiging af.
+    @Published var overlapEvent: AgendaEvent?
+    @Published var saveFailedAlert = false
+    /// Datum van het eerste voorstel ná een geslaagde bevestiging — de caller
+    /// navigeert hierop terug naar Agenda en dismisst het scherm.
+    @Published private(set) var confirmedDate: Date?
+
     private let userId: String
     private let token: String
+    private let org: String?
     private let api: PlannerAPI
     private let store: PlannerThreadStore
+    private let repository: EventRepository
+    private let reminderService: ReminderService
+    private let deviceCalendarService: DeviceCalendarService
     private let saveDebounceNanoseconds: UInt64
 
     private var apiHistory: [ChatTurn] = []
@@ -22,14 +43,26 @@ final class PlannerViewModel: ObservableObject {
     private var saveTask: Task<Void, Never>?
     private var hydrated = false
 
+    private var ownEvents: [AgendaEvent] = []
+    private var overlapCheckIndex = 0
+
+    /// Voor AssigneePickerView ("jezelf" wordt niet als optie getoond).
+    var ownerId: String { userId }
+
     init(
-        userId: String, token: String, api: PlannerAPI = PlannerAPI(),
-        store: PlannerThreadStore = PlannerThreadStore(), saveDebounceNanoseconds: UInt64 = 300_000_000
+        userId: String, token: String, org: String? = nil, api: PlannerAPI = PlannerAPI(),
+        store: PlannerThreadStore = PlannerThreadStore(), repository: EventRepository = EventRepository(),
+        reminderService: ReminderService = ReminderService(), deviceCalendarService: DeviceCalendarService = DeviceCalendarService(),
+        saveDebounceNanoseconds: UInt64 = 300_000_000
     ) {
         self.userId = userId
         self.token = token
+        self.org = org
         self.api = api
         self.store = store
+        self.repository = repository
+        self.reminderService = reminderService
+        self.deviceCalendarService = deviceCalendarService
         self.saveDebounceNanoseconds = saveDebounceNanoseconds
     }
 
@@ -50,6 +83,7 @@ final class PlannerViewModel: ObservableObject {
         // Alleen weer bevestigbaar als het gesprek op een voorstel eindigde.
         if let last = saved.thread.last, last.kind == .proposal {
             ready = last.appointments
+            visibility = Self.defaultVisibility(for: last.appointments)
         }
     }
 
@@ -87,6 +121,13 @@ final class PlannerViewModel: ObservableObject {
         idCounter = 0
         saveTask?.cancel()
         store.clear(userId: userId)
+        visibility = "private"
+        viewers = []
+        reminderMin = 0
+        assignee = []
+        overlapEvent = nil
+        overlapCheckIndex = 0
+        ownEvents = []
     }
 
     private func callPlanner() async {
@@ -102,6 +143,7 @@ final class PlannerViewModel: ObservableObject {
             } else {
                 thread.append(ThreadItem(id: nextId(), kind: .proposal, text: plan.message, appointments: plan.appointments))
                 ready = plan.appointments
+                visibility = Self.defaultVisibility(for: plan.appointments)
             }
         } catch {
             // Geen assistant-beurt toevoegen → retry verstuurt dezelfde historie opnieuw.
@@ -126,5 +168,79 @@ final class PlannerViewModel: ObservableObject {
             return
         }
         store.save(SavedConversation(thread: thread, api: apiHistory, raw: rawInput), userId: userId)
+    }
+
+    /// Valkuil C: standaard-zichtbaarheid volgt de AI-categorie (work/focus → Bedrijf,
+    /// anders Privé); de gebruiker kan het in de VisibilityPickerView omzetten.
+    private static func defaultVisibility(for appointments: [ProposedAppointment]) -> String {
+        appointments.contains { $0.category == .work || $0.category == .focus } ? "company" : "private"
+    }
+
+    // MARK: - Bevestigen (plak 3)
+
+    /// "Zet in agenda". Valkuil G: eerst alle voorstellen checken op een dubbele
+    /// boeking (één voor één, met een alert per overlap) vóórdat er iets wordt
+    /// aangemaakt — bevestigt de gebruiker "Aanpassen", dan breekt dit hele proces af.
+    func confirm() async {
+        guard let ready, !ready.isEmpty, !saving else { return }
+        saving = true
+        ownEvents = (try? await repository.fetchOwnEvents(userId: userId, token: token)) ?? []
+        overlapCheckIndex = 0
+        await checkNextOverlap(ready)
+    }
+
+    /// "Toch plannen" op de dubbele-boeking-alert.
+    func proceedPastOverlap() async {
+        guard let ready else { return }
+        overlapEvent = nil
+        saving = true
+        overlapCheckIndex += 1
+        await checkNextOverlap(ready)
+    }
+
+    /// "Aanpassen" op de dubbele-boeking-alert — hele bevestiging afbreken, gesprek blijft staan.
+    func cancelOverlap() {
+        overlapEvent = nil
+        overlapCheckIndex = 0
+        ownEvents = []
+        saving = false
+    }
+
+    private func checkNextOverlap(_ appointments: [ProposedAppointment]) async {
+        while overlapCheckIndex < appointments.count {
+            let appointment = appointments[overlapCheckIndex]
+            let range = AppointmentRange.range(for: appointment)
+            if let overlap = EventOverlap.findOverlap(in: ownEvents, start: range.start, end: range.end) {
+                overlapEvent = overlap
+                saving = false // pauzeert op de alert — geen laadstaat terwijl op de gebruiker wordt gewacht
+                return
+            }
+            overlapCheckIndex += 1
+        }
+        await createAll(appointments)
+    }
+
+    private func createAll(_ appointments: [ProposedAppointment]) async {
+        let effectiveAssignees = org != nil ? assignee : []
+        do {
+            for appointment in appointments {
+                let payload = AppointmentPayloadBuilder.build(
+                    appointment: appointment, ownerId: userId, rawInput: rawInput.isEmpty ? appointment.title : rawInput,
+                    org: org, visibility: visibility, viewers: viewers, assignees: effectiveAssignees, reminderMin: reminderMin
+                )
+                let created = try await repository.createEvent(payload: payload, token: token)
+                if reminderMin > 0 {
+                    await reminderService.schedule(eventId: created.id, title: created.title, start: created.start, minutesBefore: reminderMin)
+                }
+                await deviceCalendarService.sync(appointment)
+            }
+            let firstDate = AppointmentRange.composeDate(date: appointments[0].date, time: appointments[0].start)
+            reset()
+            saving = false
+            confirmedDate = firstDate
+        } catch {
+            saving = false
+            saveFailedAlert = true
+        }
     }
 }

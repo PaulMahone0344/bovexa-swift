@@ -16,6 +16,7 @@ targets:
         CFBundleIdentifier: com.bovexa.flow-native
         UILaunchScreen: {}
         UISupportedInterfaceOrientations: [UIInterfaceOrientationPortrait]
+        NSCalendarsWriteOnlyAccessUsageDescription: Bovexa Flow kan nieuwe afspraken ook in je iPhone Agenda zetten.
     settings:
       base:
         SWIFT_VERSION: "5.0"

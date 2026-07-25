@@ -69,6 +69,17 @@ final class PBClient {
         return try await send(request)
     }
 
+    /// POST een nieuwe record — body is een los JSON-object (zie AppointmentCreatePayload),
+    /// dus JSONSerialization i.p.v. JSONEncoder.
+    func createRecord<T: Decodable>(_ type: T.Type, collection: String, body: [String: Any], token: String) async throws -> T {
+        var request = URLRequest(url: baseURL.appendingPathComponent("/api/collections/\(collection)/records"))
+        request.httpMethod = "POST"
+        request.setValue(token, forHTTPHeaderField: "Authorization")
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.httpBody = try JSONSerialization.data(withJSONObject: body)
+        return try await send(request)
+    }
+
     /// PATCH op een losse record — body is een los JSON-object (geen uniform Encodable-type,
     /// zie EventUpdatePayload), dus JSONSerialization i.p.v. JSONEncoder.
     func updateRecord<T: Decodable>(_ type: T.Type, collection: String, id: String, body: [String: Any], token: String) async throws -> T {
