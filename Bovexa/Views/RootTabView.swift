@@ -34,8 +34,8 @@ enum BovexaTab: String, CaseIterable, Identifiable {
     }
 }
 
-/// Tabbalk met 5 tabs. Vandaag/Agenda krijgen hun echte scherm in plak 4/5;
-/// Dagtaken/Bedrijf/Profiel tonen tot latere milestones een "Komt binnenkort".
+/// Tabbalk met 5 tabs. Vandaag/Agenda/Dagtaken hebben hun echte scherm;
+/// Bedrijf/Profiel tonen tot latere milestones een "Komt binnenkort".
 /// v2 (Liquid Glass restyle): native `TabView` met de nieuwe `Tab(_:systemImage:)`-
 /// syntax i.p.v. de custom `FloatingTabBar` — dat geeft systeemeigen glas-chrome
 /// en ondersteunt `.tabBarMinimizeBehavior`. Zie DESIGN-NOTES.md.
@@ -56,7 +56,7 @@ struct RootTabView: View {
             }
 
             Tab(BovexaTab.dagtaken.label, systemImage: BovexaTab.dagtaken.icon, value: .dagtaken) {
-                ComingSoonView(title: "Dagtaken")
+                DagtakenView()
             }
 
             Tab(BovexaTab.bedrijf.label, systemImage: BovexaTab.bedrijf.icon, value: .bedrijf) {
