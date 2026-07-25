@@ -5,7 +5,7 @@ import SwiftUI
 /// witte glaskaarten, teal accent (geen losse hexcodes buiten dit bestand).
 enum BovexaTheme {
 
-    enum Category: String, CaseIterable, Decodable {
+    enum Category: String, CaseIterable, Codable {
         case focus, work, social, body, afwezig
     }
 

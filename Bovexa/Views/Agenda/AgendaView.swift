@@ -6,6 +6,9 @@ struct AgendaView: View {
     @State private var selectedEvent: AgendaEvent?
     @State private var showSearch = false
     @State private var showYearOverview = false
+    @State private var pillText = ""
+    @State private var plannerSeed: String?
+    @State private var showPlanner = false
 
     private var currentUser: AgendaUser? {
         if case .loggedIn(let user) = authStore.phase { return user }
@@ -19,6 +22,9 @@ struct AgendaView: View {
             } else {
                 monthOrListContent
             }
+        }
+        .safeAreaInset(edge: .bottom) {
+            PlannerEntryPillView(text: $pillText, onSubmit: openPlannerFromPill, onOpenPlanner: openPlannerFromPill)
         }
         .task {
             await refresh()
@@ -41,6 +47,18 @@ struct AgendaView: View {
                 )
             }
         }
+        .sheet(isPresented: $showPlanner) {
+            if let userId = currentUser?.id {
+                PlannerView(userId: userId, token: authStore.token ?? "", seed: plannerSeed)
+            }
+        }
+    }
+
+    private func openPlannerFromPill() {
+        let seed = pillText.trimmingCharacters(in: .whitespacesAndNewlines)
+        pillText = ""
+        plannerSeed = seed.isEmpty ? nil : seed
+        showPlanner = true
     }
 
     @ViewBuilder

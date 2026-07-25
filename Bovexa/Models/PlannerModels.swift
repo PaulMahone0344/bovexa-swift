@@ -20,7 +20,7 @@ enum PlanStatus: String, Decodable, Equatable {
     case ready
 }
 
-struct ProposedAppointment: Decodable, Equatable {
+struct ProposedAppointment: Codable, Equatable {
     let title: String
     let date: String // YYYY-MM-DD (lokale Amsterdamse datum)
     let start: String // HH:MM
