@@ -82,53 +82,54 @@ struct LedenLijstView: View {
         let manageable = rowManageable(member)
         let expanded = viewModel.expandedMemberId == member.id
 
-        return Button {
-            guard manageable else { return }
-            Haptics.selection()
-            viewModel.toggleExpanded(member.id)
-        } label: {
-            HStack(spacing: BovexaTheme.Space.sm) {
-                avatar(for: member)
+        // Geen omhullende Button: die dimt bij disabled() zijn hele label mee (ook de
+        // naam en de ster), terwijl alleen de chevron/uitklap-actie beheerrecht nodig
+        // heeft (valkuil C/D) — de ster blijft voor iedereen op volle sterkte tikbaar.
+        return HStack(spacing: BovexaTheme.Space.sm) {
+            avatar(for: member)
 
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(nameLabel(for: member))
-                        .font(BovexaTheme.TypeStyle.subheadline.weight(.bold))
-                        .foregroundStyle(BovexaTheme.Colors.inkSoft)
-                        .lineLimit(1)
-                    if member.isInvited {
-                        Text("Uitgenodigd")
-                            .font(BovexaTheme.TypeStyle.caption)
-                            .foregroundStyle(BovexaTheme.Colors.muted)
-                    }
+            VStack(alignment: .leading, spacing: 2) {
+                Text(nameLabel(for: member))
+                    .font(BovexaTheme.TypeStyle.subheadline.weight(.bold))
+                    .foregroundStyle(BovexaTheme.Colors.inkSoft)
+                    .lineLimit(1)
+                if member.isInvited {
+                    Text("Uitgenodigd")
+                        .font(BovexaTheme.TypeStyle.caption)
+                        .foregroundStyle(BovexaTheme.Colors.muted)
                 }
+            }
 
-                Spacer()
+            Spacer()
 
-                roleChip(for: member.role)
+            roleChip(for: member.role)
 
-                Button {
-                    Haptics.selection()
-                    viewModel.toggleFavorite(member.userId, currentUserId: currentUserId)
-                } label: {
-                    Image(systemName: viewModel.isFavorite(member.userId) ? "star.fill" : "star")
-                        .foregroundStyle(viewModel.isFavorite(member.userId) ? BovexaTheme.Colors.categoryAmber : BovexaTheme.Colors.muted)
-                }
-                .buttonStyle(.plain)
+            Button {
+                Haptics.selection()
+                viewModel.toggleFavorite(member.userId, currentUserId: currentUserId)
+            } label: {
+                Image(systemName: viewModel.isFavorite(member.userId) ? "star.fill" : "star")
+                    .foregroundStyle(viewModel.isFavorite(member.userId) ? BovexaTheme.Colors.categoryAmber : BovexaTheme.Colors.muted)
+            }
+            .buttonStyle(.plain)
 
-                if manageable {
-                    if viewModel.busyMemberId == member.id {
-                        ProgressView().tint(BovexaTheme.Colors.muted)
-                    } else {
-                        Image(systemName: "chevron.right")
-                            .font(.system(size: 13, weight: .semibold))
-                            .foregroundStyle(expanded ? BovexaTheme.Colors.accent : BovexaTheme.Colors.muted)
-                            .rotationEffect(.degrees(expanded ? 90 : 0))
-                    }
+            if manageable {
+                if viewModel.busyMemberId == member.id {
+                    ProgressView().tint(BovexaTheme.Colors.muted)
+                } else {
+                    Image(systemName: "chevron.right")
+                        .font(.system(size: 13, weight: .semibold))
+                        .foregroundStyle(expanded ? BovexaTheme.Colors.accent : BovexaTheme.Colors.muted)
+                        .rotationEffect(.degrees(expanded ? 90 : 0))
                 }
             }
         }
-        .buttonStyle(.plain)
-        .disabled(!manageable)
+        .contentShape(Rectangle())
+        .onTapGesture {
+            guard manageable else { return }
+            Haptics.selection()
+            viewModel.toggleExpanded(member.id)
+        }
         .padding(.horizontal, BovexaTheme.Space.sm)
         .padding(.vertical, BovexaTheme.Space.sm)
         .overlay(alignment: .top) {

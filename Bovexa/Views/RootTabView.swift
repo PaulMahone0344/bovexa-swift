@@ -41,6 +41,8 @@ enum BovexaTab: String, CaseIterable, Identifiable {
 /// en ondersteunt `.tabBarMinimizeBehavior`. Zie DESIGN-NOTES.md.
 struct RootTabView: View {
     @State private var selected: BovexaTab = .vandaag
+    @EnvironmentObject private var authStore: AuthStore
+    @EnvironmentObject private var joinCoordinator: JoinCoordinator
 
     var body: some View {
         // Elk schermtype (VandaagView/AgendaView/ComingSoonView/ProfielPlaceholderView)
@@ -69,9 +71,34 @@ struct RootTabView: View {
         }
         .tint(BovexaTheme.Colors.teal)
         .tabBarMinimizeBehavior(.onScrollDown)
+        .onChange(of: joinCoordinator.outcome) { _, outcome in
+            guard outcome == .joined else { return }
+            Haptics.success()
+            selected = .bedrijf
+            Task { await authStore.refreshCurrentUser() }
+            joinCoordinator.reset()
+        }
+        .alert("Je hoort al bij een bedrijf.", isPresented: Binding(
+            get: { joinCoordinator.outcome == .alreadyMember },
+            set: { if !$0 { joinCoordinator.reset() } }
+        )) {
+            Button("Naar de agenda") { joinCoordinator.reset() }
+        }
+        .alert("Toetreden mislukt", isPresented: Binding(
+            get: { if case .failed = joinCoordinator.outcome { return true }; return false },
+            set: { if !$0 { joinCoordinator.reset() } }
+        )) {
+            Button("OK", role: .cancel) { joinCoordinator.reset() }
+        } message: {
+            if case .failed(let message) = joinCoordinator.outcome {
+                Text(message)
+            }
+        }
     }
 }
 
 #Preview {
     RootTabView()
+        .environmentObject(AuthStore())
+        .environmentObject(JoinCoordinator())
 }

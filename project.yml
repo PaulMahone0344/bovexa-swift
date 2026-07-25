@@ -19,6 +19,9 @@ targets:
         NSCalendarsWriteOnlyAccessUsageDescription: Bovexa Flow kan nieuwe afspraken ook in je iPhone Agenda zetten.
         NSSpeechRecognitionUsageDescription: Bovexa Flow gebruikt spraakherkenning om je planning te dicteren.
         NSMicrophoneUsageDescription: Bovexa Flow gebruikt de microfoon om je planning te dicteren.
+        CFBundleURLTypes:
+          - CFBundleURLName: com.bovexa.flow-native
+            CFBundleURLSchemes: [bovexaflow]
     settings:
       base:
         SWIFT_VERSION: "5.0"
