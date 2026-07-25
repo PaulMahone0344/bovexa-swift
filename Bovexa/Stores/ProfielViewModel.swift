@@ -7,27 +7,34 @@ import Foundation
 final class ProfielViewModel: ObservableObject {
     @Published private(set) var todayCount: Int?
     @Published private(set) var pendingCount = 0
+    @Published private(set) var unreadNotice = false
     @Published private(set) var deviceSyncEnabled: Bool
 
     private let repository: EventRepository
+    private let noticeRepository: NoticeRepository
+    private let seenStore: NoticesSeenStore
     private let now: () -> Date
     private let defaults: UserDefaults
 
     init(
         repository: EventRepository = EventRepository(),
+        noticeRepository: NoticeRepository = NoticeRepository(),
+        seenStore: NoticesSeenStore = NoticesSeenStore(),
         now: @escaping () -> Date = Date.init,
         defaults: UserDefaults = .standard
     ) {
         self.repository = repository
+        self.noticeRepository = noticeRepository
+        self.seenStore = seenStore
         self.now = now
         self.defaults = defaults
         self.deviceSyncEnabled = DeviceCalendarSyncPreference.isEnabled(defaults: defaults)
     }
 
-    /// Ongelezen-stip op de Meldingen-rij. Tot sessie B de echte mededelingen
-    /// ophaalt, staat deze puur op openstaande toewijzingen — geen onterecht
-    /// "gelezen" laten lijken zolang dat er nog is.
-    var showUnreadDot: Bool { pendingCount > 0 }
+    /// Ongelezen-stip op de Meldingen-rij: openstaande toewijzingen (teller telt
+    /// al mee) of een mededeling die je nog niet hebt gezien. Zelfde `dot={unread
+    /// || pendingCount > 0}` als profiel.tsx.
+    var showUnreadDot: Bool { pendingCount > 0 || unreadNotice }
 
     var greetingSubtitle: String {
         guard let todayCount else { return "Fijn dat je er weer bent." }
@@ -48,6 +55,16 @@ final class ProfielViewModel: ObservableObject {
         } catch {
             todayCount = nil
             pendingCount = 0
+        }
+
+        guard let orgId else {
+            unreadNotice = false
+            return
+        }
+        if let notices = try? await noticeRepository.fetchNotices(orgId: orgId, token: token) {
+            unreadNotice = NoticeHelpers.hasUnread(notices, lastSeen: seenStore.lastSeen(userId: userId))
+        } else {
+            unreadNotice = false
         }
     }
 }

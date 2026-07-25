@@ -96,6 +96,65 @@ struct ProfielViewModelTests {
         #expect(!vm.showUnreadDot)
     }
 
+    // MARK: - Ongelezen mededeling (valkuil E, m6 plak 5)
+
+    private func routedHandler(events: String, notices: String) -> (URLRequest) -> (Int, Data) {
+        { request in
+            let path = request.url!.path
+            if path.contains("agenda_notices") { return (200, notices.data(using: .utf8)!) }
+            return (200, events.data(using: .utf8)!)
+        }
+    }
+
+    private let emptyEvents = """
+    {"items":[],"page":1,"perPage":200,"totalItems":0,"totalPages":0}
+    """
+
+    @Test func dotIsOnWhenNoticeNeverSeenWithOrg() async {
+        let notices = """
+        {"items":[{"id":"n1","org":"org1","author":"collega","author_naam":"Collega","body":"Hoi","created":"2026-07-24 09:00:00.000Z"}],
+         "page":1,"perPage":200,"totalItems":1,"totalPages":1}
+        """
+        URLProtocolStub.requestHandler = routedHandler(events: emptyEvents, notices: notices)
+        let vm = ProfielViewModel(
+            repository: EventRepository(client: PBClient(session: URLProtocolStub.makeSession())),
+            noticeRepository: NoticeRepository(client: PBClient(session: URLProtocolStub.makeSession())),
+            defaults: makeDefaults()
+        )
+        await vm.load(userId: "me", orgId: "org1", token: "tok")
+        #expect(vm.showUnreadDot)
+    }
+
+    @Test func dotIsOffWhenNoticeAlreadySeen() async {
+        let notices = """
+        {"items":[{"id":"n1","org":"org1","author":"collega","author_naam":"Collega","body":"Hoi","created":"2026-07-24 09:00:00.000Z"}],
+         "page":1,"perPage":200,"totalItems":1,"totalPages":1}
+        """
+        URLProtocolStub.requestHandler = routedHandler(events: emptyEvents, notices: notices)
+        let defaults = makeDefaults()
+        let seenStore = NoticesSeenStore(defaults: defaults)
+        seenStore.markSeen(userId: "me", at: utcNow("2026-07-25 09:00:00.000Z"))
+        let vm = ProfielViewModel(
+            repository: EventRepository(client: PBClient(session: URLProtocolStub.makeSession())),
+            noticeRepository: NoticeRepository(client: PBClient(session: URLProtocolStub.makeSession())),
+            seenStore: seenStore,
+            defaults: defaults
+        )
+        await vm.load(userId: "me", orgId: "org1", token: "tok")
+        #expect(!vm.showUnreadDot)
+    }
+
+    @Test func dotStaysOnFromPendingEvenWithoutOrg() async {
+        URLProtocolStub.requestHandler = { _ in (200, """
+        {"items":[
+          {"id":"a","owner":"collega","title":"Klus","start":"2026-07-24 09:00:00.000Z","all_day":false,"assignee":["me"],"assignee_status":{}}
+        ],"page":1,"perPage":200,"totalItems":1,"totalPages":1}
+        """.data(using: .utf8)!) }
+        let vm = ProfielViewModel(repository: EventRepository(client: PBClient(session: URLProtocolStub.makeSession())), defaults: makeDefaults())
+        await vm.load(userId: "me", orgId: nil, token: "tok")
+        #expect(vm.showUnreadDot)
+    }
+
     // MARK: - iPhone Agenda-sync (valkuil H, lokale opslag)
 
     @Test func deviceSyncDefaultsToOn() {

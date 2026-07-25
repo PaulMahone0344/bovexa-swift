@@ -22,6 +22,14 @@ enum AssignmentHelpers {
 
     /// Aantal toewijzingen dat op jouw akkoord wacht (m6, Profiel-teller/-stip).
     static func pendingCount(_ events: [AgendaEvent], userId: String) -> Int {
-        events.filter { assignmentStatus(assignees: $0.assignee, statusMap: $0.assigneeStatus, userId: userId) == "pending" }.count
+        pendingEvents(events, userId: userId).count
+    }
+
+    /// Afspraken die op jouw akkoord wachten, nieuwste eerst (m6, Meldingen-scherm).
+    /// Sluit je eigen afspraken uit — als eigenaar sta je al op "accepted" (zie nextStatusMap).
+    static func pendingEvents(_ events: [AgendaEvent], userId: String) -> [AgendaEvent] {
+        events
+            .filter { $0.owner != userId && assignmentStatus(assignees: $0.assignee, statusMap: $0.assigneeStatus, userId: userId) == "pending" }
+            .sorted { $0.start > $1.start }
     }
 }

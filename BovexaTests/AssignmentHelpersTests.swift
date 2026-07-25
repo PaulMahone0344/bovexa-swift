@@ -86,4 +86,35 @@ struct AssignmentHelpersTests {
     @Test func pendingCountIsZeroWithoutAssignments() {
         #expect(AssignmentHelpers.pendingCount([], userId: "me") == 0)
     }
+
+    // MARK: - pendingEvents (m6, Meldingen-scherm)
+
+    private func event(id: String, owner: String, start: Date, assignee: [String], status: [String: String]) -> AgendaEvent {
+        AgendaEvent(
+            id: id, owner: owner, calendar: nil, category: nil, title: "Afspraak",
+            start: start, end: nil, allDay: false, recurrence: nil, location: nil, notes: nil,
+            klantNaam: nil, assigneeStatus: status, seriesId: nil, occurrenceDate: nil,
+            assignee: assignee
+        )
+    }
+
+    @Test func pendingEventsExcludesOwnAndAcceptedAndDeclined() {
+        let events = [
+            event(id: "a", owner: "collega", start: Date(), assignee: ["me"], status: [:]),
+            event(id: "b", owner: "collega", start: Date(), assignee: ["me"], status: ["me": "accepted"]),
+            event(id: "c", owner: "collega", start: Date(), assignee: ["me"], status: ["me": "declined"]),
+            event(id: "d", owner: "me", start: Date(), assignee: ["me"], status: [:]),
+        ]
+        #expect(AssignmentHelpers.pendingEvents(events, userId: "me").map(\.id) == ["a"])
+    }
+
+    @Test func pendingEventsSortsNewestStartFirst() {
+        let older = Date(timeIntervalSince1970: 1000)
+        let newer = Date(timeIntervalSince1970: 2000)
+        let events = [
+            event(id: "old", owner: "collega", start: older, assignee: ["me"], status: [:]),
+            event(id: "new", owner: "collega", start: newer, assignee: ["me"], status: [:]),
+        ]
+        #expect(AssignmentHelpers.pendingEvents(events, userId: "me").map(\.id) == ["new", "old"])
+    }
 }
