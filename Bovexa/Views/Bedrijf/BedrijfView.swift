@@ -1,7 +1,8 @@
 import SwiftUI
+import UIKit
 
 /// Bedrijf-tab: zonder bedrijf (starten/toetreden), met bedrijf (bedrijfskaart +
-/// ledenlijst, plak 3).
+/// ledenlijst). Teambeheer (plak 5) hangt achter het team-icoon rechtsboven.
 struct BedrijfView: View {
     @EnvironmentObject private var authStore: AuthStore
     @StateObject private var viewModel = BedrijfViewModel()
@@ -27,7 +28,7 @@ struct BedrijfView: View {
                         EmptyOrgView(viewModel: viewModel) {
                             Task {
                                 await authStore.refreshCurrentUser()
-                                await viewModel.load(token: authStore.token ?? "")
+                                await viewModel.load(userId: user.id, token: authStore.token ?? "")
                             }
                         }
                     }
@@ -37,18 +38,28 @@ struct BedrijfView: View {
             }
             .navigationTitle("Bedrijf")
             .navigationBarTitleDisplayMode(.large)
+            .toolbar {
+                if let user = currentUser, hasCompany, viewModel.isAdmin(user.id) {
+                    ToolbarItem(placement: .topBarTrailing) {
+                        NavigationLink {
+                            ComingSoonView(title: "Teambeheer")
+                        } label: {
+                            Image(systemName: "person.2.fill")
+                        }
+                    }
+                }
+            }
         }
         .task { await loadIfNeeded() }
         .onChange(of: hasCompany) { _, nowHasCompany in
-            guard nowHasCompany else { return }
-            Task { await viewModel.load(token: authStore.token ?? "") }
+            guard nowHasCompany, let user = currentUser else { return }
+            Task { await viewModel.load(userId: user.id, token: authStore.token ?? "") }
         }
     }
 
     private func loadIfNeeded() async {
         guard hasCompany, let user = currentUser else { return }
-        await viewModel.load(token: authStore.token ?? "")
-        _ = user
+        await viewModel.load(userId: user.id, token: authStore.token ?? "")
     }
 
     @ViewBuilder
@@ -56,9 +67,96 @@ struct BedrijfView: View {
         if viewModel.loading {
             ProgressView().tint(BovexaTheme.Colors.teal)
         } else {
-            Text("Bedrijf")
-                .foregroundStyle(BovexaTheme.Colors.ink)
+            ScrollView {
+                VStack(alignment: .leading, spacing: BovexaTheme.Space.lg) {
+                    BedrijfCardView(viewModel: viewModel)
+
+                    if !viewModel.members.isEmpty {
+                        VStack(alignment: .leading, spacing: BovexaTheme.Space.sm) {
+                            HStack {
+                                Text("Team")
+                                    .font(BovexaTheme.TypeStyle.headline)
+                                    .foregroundStyle(BovexaTheme.Colors.ink)
+                                Spacer()
+                                Text("\(viewModel.members.count) \(viewModel.members.count == 1 ? "lid" : "leden")")
+                                    .font(BovexaTheme.TypeStyle.footnote)
+                                    .foregroundStyle(BovexaTheme.Colors.inkSoft)
+                            }
+                            LedenLijstView(viewModel: viewModel, currentUserId: user.id)
+                        }
+                    }
+                }
+                .padding(BovexaTheme.Space.xl)
+                .padding(.bottom, BovexaTheme.Space.tabBarClearance)
+            }
+            .refreshable {
+                await viewModel.refresh(userId: user.id, token: authStore.token ?? "")
+            }
         }
+    }
+}
+
+/// Bedrijfskaart: naam, logo, aantal leden/stoelen en het ICS-abonnement
+/// (valkuil F: webcal-link, geen download).
+private struct BedrijfCardView: View {
+    @ObservedObject var viewModel: BedrijfViewModel
+
+    var body: some View {
+        GlassCard(emphasis: .hero) {
+            VStack(alignment: .leading, spacing: BovexaTheme.Space.sm) {
+                HStack(spacing: BovexaTheme.Space.md) {
+                    logo
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(viewModel.org?.name ?? "Jouw bedrijf")
+                            .font(BovexaTheme.TypeStyle.title2)
+                            .foregroundStyle(BovexaTheme.Colors.ink)
+                        if let seatsMax = viewModel.seatsMax {
+                            Text("\(viewModel.members.count) van \(seatsMax) plekken")
+                                .font(BovexaTheme.TypeStyle.footnote)
+                                .foregroundStyle(BovexaTheme.Colors.inkSoft)
+                        }
+                    }
+                    Spacer()
+                }
+
+                if let icsToken = viewModel.org?.icsToken, !icsToken.isEmpty {
+                    Button {
+                        Haptics.selection()
+                        openCalendarFeed(token: icsToken)
+                    } label: {
+                        Label("In iPhone Agenda", systemImage: "calendar.badge.plus")
+                    }
+                    .buttonStyle(.glassSecondaryBrand)
+                }
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var logo: some View {
+        if let org = viewModel.org, !org.logo.isEmpty,
+           let url = URL(string: "\(PBEndpoint.base.absoluteString)/api/files/agenda_orgs/\(org.id)/\(org.logo)") {
+            AsyncImage(url: url) { image in
+                image.resizable().aspectRatio(contentMode: .fit)
+            } placeholder: {
+                Color.clear
+            }
+            .frame(width: 44, height: 44)
+            .clipShape(RoundedRectangle(cornerRadius: BovexaTheme.Radius.sm, style: .continuous))
+        } else {
+            RoundedRectangle(cornerRadius: BovexaTheme.Radius.sm, style: .continuous)
+                .fill(BovexaTheme.Colors.glassStrong)
+                .frame(width: 44, height: 44)
+                .overlay(Image(systemName: "briefcase.fill").foregroundStyle(BovexaTheme.Colors.accent))
+        }
+    }
+
+    /// webcal:// laat iOS zelf het agenda-abonnement aanbieden — dit is geen
+    /// download en staat los van de EventKit-sync uit m3.
+    private func openCalendarFeed(token: String) {
+        guard let host = PBEndpoint.base.host,
+              let url = URL(string: "webcal://\(host)/api/agenda/ics/\(token).ics") else { return }
+        UIApplication.shared.open(url)
     }
 }
 

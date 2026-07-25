@@ -25,10 +25,17 @@ final class BedrijfViewModel: ObservableObject {
     @Published private(set) var refreshing = false
     @Published private(set) var membersResponse: CompanyMembersResponse?
 
-    private let repository: CompanyRepository
+    @Published private(set) var favorites: [String] = []
+    @Published var memberQuery = ""
 
-    init(repository: CompanyRepository = CompanyRepository()) {
+    let memberColors = MemberColors()
+
+    private let repository: CompanyRepository
+    private let favoritesStore: FavoritesStore
+
+    init(repository: CompanyRepository = CompanyRepository(), favoritesStore: FavoritesStore = FavoritesStore()) {
         self.repository = repository
+        self.favoritesStore = favoritesStore
     }
 
     var hasLoadedCompany: Bool { membersResponse != nil }
@@ -36,6 +43,19 @@ final class BedrijfViewModel: ObservableObject {
     var org: CompanyOrgProfile? { membersResponse?.org }
     var seatsMax: Int? { membersResponse?.seatsMax }
     var joinCode: String? { membersResponse?.joinCode }
+
+    /// Favorieten bovenaan, daarna alfabetisch; zoekbalk verschijnt vanaf 6 leden
+    /// (view beslist, dit is puur de gefilterde/gesorteerde data).
+    var visibleMembers: [CompanyMember] {
+        CompanyMemberSearchHelpers.sortMembers(CompanyMemberSearchHelpers.filterMembers(members, query: memberQuery), favorites: favorites)
+    }
+
+    func isFavorite(_ userId: String) -> Bool { favorites.contains(userId) }
+
+    func toggleFavorite(_ memberUserId: String, currentUserId: String) {
+        favorites = CompanyMemberSearchHelpers.toggleFavorite(memberUserId, in: favorites)
+        favoritesStore.save(favorites, userId: currentUserId)
+    }
 
     func role(for userId: String) -> CompanyRole? {
         members.first { $0.userId == userId }?.role
@@ -93,10 +113,16 @@ final class BedrijfViewModel: ObservableObject {
         }
     }
 
-    func load(token: String) async {
+    func load(userId: String, token: String) async {
         if membersResponse == nil { loading = true }
+        favorites = favoritesStore.load(userId: userId)
         do {
-            membersResponse = try await repository.listMembers(token: token)
+            let response = try await repository.listMembers(token: token)
+            membersResponse = response
+            memberColors.prime(
+                members: response.items.map { Member(id: $0.id, userId: $0.userId, naam: $0.naam, email: $0.email, avatar: $0.avatar) },
+                org: response.org.map { CompanyOrgInfo(id: $0.id, name: $0.name, logo: $0.logo) }
+            )
         } catch {
             membersResponse = nil
         }
@@ -104,9 +130,9 @@ final class BedrijfViewModel: ObservableObject {
         refreshing = false
     }
 
-    func refresh(token: String) async {
+    func refresh(userId: String, token: String) async {
         refreshing = true
-        await load(token: token)
+        await load(userId: userId, token: token)
     }
 
     private static func errorText(_ error: Error, fallback: String) -> String {
