@@ -40,14 +40,25 @@ struct VandaagView: View {
                             // Het bedrijfslogo stond als brede banner midden in
                             // het scherm en domineerde de compositie; hier is het
                             // een rustig merkteken op de kopregel.
+                            //
+                            // Het is een upload van het bedrijf zelf, dus de
+                            // kleuren liggen niet vast en botsen soms met het
+                            // teal-palet. Een eigen glasplaatje eronder geeft het
+                            // een eigen vlak, zodat het als merkteken leest en
+                            // niet als een losse afbeelding die op de ondergrond
+                            // zweeft. Niet grijs maken: dat verminkt huisstijlen
+                            // die wél kloppen.
                             if let logoURL = viewModel.orgLogoURL {
                                 AsyncImage(url: logoURL) { image in
                                     image.resizable().scaledToFit()
                                 } placeholder: {
                                     Color.clear
                                 }
-                                .frame(maxWidth: 120, maxHeight: 20)
-                                .opacity(0.7)
+                                .frame(maxWidth: 116, maxHeight: 22)
+                                .padding(.horizontal, BovexaTheme.Space.sm)
+                                .padding(.vertical, BovexaTheme.Space.xs)
+                                .background(BovexaTheme.Colors.glassStrong, in: Capsule())
+                                .overlay(Capsule().stroke(BovexaTheme.Colors.edgeSoft, lineWidth: 0.8))
                             }
                         }
                         .padding(.horizontal, 2)
