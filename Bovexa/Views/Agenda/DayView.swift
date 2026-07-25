@@ -3,8 +3,14 @@ import SwiftUI
 /// Dagweergave: horizontale dagcarousel + uurgrid, "‹ maand"-pill terug naar
 /// de maandweergave die actief was vóór het openen van deze dag.
 struct DayView: View {
+    @EnvironmentObject private var authStore: AuthStore
     @ObservedObject var viewModel: AgendaViewModel
     let currentUserId: String
+
+    private var currentUserOrgId: String? {
+        if case .loggedIn(let user) = authStore.phase { return user.defaultOrg }
+        return nil
+    }
 
     @State private var days: [Date] = []
     @State private var scrollDay: Date?
@@ -38,7 +44,10 @@ struct DayView: View {
                 }
             }
             .navigationDestination(item: $selectedEvent) { event in
-                EventDetailView(event: event, currentUserId: currentUserId, memberColors: viewModel.memberColors)
+                EventDetailView(
+                    event: event, currentUserId: currentUserId, currentUserOrgId: currentUserOrgId,
+                    token: authStore.token ?? "", memberColors: viewModel.memberColors
+                )
             }
         }
         .onAppear {

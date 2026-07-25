@@ -36,7 +36,7 @@ final class VandaagViewModel: ObservableObject {
 
         let events = await eventsResult ?? []
         if let members = await membersResult {
-            memberColors.prime(members: members.items)
+            memberColors.prime(members: members.items, org: members.org)
             orgLogoURL = Self.logoURL(for: members.org)
         } else {
             orgLogoURL = nil

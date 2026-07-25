@@ -62,7 +62,10 @@ struct AgendaView: View {
             }
             .navigationDestination(item: $selectedEvent) { event in
                 if let userId = currentUser?.id {
-                    EventDetailView(event: event, currentUserId: userId, memberColors: viewModel.memberColors)
+                    EventDetailView(
+                        event: event, currentUserId: userId, currentUserOrgId: currentUser?.defaultOrg,
+                        token: authStore.token ?? "", memberColors: viewModel.memberColors
+                    )
                 }
             }
         }

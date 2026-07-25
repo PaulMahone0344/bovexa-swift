@@ -48,6 +48,18 @@ struct MemberColorsTests {
         #expect(colors.firstName(for: "onbekend") == nil)
     }
 
+    @Test func primeStoresOrgNameWhenProvided() {
+        let colors = MemberColors()
+        colors.prime(members: [member("u1")], org: CompanyOrgInfo(id: "org1", name: "Bovexa", logo: ""))
+        #expect(colors.orgName == "Bovexa")
+    }
+
+    @Test func primeWithoutOrgLeavesOrgNameNil() {
+        let colors = MemberColors()
+        colors.prime(members: [member("u1")])
+        #expect(colors.orgName == nil)
+    }
+
     @Test func borderColorOnlyForOthersEvents() {
         let colors = MemberColors()
         colors.prime(members: [member("me"), member("collega")])

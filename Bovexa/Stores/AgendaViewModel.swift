@@ -56,7 +56,7 @@ final class AgendaViewModel: ObservableObject {
 
         events = await eventsResult ?? []
         if let members = await membersResult {
-            memberColors.prime(members: members.items)
+            memberColors.prime(members: members.items, org: members.org)
         }
     }
 

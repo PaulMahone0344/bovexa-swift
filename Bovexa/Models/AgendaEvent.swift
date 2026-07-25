@@ -72,6 +72,32 @@ struct AgendaEvent: Decodable, Identifiable {
         )
     }
 
+    /// Kopie met bijgewerkte assignee_status — voor optimistische UI-updates bij
+    /// accepteren/weigeren (valkuil B), zonder de rest van de afspraak aan te raken.
+    func withAssigneeStatus(_ assigneeStatus: [String: String]) -> AgendaEvent {
+        AgendaEvent(
+            id: id, owner: owner, calendar: calendar, category: category, title: title,
+            start: start, end: end, allDay: allDay, recurrence: recurrence, location: location,
+            notes: notes, klantNaam: klantNaam, assigneeStatus: assigneeStatus,
+            seriesId: seriesId, occurrenceDate: occurrenceDate,
+            org: org, visibilityRaw: visibilityRaw, viewers: viewers,
+            assignee: assignee, reminderMin: reminderMin, klantTelefoon: klantTelefoon
+        )
+    }
+
+    /// Kopie met bijgewerkte visibility/viewers — voor optimistische UI-updates bij
+    /// het wijzigen van de zichtbaarheid.
+    func withVisibility(_ visibilityRaw: String, viewers: [String]) -> AgendaEvent {
+        AgendaEvent(
+            id: id, owner: owner, calendar: calendar, category: category, title: title,
+            start: start, end: end, allDay: allDay, recurrence: recurrence, location: location,
+            notes: notes, klantNaam: klantNaam, assigneeStatus: assigneeStatus,
+            seriesId: seriesId, occurrenceDate: occurrenceDate,
+            org: org, visibilityRaw: visibilityRaw, viewers: viewers,
+            assignee: assignee, reminderMin: reminderMin, klantTelefoon: klantTelefoon
+        )
+    }
+
     enum CodingKeys: String, CodingKey {
         case id, owner, calendar, category, title, start, end
         case allDay = "all_day"

@@ -23,8 +23,9 @@ final class MemberColors: ObservableObject {
 
     private var colorMap: [String: String] = [:]
     private var nameMap: [String: String] = [:]
+    private(set) var orgName: String?
 
-    func prime(members: [Member]) {
+    func prime(members: [Member], org: CompanyOrgInfo? = nil) {
         let ids = Array(Set(members.map(\.userId))).sorted()
         for (index, id) in ids.enumerated() {
             colorMap[id] = Self.palette[index % Self.palette.count]
@@ -33,6 +34,7 @@ final class MemberColors: ObservableObject {
             let fallback = member.email.split(separator: "@").first.map(String.init) ?? member.email
             nameMap[member.userId] = member.naam.isEmpty ? fallback : member.naam
         }
+        if let org, !org.name.isEmpty { orgName = org.name }
     }
 
     func colorHex(for userId: String?) -> String {
