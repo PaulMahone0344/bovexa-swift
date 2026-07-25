@@ -60,7 +60,7 @@ struct RootTabView: View {
             }
 
             Tab(BovexaTab.bedrijf.label, systemImage: BovexaTab.bedrijf.icon, value: .bedrijf) {
-                ComingSoonView(title: "Bedrijf")
+                BedrijfView()
             }
 
             Tab(BovexaTab.profiel.label, systemImage: BovexaTab.profiel.icon, value: .profiel) {

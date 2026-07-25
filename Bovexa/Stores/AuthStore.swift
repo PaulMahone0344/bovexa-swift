@@ -48,6 +48,22 @@ final class AuthStore: ObservableObject {
         }
     }
 
+    /// Ververst het account na een server-mutatie die buiten AuthStore om gebeurde
+    /// (bv. company/create of company/join zet `default_org`). De mutatie is dan al
+    /// gelukt — een netwerkhikje hierna mag geen foutmelding tonen, dit is puur
+    /// state-sync (zelfde principe als refresh() in de RN-auth-context).
+    func refreshCurrentUser() async {
+        guard let token else { return }
+        do {
+            let response = try await client.authRefresh(token: token)
+            self.token = response.token
+            tokenStore.save(response.token)
+            phase = .loggedIn(response.record)
+        } catch {
+            // Stil negeren — zie doc-comment hierboven.
+        }
+    }
+
     func signOut() {
         tokenStore.clear()
         token = nil
