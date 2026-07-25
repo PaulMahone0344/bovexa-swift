@@ -82,7 +82,12 @@ struct BedrijfView: View {
                                     .font(BovexaTheme.TypeStyle.footnote)
                                     .foregroundStyle(BovexaTheme.Colors.inkSoft)
                             }
-                            LedenLijstView(viewModel: viewModel, currentUserId: user.id)
+                            LedenLijstView(
+                                viewModel: viewModel,
+                                currentUserId: user.id,
+                                canManage: viewModel.isAdmin(user.id),
+                                token: authStore.token ?? ""
+                            )
                         }
                     }
                 }

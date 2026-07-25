@@ -171,4 +171,97 @@ struct BedrijfViewModelTests {
         await vm2.load(userId: "u1", token: "tok")
         #expect(vm2.isFavorite("u2"))
     }
+
+    // MARK: - Rol, rechten, verwijderen (plak 4, valkuil C)
+
+    private func loadedViewModel() async -> BedrijfViewModel {
+        URLProtocolStub.requestHandler = { _ in (200, Self.membersJSON.data(using: .utf8)!) }
+        let vm = makeViewModel()
+        await vm.load(userId: "u1", token: "tok")
+        return vm
+    }
+
+    @Test func canBeManagedBlocksAllThreeActionsOnSelfAndOwner() async {
+        let vm = await loadedViewModel()
+        let owner = vm.members.first { $0.userId == "u1" }!  // isOwner: true
+        let me = owner
+
+        URLProtocolStub.requestHandler = { _ in Issue.record("mocht geen request doen"); return (500, Data()) }
+
+        await vm.changeRole(owner, to: .member, actingUserId: "u1", token: "tok")
+        await vm.togglePermission(owner, key: .magWijzigen, actingUserId: "u1", token: "tok")
+        await vm.removeMember(owner, actingUserId: "u1", token: "tok")
+
+        #expect(vm.members.count == 2) // niets verwijderd
+        #expect(vm.members.first { $0.userId == "u1" }?.role == .admin) // rol ongewijzigd
+        _ = me
+    }
+
+    @Test func failedRoleChangeRollsBack() async {
+        let vm = await loadedViewModel()
+        let bram = vm.members.first { $0.userId == "u2" }!
+        URLProtocolStub.requestHandler = { _ in
+            (400, """
+            {"message":"Rol wijzigen mislukt."}
+            """.data(using: .utf8)!)
+        }
+        await vm.changeRole(bram, to: .admin, actingUserId: "u1", token: "tok")
+        #expect(vm.members.first { $0.userId == "u2" }?.role == .member) // teruggedraaid
+        #expect(vm.memberActionErrorMessage == "Rol wijzigen mislukt.")
+    }
+
+    @Test func failedPermissionToggleRollsBack() async {
+        let vm = await loadedViewModel()
+        let bram = vm.members.first { $0.userId == "u2" }!
+        URLProtocolStub.requestHandler = { _ in
+            (400, """
+            {"message":"Rechten wijzigen mislukt."}
+            """.data(using: .utf8)!)
+        }
+        await vm.togglePermission(bram, key: .magWijzigen, actingUserId: "u1", token: "tok")
+        #expect(vm.members.first { $0.userId == "u2" }?.magWijzigen == false) // teruggedraaid
+        #expect(vm.memberActionErrorMessage == "Rechten wijzigen mislukt.")
+    }
+
+    @Test func failedRemoveRollsBack() async {
+        let vm = await loadedViewModel()
+        let bram = vm.members.first { $0.userId == "u2" }!
+        URLProtocolStub.requestHandler = { _ in
+            (400, """
+            {"message":"Lid verwijderen mislukt."}
+            """.data(using: .utf8)!)
+        }
+        await vm.removeMember(bram, actingUserId: "u1", token: "tok")
+        #expect(vm.members.count == 2) // teruggedraaid
+        #expect(vm.memberActionErrorMessage == "Lid verwijderen mislukt.")
+    }
+
+    @Test func successfulRoleChangeReloadsMembers() async {
+        let vm = await loadedViewModel()
+        let bram = vm.members.first { $0.userId == "u2" }!
+        var requestCount = 0
+        URLProtocolStub.requestHandler = { _ in
+            requestCount += 1
+            if requestCount == 1 {
+                return (200, """
+                {"id":"m2","role":"admin"}
+                """.data(using: .utf8)!)
+            }
+            // Herlaadactie (valkuil B): server-waarheid wint.
+            return (200, """
+            {
+              "items": [
+                {"id":"m1","userId":"u1","naam":"Anna","email":"anna@x.nl","avatar":"","role":"admin","status":"active","isOwner":true,"magMaken":true,"magWijzigen":true,"magVerwijderen":true,"magKlantZien":true,"magAgendaAnderenZien":true},
+                {"id":"m2","userId":"u2","naam":"Bram","email":"bram@x.nl","avatar":"","role":"admin","status":"active","isOwner":false,"magMaken":true,"magWijzigen":false,"magVerwijderen":false,"magKlantZien":true,"magAgendaAnderenZien":true}
+              ],
+              "seats_max": 3, "plan": "free", "join_code": "BOVEXA-7F3K",
+              "org": {"id":"org1","name":"Bovexa BV","logo":"","ics_token":"","address":"","phone":"","email":"","opening_hours":null,"timezone":"Europe/Amsterdam","default_duration_min":30}
+            }
+            """.data(using: .utf8)!)
+        }
+        await vm.changeRole(bram, to: .admin, actingUserId: "u1", token: "tok")
+        #expect(requestCount == 2) // mutatie + herlaad
+        #expect(vm.members.first { $0.userId == "u2" }?.role == .admin)
+        #expect(vm.memberActionErrorMessage == nil)
+    }
 }

@@ -49,6 +49,56 @@ struct CompanyMember: Decodable, Equatable, Identifiable {
     func canBeManaged(by actingUserId: String) -> Bool {
         !isOwner && userId != actingUserId
     }
+
+    func value(forPermissionKey key: String) -> Bool {
+        switch key {
+        case "mag_maken": return magMaken
+        case "mag_wijzigen": return magWijzigen
+        case "mag_verwijderen": return magVerwijderen
+        case "mag_klant_zien": return magKlantZien
+        case "mag_agenda_anderen_zien": return magAgendaAnderenZien
+        default: return false
+        }
+    }
+
+    /// Nieuwe kopie met één recht omgezet — voor optimistische updates.
+    func withPermission(key: String, value: Bool) -> CompanyMember {
+        var copy = self
+        switch key {
+        case "mag_maken": copy.magMaken = value
+        case "mag_wijzigen": copy.magWijzigen = value
+        case "mag_verwijderen": copy.magVerwijderen = value
+        case "mag_klant_zien": copy.magKlantZien = value
+        case "mag_agenda_anderen_zien": copy.magAgendaAnderenZien = value
+        default: break
+        }
+        return copy
+    }
+
+    func withRole(_ role: CompanyRole) -> CompanyMember {
+        var copy = self
+        copy.role = role
+        return copy
+    }
+}
+
+/// De vijf togglebare rechten, in de vaste weergavevolgorde uit de ledenlijst.
+enum CompanyPermission: String, CaseIterable {
+    case magMaken = "mag_maken"
+    case magWijzigen = "mag_wijzigen"
+    case magVerwijderen = "mag_verwijderen"
+    case magKlantZien = "mag_klant_zien"
+    case magAgendaAnderenZien = "mag_agenda_anderen_zien"
+
+    var label: String {
+        switch self {
+        case .magMaken: return "Afspraken maken"
+        case .magWijzigen: return "Andermans afspraken wijzigen"
+        case .magVerwijderen: return "Andermans afspraken verwijderen"
+        case .magKlantZien: return "Klantgegevens zien"
+        case .magAgendaAnderenZien: return "Agenda van collega's zien"
+        }
+    }
 }
 
 /// Rollen die een admin daadwerkelijk kan kiezen (valkuil D: Manager hoort bij de
@@ -132,6 +182,12 @@ struct CompanyMembersResponse: Decodable, Equatable {
         case items, plan, org
         case seatsMax = "seats_max"
         case joinCode = "join_code"
+    }
+
+    /// Nieuwe kopie met andere leden — voor optimistische updates zonder in-place
+    /// mutatie (rol/rechten togglen, lid verwijderen, plak 4).
+    func replacing(items: [CompanyMember]) -> CompanyMembersResponse {
+        CompanyMembersResponse(items: items, seatsMax: seatsMax, plan: plan, joinCode: joinCode, org: org)
     }
 }
 

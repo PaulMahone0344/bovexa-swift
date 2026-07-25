@@ -28,6 +28,11 @@ final class BedrijfViewModel: ObservableObject {
     @Published private(set) var favorites: [String] = []
     @Published var memberQuery = ""
 
+    /// Uitgeklapte rij in de ledenlijst (rol/rechten/verwijderen, plak 4).
+    @Published var expandedMemberId: String?
+    @Published private(set) var busyMemberId: String?
+    @Published var memberActionErrorMessage: String?
+
     let memberColors = MemberColors()
 
     private let repository: CompanyRepository
@@ -133,6 +138,79 @@ final class BedrijfViewModel: ObservableObject {
     func refresh(userId: String, token: String) async {
         refreshing = true
         await load(userId: userId, token: token)
+    }
+
+    // MARK: - Rol, rechten en verwijderen per lid (plak 4)
+
+    func toggleExpanded(_ memberId: String) {
+        expandedMemberId = expandedMemberId == memberId ? nil : memberId
+    }
+
+    func changeRole(_ member: CompanyMember, to role: CompanyRole, actingUserId: String, token: String) async {
+        guard member.canBeManaged(by: actingUserId), busyMemberId == nil else { return }
+        expandedMemberId = nil
+        guard role != member.role else { return }
+
+        let previous = membersResponse
+        busyMemberId = member.id
+        updateMember(member.id) { $0.withRole(role) }
+
+        do {
+            _ = try await repository.setMemberRole(memberId: member.id, role: role, token: token)
+            // Valkuil B: rechten/rol lezen we altijd terug via de route, nooit lokaal
+            // definitief maken — de server is de bron van waarheid.
+            await load(userId: actingUserId, token: token)
+        } catch {
+            membersResponse = previous
+            memberActionErrorMessage = Self.errorText(error, fallback: "Rol wijzigen mislukt.")
+        }
+        busyMemberId = nil
+    }
+
+    func togglePermission(_ member: CompanyMember, key: CompanyPermission, actingUserId: String, token: String) async {
+        guard member.canBeManaged(by: actingUserId), busyMemberId == nil else { return }
+
+        let previous = membersResponse
+        let nextValue = !member.value(forPermissionKey: key.rawValue)
+        busyMemberId = member.id
+        updateMember(member.id) { $0.withPermission(key: key.rawValue, value: nextValue) }
+
+        do {
+            _ = try await repository.setMemberPermissions(memberId: member.id, key: key.rawValue, value: nextValue, token: token)
+            await load(userId: actingUserId, token: token)
+        } catch {
+            membersResponse = previous
+            memberActionErrorMessage = Self.errorText(error, fallback: "Rechten wijzigen mislukt.")
+        }
+        busyMemberId = nil
+    }
+
+    func removeMember(_ member: CompanyMember, actingUserId: String, token: String) async {
+        guard member.canBeManaged(by: actingUserId), busyMemberId == nil else { return }
+        expandedMemberId = nil
+
+        let previous = membersResponse
+        busyMemberId = member.id
+        updateMember(removing: member.id)
+
+        do {
+            _ = try await repository.removeMember(memberId: member.id, token: token)
+            await load(userId: actingUserId, token: token)
+        } catch {
+            membersResponse = previous
+            memberActionErrorMessage = Self.errorText(error, fallback: "Lid verwijderen mislukt.")
+        }
+        busyMemberId = nil
+    }
+
+    private func updateMember(_ id: String, transform: (CompanyMember) -> CompanyMember) {
+        guard let response = membersResponse else { return }
+        membersResponse = response.replacing(items: response.items.map { $0.id == id ? transform($0) : $0 })
+    }
+
+    private func updateMember(removing id: String) {
+        guard let response = membersResponse else { return }
+        membersResponse = response.replacing(items: response.items.filter { $0.id != id })
     }
 
     private static func errorText(_ error: Error, fallback: String) -> String {
