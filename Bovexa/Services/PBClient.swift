@@ -33,7 +33,7 @@ final class PBClient {
         return try await send(request)
     }
 
-    func getFullList<T: Decodable>(_ type: T.Type, collection: String, filter: String, sort: String? = nil, token: String) async throws -> [T] {
+    func getFullList<T: Decodable>(_ type: T.Type, collection: String, filter: String, sort: String? = nil, expand: String? = nil, token: String) async throws -> [T] {
         var results: [T] = []
         var page = 1
         let perPage = 200
@@ -46,6 +46,7 @@ final class PBClient {
             ]
             if !filter.isEmpty { query.append(URLQueryItem(name: "filter", value: filter)) }
             if let sort { query.append(URLQueryItem(name: "sort", value: sort)) }
+            if let expand { query.append(URLQueryItem(name: "expand", value: expand)) }
             components.queryItems = query
 
             var request = URLRequest(url: components.url!)
