@@ -42,7 +42,7 @@ struct BedrijfView: View {
                 if let user = currentUser, hasCompany, viewModel.isAdmin(user.id) {
                     ToolbarItem(placement: .topBarTrailing) {
                         NavigationLink {
-                            ComingSoonView(title: "Teambeheer")
+                            TeambeheerView()
                         } label: {
                             Image(systemName: "person.2.fill")
                         }
