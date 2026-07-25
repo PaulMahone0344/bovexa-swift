@@ -50,10 +50,12 @@ struct NextUpCard: View {
                 }
 
                 HStack(alignment: .firstTextBaseline, spacing: BovexaTheme.Space.md) {
-                    Text(EventHelpers.fmtTime(event.start))
-                        .font(.system(size: 40, weight: .bold, design: .rounded))
+                    // "Hele dag" past niet op 40pt naast de titel.
+                    Text(EventHelpers.rowTimeText(event))
+                        .font(.system(size: event.allDay ? 26 : 40, weight: .bold, design: .rounded))
                         .foregroundStyle(BovexaTheme.Colors.ink)
                         .monospacedDigit()
+                        .lineLimit(1)
 
                     VStack(alignment: .leading, spacing: 2) {
                         Text(event.title)
@@ -111,7 +113,9 @@ struct NextUpCard: View {
         if let location = event.location, !location.isEmpty {
             parts.append(location)
         }
-        parts.append(EventHelpers.durationLabel(event))
-        return parts.joined(separator: " · ")
+        parts.append(EventHelpers.rowDurationLabel(event))
+        // Lege delen eruit, anders eindigt de regel op een losse " · " zodra er
+        // geen duur is (hele dag, of een event zonder eindtijd).
+        return parts.filter { !$0.isEmpty }.joined(separator: " · ")
     }
 }

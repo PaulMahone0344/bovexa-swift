@@ -31,4 +31,27 @@ struct EventDetailFormattingTests {
         let event = makeEvent(start: date(9), end: nil, allDay: false)
         #expect(EventHelpers.detailTimeText(event) == "09:00")
     }
+
+    // Rij-weergave (tijdlijn Vandaag, DaySheet, lijst, zoekresultaat). Het
+    // Afwezig-scherm schrijft hele-dag-events weg; die toonden hier "00:00".
+
+    @Test func allDayEventShowsHeleDagInRow() {
+        let event = makeEvent(start: date(0), end: nil, allDay: true)
+        #expect(EventHelpers.rowTimeText(event) == "Hele dag")
+    }
+
+    @Test func timedEventShowsClockTimeInRow() {
+        let event = makeEvent(start: date(9, 30), end: date(10), allDay: false)
+        #expect(EventHelpers.rowTimeText(event) == "09:30")
+    }
+
+    @Test func allDayEventHasNoDurationLabel() {
+        let event = makeEvent(start: date(0), end: date(23, 59), allDay: true)
+        #expect(EventHelpers.rowDurationLabel(event) == "")
+    }
+
+    @Test func timedEventKeepsDurationLabel() {
+        let event = makeEvent(start: date(9), end: date(10), allDay: false)
+        #expect(EventHelpers.rowDurationLabel(event) == "1 uur")
+    }
 }

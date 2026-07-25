@@ -15,11 +15,17 @@ struct AppointmentRow: View {
 
     var body: some View {
         HStack(spacing: BovexaTheme.Space.md) {
-            Text(EventHelpers.fmtTime(event.start))
-                .font(.system(.subheadline, design: .rounded, weight: .semibold))
+            // Vaste breedte i.p.v. minWidth: "Hele dag" is breder dan "10:00" en
+            // zou anders de kleurstrepen per rij laten verspringen.
+            Text(EventHelpers.rowTimeText(event))
+                .font(event.allDay
+                      ? .system(.caption, design: .rounded, weight: .semibold)
+                      : .system(.subheadline, design: .rounded, weight: .semibold))
                 .foregroundStyle(BovexaTheme.Colors.inkSoft)
                 .monospacedDigit()
-                .frame(minWidth: 46, alignment: .leading)
+                .lineLimit(1)
+                .minimumScaleFactor(0.8)
+                .frame(width: 54, alignment: .leading)
 
             Capsule()
                 .fill(EventHelpers.eventColor(event))
@@ -56,7 +62,7 @@ struct AppointmentRow: View {
 
             Spacer(minLength: BovexaTheme.Space.sm)
 
-            Text(EventHelpers.durationLabel(event))
+            Text(EventHelpers.rowDurationLabel(event))
                 .font(BovexaTheme.TypeStyle.caption)
                 .foregroundStyle(BovexaTheme.Colors.muted)
         }

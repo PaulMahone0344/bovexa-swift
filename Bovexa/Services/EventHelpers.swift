@@ -44,6 +44,20 @@ enum EventHelpers {
         return "\(start) · \(durationLabel(event))"
     }
 
+    /// Tijdlabel voor een rij in een lijst (tijdlijn Vandaag, DaySheet,
+    /// agenda-lijst, zoekresultaat). Een hele-dag-event heeft geen klok: dat
+    /// toonde "00:00", en sinds het Afwezig-scherm bestaat komen die events
+    /// dagelijks voorbij. Zelfde regel als `all_day ? 'Hele dag' : fmtTime(...)`
+    /// in EventList.tsx / DaySheet.tsx van de RN-app.
+    static func rowTimeText(_ event: AgendaEvent) -> String {
+        event.allDay ? "Hele dag" : fmtTime(event.start)
+    }
+
+    /// Duur naast een rij. Bij een hele-dag-event zegt "24 uur" niets, dus leeg.
+    static func rowDurationLabel(_ event: AgendaEvent) -> String {
+        event.allDay ? "" : durationLabel(event)
+    }
+
     static func sameDay(_ a: Date, _ b: Date, calendar: Calendar = .current) -> Bool {
         calendar.isDate(a, inSameDayAs: b)
     }

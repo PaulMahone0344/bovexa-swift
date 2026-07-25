@@ -117,7 +117,7 @@ struct SearchView: View {
     }
 
     private func metaText(_ event: AgendaEvent) -> String {
-        var text = "\(EventHelpers.longDay(event.start)) · \(EventHelpers.fmtTime(event.start))"
+        var text = "\(EventHelpers.longDay(event.start)) · \(EventHelpers.rowTimeText(event))"
         if let location = event.location, !location.isEmpty {
             text += " · \(location)"
         }
