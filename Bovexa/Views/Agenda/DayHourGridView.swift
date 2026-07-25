@@ -105,7 +105,12 @@ struct DayHourGridView: View {
     }
 }
 
-/// Eén afspraak-blok in het uurgrid — collega-rand in persoonskleur + voornaam.
+/// Eén afspraak-blok in het uurgrid.
+///
+/// v3: de afspraak van een collega krijgt een kleurstreep aan de zijkant in
+/// diens persoonskleur, niet langer een volle omranding — een 2px rode kader
+/// rondom een blok las als foutmelding in plaats van als "dit is van Daan".
+/// Dezelfde markering als in de tijdlijn op Vandaag.
 private struct EventBlockView: View {
     let event: AgendaEvent
     let currentUserId: String
@@ -113,31 +118,42 @@ private struct EventBlockView: View {
 
     private var isColleague: Bool { event.owner != currentUserId }
 
+    private var accent: Color {
+        isColleague ? memberColors.color(for: event.owner) : EventHelpers.eventColor(event)
+    }
+
+    private var shape: RoundedRectangle {
+        RoundedRectangle(cornerRadius: 8, style: .continuous)
+    }
+
     var body: some View {
-        VStack(alignment: .leading, spacing: 1) {
-            Text(EventHelpers.fmtTime(event.start))
-                .font(.system(size: 9, weight: .semibold))
-            Text(event.title)
-                .font(.system(size: 10, weight: .medium))
-                .lineLimit(1)
-            if isColleague, let firstName = memberColors.firstName(for: event.owner) {
-                Text(firstName)
-                    .font(.system(size: 8))
+        HStack(spacing: 0) {
+            Rectangle()
+                .fill(accent)
+                .frame(width: isColleague ? 4 : 3)
+
+            VStack(alignment: .leading, spacing: 1) {
+                Text(EventHelpers.fmtTime(event.start))
+                    .font(.system(size: 9, weight: .semibold, design: .rounded))
+                    .foregroundStyle(BovexaTheme.Colors.inkSoft)
+                Text(event.title)
+                    .font(.system(size: 11, weight: .semibold))
+                    .foregroundStyle(BovexaTheme.Colors.ink)
+                    .lineLimit(1)
+                if isColleague, let firstName = memberColors.firstName(for: event.owner) {
+                    Text(firstName)
+                        .font(.system(size: 9, weight: .medium))
+                        .foregroundStyle(accent)
+                }
             }
+            .padding(.horizontal, 5)
+            .padding(.vertical, 3)
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         }
-        .foregroundStyle(BovexaTheme.Colors.ink)
-        .padding(4)
-        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         .glassEffect(
-            .regular.tint(EventHelpers.eventColor(event).opacity(0.35)),
-            in: RoundedRectangle(cornerRadius: 6, style: .continuous)
+            .regular.tint(EventHelpers.eventColor(event).opacity(0.28)),
+            in: shape
         )
-        .overlay(
-            RoundedRectangle(cornerRadius: 6, style: .continuous)
-                .strokeBorder(
-                    isColleague ? memberColors.color(for: event.owner) : EventHelpers.eventColor(event),
-                    lineWidth: isColleague ? 2 : 1
-                )
-        )
+        .clipShape(shape)
     }
 }

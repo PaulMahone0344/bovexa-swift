@@ -15,16 +15,16 @@ enum BovexaTab: String, CaseIterable, Identifiable {
         }
     }
 
-    /// v2 (Liquid Glass restyle): iconen volgen het designdocument
-    /// (house/calendar/checklist/briefcase/person.crop.circle) i.p.v. de
-    /// oude sun.max/building.2 — zuivere chrome-wijziging, zie DESIGN-NOTES.md.
+    /// v3: vijf duidelijk verschillende silhouetten (zon, kalender, lijst,
+    /// gebouw, persoon). De v2-set had twee persoon-iconen en twee cirkels,
+    /// waardoor de tabs op klein formaat op elkaar leken.
     var icon: String {
         switch self {
-        case .vandaag: return "house"
+        case .vandaag: return "sun.horizon.fill"
         case .agenda: return "calendar"
         case .dagtaken: return "checklist"
-        case .bedrijf: return "briefcase"
-        case .profiel: return "person.crop.circle"
+        case .bedrijf: return "building.2.fill"
+        case .profiel: return "person.fill"
         }
     }
 }

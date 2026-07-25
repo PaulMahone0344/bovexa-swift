@@ -1,6 +1,11 @@
 import SwiftUI
 
-/// Eén rij in de tijdlijn van vandaag of de "Volgende afspraak"-kaart.
+/// Eén rij in de tijdlijn van vandaag.
+///
+/// v3: tijd links in rounded cijfers als anker, daarnaast een verticale
+/// kleurstreep in de categoriekleur (met de persoonskleur eromheen bij een
+/// afspraak van een collega). De v2-rij gebruikte twee gestapelde cirkels,
+/// wat op een volle dag als ruis las.
 struct AppointmentRow: View {
     let event: AgendaEvent
     let currentUserId: String
@@ -11,49 +16,52 @@ struct AppointmentRow: View {
     var body: some View {
         HStack(spacing: BovexaTheme.Space.md) {
             Text(EventHelpers.fmtTime(event.start))
-                .font(BovexaTheme.TypeStyle.footnote.weight(.semibold))
-                .foregroundStyle(BovexaTheme.Colors.muted)
+                .font(.system(.subheadline, design: .rounded, weight: .semibold))
+                .foregroundStyle(BovexaTheme.Colors.inkSoft)
                 .monospacedDigit()
-                .frame(minWidth: 44, alignment: .leading)
+                .frame(minWidth: 46, alignment: .leading)
 
-            ZStack {
-                if isColleague {
-                    Circle()
-                        .stroke(memberColors.color(for: event.owner), lineWidth: 2)
-                        .frame(width: 14, height: 14)
-                }
-                Circle()
-                    .fill(EventHelpers.eventColor(event))
-                    .frame(width: 9, height: 9)
-            }
-
-            VStack(alignment: .leading, spacing: 2) {
-                HStack(spacing: BovexaTheme.Space.xs) {
-                    Text(event.title)
-                        .font(BovexaTheme.TypeStyle.body.weight(.medium))
-                        .foregroundStyle(BovexaTheme.Colors.ink)
-                        .lineLimit(1)
-                    if isColleague, let firstName = memberColors.firstName(for: event.owner) {
-                        Text(firstName)
-                            .font(BovexaTheme.TypeStyle.caption.weight(.medium))
-                            .foregroundStyle(memberColors.color(for: event.owner))
+            Capsule()
+                .fill(EventHelpers.eventColor(event))
+                .frame(width: 4)
+                .frame(maxHeight: .infinity)
+                .overlay(alignment: .leading) {
+                    if isColleague {
+                        Capsule()
+                            .stroke(memberColors.color(for: event.owner), lineWidth: 1.5)
+                            .frame(width: 4)
                     }
                 }
-                if let location = event.location, !location.isEmpty {
-                    Text(location)
-                        .font(BovexaTheme.TypeStyle.footnote)
-                        .foregroundStyle(BovexaTheme.Colors.muted)
-                        .lineLimit(1)
+
+            VStack(alignment: .leading, spacing: 3) {
+                Text(event.title)
+                    .font(BovexaTheme.TypeStyle.body.weight(.semibold))
+                    .foregroundStyle(BovexaTheme.Colors.ink)
+                    .lineLimit(1)
+
+                HStack(spacing: BovexaTheme.Space.xs) {
+                    if isColleague, let firstName = memberColors.firstName(for: event.owner) {
+                        Text(firstName)
+                            .font(BovexaTheme.TypeStyle.caption.weight(.semibold))
+                            .foregroundStyle(memberColors.color(for: event.owner))
+                    }
+                    if let location = event.location, !location.isEmpty {
+                        Text(location)
+                            .font(BovexaTheme.TypeStyle.footnote)
+                            .foregroundStyle(BovexaTheme.Colors.muted)
+                            .lineLimit(1)
+                    }
                 }
             }
 
             Spacer(minLength: BovexaTheme.Space.sm)
 
             Text(EventHelpers.durationLabel(event))
-                .font(BovexaTheme.TypeStyle.footnote)
+                .font(BovexaTheme.TypeStyle.caption)
                 .foregroundStyle(BovexaTheme.Colors.muted)
         }
-        .padding(.vertical, BovexaTheme.Space.xs)
+        .padding(.vertical, BovexaTheme.Space.sm)
+        .frame(minHeight: 44)
         .contentShape(Rectangle())
     }
 }

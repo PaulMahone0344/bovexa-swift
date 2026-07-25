@@ -10,101 +10,62 @@ struct VandaagView: View {
         return nil
     }
 
+    /// "zaterdag 25 juli" — de grote titel zegt alleen "Vandaag"; welke dag dat
+    /// is stond nergens.
+    private var todayLine: String {
+        let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: "nl_NL")
+        formatter.dateFormat = "EEEE d MMMM"
+        return formatter.string(from: Date())
+    }
+
     var body: some View {
         NavigationStack {
             ZStack {
                 AppBackground()
 
                 ScrollView {
-                    VStack(spacing: BovexaTheme.Space.lg) {
-                        if let logoURL = viewModel.orgLogoURL {
-                            AsyncImage(url: logoURL) { image in
-                                image.resizable().scaledToFit()
-                            } placeholder: {
-                                Color.clear
-                            }
-                            .frame(height: 48)
-                        }
+                    VStack(alignment: .leading, spacing: BovexaTheme.Space.lg) {
+                        HStack(alignment: .center) {
+                            Text(todayLine)
+                                .font(BovexaTheme.TypeStyle.subheadline)
+                                .foregroundStyle(BovexaTheme.Colors.muted)
 
-                        GlassCard {
-                            HStack {
-                                StatTile(value: "\(viewModel.appointmentCount)", label: "afspraken")
-                                StatTile(value: viewModel.plannedHoursText, label: "geplande uren")
-                            }
-                        }
+                            Spacer()
 
-                        if let next = viewModel.nextEvent, let userId = currentUser?.id {
-                            VStack(alignment: .leading, spacing: BovexaTheme.Space.sm) {
-                                Label {
-                                    Text("Volgende afspraak")
-                                        .font(BovexaTheme.TypeStyle.headline)
-                                        .foregroundStyle(BovexaTheme.Colors.ink)
-                                } icon: {
-                                    Image(systemName: "clock")
-                                        .font(BovexaTheme.TypeStyle.headline)
-                                        .foregroundStyle(BovexaTheme.Colors.teal)
+                            // Het bedrijfslogo stond als brede banner midden in
+                            // het scherm en domineerde de compositie; hier is het
+                            // een rustig merkteken op de kopregel.
+                            if let logoURL = viewModel.orgLogoURL {
+                                AsyncImage(url: logoURL) { image in
+                                    image.resizable().scaledToFit()
+                                } placeholder: {
+                                    Color.clear
                                 }
-                                .frame(maxWidth: .infinity, alignment: .leading)
-
-                                // Belangrijkste kaart op het scherm: prominenter glas via een
-                                // extra teal glow bovenop GlassCard's eigen schaduw (design-taal:
-                                // "belangrijke kaarten prominenter glas, lijst-rijen subtieler").
-                                GlassCard {
-                                    Button {
-                                        Haptics.selection()
-                                        selectedEvent = next
-                                    } label: {
-                                        AppointmentRow(event: next, currentUserId: userId, memberColors: viewModel.memberColors)
-                                    }
-                                    .buttonStyle(.plain)
-                                }
-                                .shadow(
-                                    color: BovexaTheme.Shadow.tealGlowColor.opacity(BovexaTheme.Shadow.tealGlowOpacity),
-                                    radius: BovexaTheme.Shadow.tealGlowRadius,
-                                    x: 0,
-                                    y: BovexaTheme.Shadow.tealGlowOffsetY
-                                )
-                            }
-                            .transition(.opacity)
-                        }
-
-                        VStack(alignment: .leading, spacing: BovexaTheme.Space.sm) {
-                            Text("Tijdlijn")
-                                .font(BovexaTheme.TypeStyle.headline)
-                                .foregroundStyle(BovexaTheme.Colors.ink)
-                                .frame(maxWidth: .infinity, alignment: .leading)
-
-                            GlassCard {
-                                if !viewModel.hasLoadedOnce {
-                                    ProgressView()
-                                        .tint(BovexaTheme.Colors.teal)
-                                        .frame(maxWidth: .infinity, alignment: .center)
-                                } else if viewModel.todayEvents.isEmpty {
-                                    EmptyStateView(systemImage: "calendar", text: "Nog niks gepland vandaag…")
-                                } else if let userId = currentUser?.id {
-                                    VStack(spacing: 0) {
-                                        ForEach(viewModel.todayEvents) { event in
-                                            Button {
-                                                Haptics.selection()
-                                                selectedEvent = event
-                                            } label: {
-                                                AppointmentRow(event: event, currentUserId: userId, memberColors: viewModel.memberColors)
-                                            }
-                                            .buttonStyle(.plain)
-
-                                            if event.id != viewModel.todayEvents.last?.id {
-                                                Divider().overlay(BovexaTheme.Colors.edgeSoft)
-                                            }
-                                        }
-                                    }
-                                }
+                                .frame(maxWidth: 120, maxHeight: 20)
+                                .opacity(0.7)
                             }
                         }
+                        .padding(.horizontal, 2)
+
+                        if let userId = currentUser?.id {
+                            NextUpCard(
+                                event: viewModel.nextEvent,
+                                hadEventsToday: !viewModel.todayEvents.isEmpty,
+                                currentUserId: userId,
+                                memberColors: viewModel.memberColors,
+                                onOpen: { selectedEvent = $0 }
+                            )
+                        }
+
+                        statsRow
+
+                        timeline
 
                         WeekBusyCard(counts: viewModel.weekBusyCounts)
                     }
                     .padding(BovexaTheme.Space.xl)
-                    .padding(.bottom, 90) // ruimte voor de tabbalk onderin
+                    .padding(.bottom, 120) // ruimte voor de tabbalk onderin
                     .animation(.smooth(duration: 0.3), value: viewModel.nextEvent?.id)
                 }
             }
@@ -124,6 +85,54 @@ struct VandaagView: View {
         }
         .onAppear {
             Task { await refresh() }
+        }
+    }
+
+    /// Twee cijfers naast elkaar als rustige pillen: informatie die je wel wilt
+    /// zien, maar die de hero-kaart niet mag beconcurreren.
+    private var statsRow: some View {
+        HStack(spacing: BovexaTheme.Space.md) {
+            GlassCard(padding: BovexaTheme.Space.md, emphasis: .quiet) {
+                StatTile(value: "\(viewModel.appointmentCount)", label: "afspraken")
+            }
+            GlassCard(padding: BovexaTheme.Space.md, emphasis: .quiet) {
+                StatTile(value: viewModel.plannedHoursText, label: "geplande uren")
+            }
+        }
+    }
+
+    private var timeline: some View {
+        VStack(alignment: .leading, spacing: BovexaTheme.Space.sm) {
+            Text("Tijdlijn")
+                .font(BovexaTheme.TypeStyle.headline)
+                .foregroundStyle(BovexaTheme.Colors.ink)
+                .frame(maxWidth: .infinity, alignment: .leading)
+
+            GlassCard {
+                if !viewModel.hasLoadedOnce {
+                    ProgressView()
+                        .tint(BovexaTheme.Colors.teal)
+                        .frame(maxWidth: .infinity, alignment: .center)
+                } else if viewModel.todayEvents.isEmpty {
+                    EmptyStateView(systemImage: "calendar", text: "Nog niks gepland vandaag…")
+                } else if let userId = currentUser?.id {
+                    VStack(spacing: 0) {
+                        ForEach(viewModel.todayEvents) { event in
+                            Button {
+                                Haptics.selection()
+                                selectedEvent = event
+                            } label: {
+                                AppointmentRow(event: event, currentUserId: userId, memberColors: viewModel.memberColors)
+                            }
+                            .buttonStyle(.plain)
+
+                            if event.id != viewModel.todayEvents.last?.id {
+                                Divider().overlay(BovexaTheme.Colors.edgeSoft)
+                            }
+                        }
+                    }
+                }
+            }
         }
     }
 

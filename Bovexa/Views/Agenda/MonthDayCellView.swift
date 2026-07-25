@@ -72,13 +72,13 @@ struct MonthDayCellView: View {
         return VStack(alignment: .leading, spacing: 2) {
             ForEach(result.shown) { event in
                 Text(event.title)
-                    .font(.system(size: 9))
+                    .font(.system(size: 9, weight: .medium))
                     .foregroundStyle(BovexaTheme.Colors.ink)
                     .lineLimit(1)
-                    .padding(.horizontal, 3)
-                    .padding(.vertical, 1)
-                    .background(EventHelpers.eventColor(event).opacity(0.25))
-                    .clipShape(RoundedRectangle(cornerRadius: 3))
+                    .padding(.horizontal, 4)
+                    .padding(.vertical, 1.5)
+                    .background(EventHelpers.eventColor(event).opacity(0.38))
+                    .clipShape(RoundedRectangle(cornerRadius: 4, style: .continuous))
             }
             if result.overflow > 0 {
                 Text("+\(result.overflow)")

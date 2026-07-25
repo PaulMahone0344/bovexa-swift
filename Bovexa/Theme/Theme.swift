@@ -20,20 +20,28 @@ enum BovexaTheme {
     }
 
     enum Colors {
-        // achtergrond-gradient (licht teal-grijs, zoals de mockup)
-        static let bgTop = Color(hex: "#DCE7E7")
-        static let bgBottom = Color(hex: "#EDF3F2")
+        // Achtergrond — "daglicht": koele teal-mist bovenin die naar warm zand
+        // onderin zakt. Het glas heeft kleurverschil nodig om iets te breken;
+        // een egale bijna-witte ondergrond maakt glas optisch onzichtbaar.
+        static let bgTop = Color(hex: "#C4DFE2")
+        static let bgMid = Color(hex: "#E1EDEA")
+        static let bgBottom = Color(hex: "#F8F3EA")
         static let page = Color(hex: "#DFE8E8")
 
-        // inkt (donker op licht oppervlak)
-        static let ink = Color(hex: "#10191A")
-        static let inkSoft = Color(hex: "#203133")
-        static let muted = Color(hex: "#5F6D70")
+        // inkt (donker op licht oppervlak, met teal-zweem)
+        static let ink = Color(hex: "#0E1A1C")
+        static let inkSoft = Color(hex: "#24393B")
+        static let muted = Color(hex: "#62787A")
 
         // merk / teal accent
-        static let teal = Color(hex: "#58AEB7")
-        static let tealDark = Color(hex: "#2F858F")
-        static let accent = Color(hex: "#2F858F")
+        static let teal = Color(hex: "#2AA1AD")
+        static let tealDark = Color(hex: "#0B5C63")
+        /// Tekst-accent: dieper dan `teal` zodat het leesbaar blijft op glas.
+        static let accent = Color(hex: "#0B5C63")
+        static let tealLight = Color(hex: "#8FD4DB")
+        /// Warm tegenwicht voor de koele teal — gebruikt in de ondergrond en
+        /// voor "rustig"-signalen (lege dag, afgeronde staat).
+        static let warm = Color(hex: "#D9A45B")
 
         // categorie-accenten (focus/social/body/afwezig — work gebruikt teal)
         static let categoryBlue = Color(hex: "#7EB3DC")
@@ -68,10 +76,14 @@ enum BovexaTheme {
 
         static let background = [BovexaTheme.Colors.bgTop, BovexaTheme.Colors.bgBottom]
 
-        /// v2 (Liquid Glass restyle): subtielere, minder verzadigde achtergrond dan
-        /// `background` — het glas moet het werk doen, niet de ondergrond.
-        /// Zie DESIGN-NOTES.md. Oude token `background` blijft ongewijzigd bestaan.
-        static let backgroundSubtle = [Color(hex: "#E7EFEE"), Color(hex: "#F4F7F6")]
+        /// v3: drie stops — koel bovenin, warm onderin. Geeft het glas een
+        /// kleurverloop om op te pikken (v2 was bijna-wit-op-bijna-wit,
+        /// waardoor het glaseffect wegviel).
+        static let backgroundSubtle = [
+            BovexaTheme.Colors.bgTop,
+            BovexaTheme.Colors.bgMid,
+            BovexaTheme.Colors.bgBottom,
+        ]
 
         static let cardGlass = [Color.white.opacity(0.70), Color.white.opacity(0.50)]
         static let raisedGlass = [Color.white.opacity(0.74), Color.white.opacity(0.54)]
