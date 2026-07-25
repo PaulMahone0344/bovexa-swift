@@ -1,11 +1,12 @@
 import SwiftUI
 
-/// Dagtaken-tab: composer + "Mijn dagtaken" (plak 3). Archief en de team-sectie
-/// komen in plak 4 op ditzelfde scherm.
+/// Dagtaken-tab: composer, "Mijn dagtaken", archief en de team-sectie.
 struct DagtakenView: View {
     @EnvironmentObject private var authStore: AuthStore
     @StateObject private var viewModel = DagtakenViewModel()
     @State private var collapsedIds: Set<String> = []
+    @State private var archiveOpen = false
+    @State private var teamTaskPendingDelete: AgendaTask?
 
     private var currentUser: AgendaUser? {
         if case .loggedIn(let user) = authStore.phase { return user }
@@ -31,9 +32,41 @@ struct DagtakenView: View {
         } message: {
             Text("Kon de dagtaak niet opslaan.")
         }
-        .task {
-            await viewModel.loadOrgInfo(token: authStore.token ?? "")
+        .alert("Mislukt", isPresented: $viewModel.deleteTeamTaskFailedAlert) {
+            Button("OK", role: .cancel) {}
+        } message: {
+            Text("Kon de team-dagtaak niet wissen.")
         }
+        .alert(
+            "Team-dagtaak wissen",
+            isPresented: Binding(get: { teamTaskPendingDelete != nil }, set: { if !$0 { teamTaskPendingDelete = nil } })
+        ) {
+            Button("Annuleren", role: .cancel) { teamTaskPendingDelete = nil }
+            Button("Wissen", role: .destructive) {
+                confirmDeleteTeamTask()
+            }
+        } message: {
+            Text("\"\(teamTaskPendingDelete?.title ?? "")\" verdwijnt voor het hele team.")
+        }
+        .task {
+            await refresh()
+        }
+        .onAppear {
+            Task { await refresh() }
+        }
+    }
+
+    /// Herlaadt bij elke terugkeer naar dit scherm — er is geen realtime-abonnement
+    /// (RN gebruikt hiervoor useFocusEffect; `.onAppear` is de SwiftUI-tegenhanger).
+    private func refresh() async {
+        guard let user = currentUser else { return }
+        await viewModel.load(userId: user.id, org: user.defaultOrg, token: authStore.token ?? "")
+    }
+
+    private func confirmDeleteTeamTask() {
+        guard let task = teamTaskPendingDelete, let user = currentUser else { return }
+        teamTaskPendingDelete = nil
+        Task { await viewModel.deleteTeamTask(task, userId: user.id, token: authStore.token ?? "") }
     }
 
     private func content(for user: AgendaUser) -> some View {
@@ -41,6 +74,8 @@ struct DagtakenView: View {
             VStack(alignment: .leading, spacing: BovexaTheme.Space.lg) {
                 composer(for: user)
                 mijnDagtakenSection
+                archiefSection
+                teamSection(for: user)
             }
             .padding(BovexaTheme.Space.xl)
             .padding(.bottom, BovexaTheme.Space.tabBarClearance)
@@ -131,6 +166,91 @@ struct DagtakenView: View {
                             onEdit: { viewModel.startEdit(note) },
                             onArchive: { viewModel.archive(note.id) }
                         )
+                    }
+                }
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var archiefSection: some View {
+        if !viewModel.archivedNotes.isEmpty {
+            VStack(alignment: .leading, spacing: BovexaTheme.Space.sm) {
+                Button {
+                    Haptics.selection()
+                    withAnimation(.snappy) { archiveOpen.toggle() }
+                } label: {
+                    HStack {
+                        HStack(spacing: BovexaTheme.Space.xs) {
+                            Image(systemName: "chevron.right")
+                                .font(.system(size: 12, weight: .semibold))
+                                .foregroundStyle(BovexaTheme.Colors.muted)
+                                .rotationEffect(.degrees(archiveOpen ? 90 : 0))
+                            Text("Archief")
+                                .font(BovexaTheme.TypeStyle.headline)
+                                .foregroundStyle(BovexaTheme.Colors.ink)
+                        }
+
+                        Spacer()
+
+                        Text("\(viewModel.archivedNotes.count) \(viewModel.archivedNotes.count == 1 ? "dagtaak" : "dagtaken")")
+                            .font(BovexaTheme.TypeStyle.footnote)
+                            .foregroundStyle(BovexaTheme.Colors.inkSoft)
+                    }
+                }
+                .buttonStyle(.plain)
+
+                if archiveOpen {
+                    VStack(spacing: BovexaTheme.Space.sm) {
+                        ForEach(viewModel.archivedNotes) { note in
+                            PlanningRowView(
+                                note: note,
+                                isEditing: note.id == viewModel.editingId,
+                                isExpanded: !collapsedIds.contains(note.id),
+                                onToggleExpand: { toggleExpand(note.id) },
+                                onEdit: { viewModel.startEdit(note) },
+                                onRestore: { viewModel.restore(note.id) },
+                                onDelete: { viewModel.requestDeleteLocalNote(note.id) },
+                                deleteLabel: viewModel.confirmDeleteId == note.id ? "Nog eens tikken" : "Wissen"
+                            )
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func teamSection(for user: AgendaUser) -> some View {
+        if user.defaultOrg != nil {
+            VStack(alignment: .leading, spacing: BovexaTheme.Space.sm) {
+                HStack {
+                    Text("Dagtaken\(viewModel.orgName.map { " — \($0)" } ?? "")")
+                        .font(BovexaTheme.TypeStyle.headline)
+                        .foregroundStyle(BovexaTheme.Colors.ink)
+
+                    Spacer()
+
+                    Text("\(viewModel.teamTasks.count) \(viewModel.teamTasks.count == 1 ? "dagtaak" : "dagtaken")")
+                        .font(BovexaTheme.TypeStyle.footnote)
+                        .foregroundStyle(BovexaTheme.Colors.inkSoft)
+                }
+
+                if viewModel.teamTasks.isEmpty {
+                    Text("Nog geen gedeelde dagtaken. Kies “\(viewModel.orgName ?? "Bedrijf")” bij het toevoegen.")
+                        .font(BovexaTheme.TypeStyle.footnote)
+                        .foregroundStyle(BovexaTheme.Colors.inkSoft)
+                } else {
+                    VStack(spacing: BovexaTheme.Space.sm) {
+                        ForEach(viewModel.teamTasks) { task in
+                            TeamTaskRowView(
+                                task: task,
+                                isMine: task.owner == user.id,
+                                ownerLabel: task.owner == user.id ? "Jij" : (viewModel.memberColors.firstName(for: task.owner) ?? "Collega"),
+                                onToggle: { Task { await viewModel.toggleTeamTask(task, userId: user.id, token: authStore.token ?? "") } },
+                                onDelete: { teamTaskPendingDelete = task }
+                            )
+                        }
                     }
                 }
             }

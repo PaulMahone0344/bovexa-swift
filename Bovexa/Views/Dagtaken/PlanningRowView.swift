@@ -1,14 +1,23 @@
 import SwiftUI
 
-/// Eén regel in "Mijn dagtaken" — tekst tikken klapt in/uit, acties eronder.
-/// Archief-specifieke acties (Terugzetten, twee-tik-wissen) komen in plak 4.
+/// Eén regel in "Mijn dagtaken" of het archief — tekst tikken klapt in/uit, acties
+/// eronder. In "Mijn dagtaken" is de derde actie "Archiveren" (`onArchive`); in het
+/// archief is dat "Terugzetten" + een wis-actie met een dynamisch label (voor de
+/// twee-tik-bevestiging, valkuil G) — zelfde component voor beide, zoals PlanningRow
+/// in taken.tsx.
 struct PlanningRowView: View {
     let note: PlanningNote
     let isEditing: Bool
     let isExpanded: Bool
     let onToggleExpand: () -> Void
     let onEdit: () -> Void
-    let onArchive: () -> Void
+    var onArchive: (() -> Void)?
+    var onRestore: (() -> Void)?
+    var onDelete: () -> Void = {}
+    var deleteLabel: String?
+
+    private var trailingLabel: String { deleteLabel ?? (onArchive != nil ? "Archiveren" : "Wissen") }
+    private var trailingAction: () -> Void { onArchive ?? onDelete }
 
     var body: some View {
         GlassCard(emphasis: isEditing ? .standard : .quiet) {
@@ -50,7 +59,13 @@ struct PlanningRowView: View {
                         .font(BovexaTheme.TypeStyle.footnote.weight(.bold))
                         .foregroundStyle(BovexaTheme.Colors.accent)
 
-                    Button("Archiveren", action: onArchive)
+                    if let onRestore {
+                        Button("Terugzetten", action: onRestore)
+                            .font(BovexaTheme.TypeStyle.footnote.weight(.bold))
+                            .foregroundStyle(BovexaTheme.Colors.accent)
+                    }
+
+                    Button(trailingLabel, action: trailingAction)
                         .font(BovexaTheme.TypeStyle.footnote.weight(.bold))
                         .foregroundStyle(BovexaTheme.Colors.danger)
                 }

@@ -167,4 +167,234 @@ struct DagtakenViewModelTests {
         #expect(vm.orgName == "Bovexa")
         #expect(vm.memberColors.firstName(for: "u1") == "Ibrahim")
     }
+
+    // MARK: - restore
+
+    @Test func restoreMovesNoteBackToOpenNotes() async {
+        let vm = makeViewModel()
+        vm.draft = "Terug uit archief"
+        await vm.submit(userId: "u1", org: nil, token: "tok")
+        let note = vm.openNotes.first!
+        vm.archive(note.id)
+
+        vm.restore(note.id)
+
+        #expect(vm.archivedNotes.isEmpty)
+        #expect(vm.openNotes.map(\.id) == [note.id])
+    }
+
+    // MARK: - twee-tik-bevestiging (valkuil G)
+
+    @Test func requestDeleteMarksThenDeletesOnSecondTapWithinWindow() async {
+        let vm = makeViewModel()
+        vm.draft = "Te wissen"
+        await vm.submit(userId: "u1", org: nil, token: "tok")
+        let note = vm.openNotes.first!
+        vm.archive(note.id)
+        let archived = vm.archivedNotes.first!
+
+        vm.requestDeleteLocalNote(archived.id)
+        #expect(vm.confirmDeleteId == archived.id)
+        #expect(vm.archivedNotes.count == 1)
+
+        vm.requestDeleteLocalNote(archived.id)
+        #expect(vm.confirmDeleteId == nil)
+        #expect(vm.archivedNotes.isEmpty)
+    }
+
+    @Test func requestDeleteConfirmationExpiresAfterTimeout() async throws {
+        let vm = DagtakenViewModel(
+            planningStore: PlanningNoteStore(defaults: makeDefaults()),
+            taskRepository: TaskRepository(client: PBClient(session: URLProtocolStub.makeSession())),
+            eventRepository: EventRepository(client: PBClient(session: URLProtocolStub.makeSession())),
+            confirmDeleteTimeout: .milliseconds(20)
+        )
+        vm.draft = "Te wissen"
+        await vm.submit(userId: "u1", org: nil, token: "tok")
+        let note = vm.openNotes.first!
+        vm.archive(note.id)
+        let archived = vm.archivedNotes.first!
+
+        vm.requestDeleteLocalNote(archived.id)
+        #expect(vm.confirmDeleteId == archived.id)
+
+        try await Task.sleep(for: .milliseconds(80))
+
+        #expect(vm.confirmDeleteId == nil)
+        #expect(vm.archivedNotes.map(\.id) == [archived.id])
+
+        // Na de vervaltijd telt een volgende tik weer als de ÉÉRSTE tik.
+        vm.requestDeleteLocalNote(archived.id)
+        #expect(vm.confirmDeleteId == archived.id)
+        #expect(vm.archivedNotes.map(\.id) == [archived.id])
+    }
+
+    // MARK: - loadTeamTasks (valkuil C + D)
+
+    @Test func loadTeamTasksWithoutOrgSkipsNetworkAndClearsList() async {
+        let vm = makeViewModel()
+        URLProtocolStub.requestHandler = { _ in
+            Issue.record("mag geen netwerkverzoek doen zonder org")
+            return (500, Data())
+        }
+        await vm.loadTeamTasks(org: nil, token: "tok")
+        #expect(vm.teamTasks.isEmpty)
+    }
+
+    @Test func loadTeamTasksWithOrgPopulatesList() async {
+        let vm = makeViewModel()
+        URLProtocolStub.requestHandler = { _ in
+            let json = """
+            {"items":[{"id":"t1","owner":"u1","org":"org1","title":"Taak","notes":"","status":"open",
+             "visibility":"company","viewers":[],"created":"2026-07-24 09:00:00.000Z","updated":"2026-07-24 09:00:00.000Z"}],
+             "page":1,"perPage":200,"totalItems":1,"totalPages":1}
+            """.data(using: .utf8)!
+            return (200, json)
+        }
+        await vm.loadTeamTasks(org: "org1", token: "tok")
+        #expect(vm.teamTasks.map(\.id) == ["t1"])
+    }
+
+    @Test func submitTeamTaskPrependsToTeamTasksImmediately() async {
+        let vm = makeViewModel()
+        URLProtocolStub.requestHandler = { _ in
+            let json = """
+            {"id":"t1","owner":"u1","org":"org1","title":"Nieuw","notes":"","status":"open",
+             "visibility":"company","viewers":[],"created":"2026-07-24 09:00:00.000Z","updated":"2026-07-24 09:00:00.000Z"}
+            """.data(using: .utf8)!
+            return (200, json)
+        }
+        vm.draft = "Nieuw"
+        vm.visibility = .company
+        await vm.submit(userId: "u1", org: "org1", token: "tok")
+        #expect(vm.teamTasks.map(\.id) == ["t1"])
+    }
+
+    // MARK: - toggleTeamTask (valkuil E + F)
+
+    private func makeTask(id: String = "t1", owner: String = "u1", status: TaskStatus = .open) -> AgendaTask {
+        AgendaTask(
+            id: id, owner: owner, org: "org1", title: "Taak", notes: nil, status: status,
+            visibility: .company, viewers: [], created: Date(timeIntervalSince1970: 0), updated: Date(timeIntervalSince1970: 0)
+        )
+    }
+
+    @Test func toggleTeamTaskOnColleagueTaskDoesNothing() async {
+        let vm = makeViewModel()
+        URLProtocolStub.requestHandler = { _ in
+            Issue.record("mag niet afvinken bij andermans taak")
+            return (500, Data())
+        }
+        let colleagueTask = makeTask(owner: "u2")
+        await vm.toggleTeamTask(colleagueTask, userId: "u1", token: "tok")
+        #expect(vm.teamTasks.isEmpty)
+    }
+
+    @Test func toggleTeamTaskOnOwnTaskFlipsStatusOptimisticallyThenConfirms() async {
+        let vm = makeViewModel()
+        // Seed via een gemockte fetch, i.p.v. rechtstreeks state te injecteren.
+        URLProtocolStub.requestHandler = { _ in
+            let json = """
+            {"items":[{"id":"t1","owner":"u1","org":"org1","title":"Taak","notes":"","status":"open",
+             "visibility":"company","viewers":[],"created":"2026-07-24 09:00:00.000Z","updated":"2026-07-24 09:00:00.000Z"}],
+             "page":1,"perPage":200,"totalItems":1,"totalPages":1}
+            """.data(using: .utf8)!
+            return (200, json)
+        }
+        await vm.loadTeamTasks(org: "org1", token: "tok")
+        let task = vm.teamTasks.first!
+
+        URLProtocolStub.requestHandler = { request in
+            #expect(request.httpMethod == "PATCH")
+            let body = try! JSONSerialization.jsonObject(with: self.bodyData(from: request)) as! [String: Any]
+            #expect(body["status"] as? String == "klaar")
+            let json = """
+            {"id":"t1","owner":"u1","org":"org1","title":"Taak","notes":"","status":"klaar",
+             "visibility":"company","viewers":[],"created":"2026-07-24 09:00:00.000Z","updated":"2026-07-24 09:00:00.000Z"}
+            """.data(using: .utf8)!
+            return (200, json)
+        }
+        await vm.toggleTeamTask(task, userId: "u1", token: "tok")
+        #expect(vm.teamTasks.first?.status == .klaar)
+    }
+
+    @Test func toggleTeamTaskRollsBackOnServerFailure() async {
+        let vm = makeViewModel()
+        URLProtocolStub.requestHandler = { _ in
+            let json = """
+            {"items":[{"id":"t1","owner":"u1","org":"org1","title":"Taak","notes":"","status":"open",
+             "visibility":"company","viewers":[],"created":"2026-07-24 09:00:00.000Z","updated":"2026-07-24 09:00:00.000Z"}],
+             "page":1,"perPage":200,"totalItems":1,"totalPages":1}
+            """.data(using: .utf8)!
+            return (200, json)
+        }
+        await vm.loadTeamTasks(org: "org1", token: "tok")
+        let task = vm.teamTasks.first!
+
+        URLProtocolStub.requestHandler = { _ in
+            let json = """
+            {"data":{},"message":"Mislukt.","status":400}
+            """.data(using: .utf8)!
+            return (400, json)
+        }
+        await vm.toggleTeamTask(task, userId: "u1", token: "tok")
+        #expect(vm.teamTasks.first?.status == .open)
+    }
+
+    // MARK: - deleteTeamTask (valkuil E)
+
+    @Test func deleteTeamTaskOnColleagueTaskDoesNothing() async {
+        let vm = makeViewModel()
+        URLProtocolStub.requestHandler = { _ in
+            Issue.record("mag niet wissen bij andermans taak")
+            return (500, Data())
+        }
+        let colleagueTask = makeTask(owner: "u2")
+        await vm.deleteTeamTask(colleagueTask, userId: "u1", token: "tok")
+        #expect(vm.deleteTeamTaskFailedAlert == false)
+    }
+
+    @Test func deleteTeamTaskOnOwnTaskRemovesItFromList() async {
+        let vm = makeViewModel()
+        URLProtocolStub.requestHandler = { _ in
+            let json = """
+            {"items":[{"id":"t1","owner":"u1","org":"org1","title":"Taak","notes":"","status":"open",
+             "visibility":"company","viewers":[],"created":"2026-07-24 09:00:00.000Z","updated":"2026-07-24 09:00:00.000Z"}],
+             "page":1,"perPage":200,"totalItems":1,"totalPages":1}
+            """.data(using: .utf8)!
+            return (200, json)
+        }
+        await vm.loadTeamTasks(org: "org1", token: "tok")
+        let task = vm.teamTasks.first!
+
+        URLProtocolStub.requestHandler = { request in
+            #expect(request.httpMethod == "DELETE")
+            return (204, Data())
+        }
+        await vm.deleteTeamTask(task, userId: "u1", token: "tok")
+        #expect(vm.teamTasks.isEmpty)
+    }
+
+    @Test func deleteTeamTaskFailureShowsAlertAndKeepsTask() async {
+        let vm = makeViewModel()
+        URLProtocolStub.requestHandler = { _ in
+            let json = """
+            {"items":[{"id":"t1","owner":"u1","org":"org1","title":"Taak","notes":"","status":"open",
+             "visibility":"company","viewers":[],"created":"2026-07-24 09:00:00.000Z","updated":"2026-07-24 09:00:00.000Z"}],
+             "page":1,"perPage":200,"totalItems":1,"totalPages":1}
+            """.data(using: .utf8)!
+            return (200, json)
+        }
+        await vm.loadTeamTasks(org: "org1", token: "tok")
+
+        URLProtocolStub.requestHandler = { _ in
+            let json = """
+            {"data":{},"message":"Mislukt.","status":400}
+            """.data(using: .utf8)!
+            return (400, json)
+        }
+        await vm.deleteTeamTask(vm.teamTasks.first!, userId: "u1", token: "tok")
+        #expect(vm.deleteTeamTaskFailedAlert == true)
+        #expect(vm.teamTasks.count == 1)
+    }
 }
