@@ -29,12 +29,32 @@ struct GlassCard<Content: View>: View {
         }
     }
 
-    private var strokeColor: Color {
+    /// v4: geen uniforme rand meer. Echt glas vangt licht ongelijk — fel langs de
+    /// bovenrand, weg aan de onderkant. Een even sterke rand rondom leest als een
+    /// getekend kadertje en dat maakte de kaarten mat.
+    private var strokeGradient: LinearGradient {
+        let colors: [Color]
         switch emphasis {
-        case .hero: return BovexaTheme.Colors.teal.opacity(0.45)
-        case .standard: return Color.white.opacity(0.5)
-        case .quiet: return Color.white.opacity(0.35)
+        case .hero:
+            colors = [BovexaTheme.Colors.tealLight.opacity(0.85), BovexaTheme.Colors.teal.opacity(0.15)]
+        case .standard:
+            colors = [Color.white.opacity(0.75), Color.white.opacity(0.10)]
+        case .quiet:
+            colors = [Color.white.opacity(0.50), Color.white.opacity(0.08)]
         }
+        return LinearGradient(colors: colors, startPoint: .top, endPoint: .bottom)
+    }
+
+    /// Binnenglans over de bovenrand: de "lichtstrijk" die anders volledig van de
+    /// ondergrond moet komen. Geclipt op de kaartvorm.
+    private var topSheen: some View {
+        LinearGradient(
+            colors: [Color.white.opacity(emphasis == .quiet ? 0.10 : 0.18), Color.white.opacity(0)],
+            startPoint: .top,
+            endPoint: .bottom
+        )
+        .clipShape(shape)
+        .allowsHitTesting(false)
     }
 
     private var shadowColor: Color {
@@ -65,7 +85,8 @@ struct GlassCard<Content: View>: View {
         content()
             .padding(padding)
             .glassEffect(glass, in: shape)
-            .overlay(shape.stroke(strokeColor, lineWidth: 0.8))
+            .overlay(topSheen)
+            .overlay(shape.stroke(strokeGradient, lineWidth: 0.8))
             .shadow(color: shadowColor, radius: shadowRadius, x: 0, y: shadowOffset)
     }
 }

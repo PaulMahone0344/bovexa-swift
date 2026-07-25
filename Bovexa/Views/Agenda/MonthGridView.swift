@@ -15,9 +15,11 @@ struct MonthGridView: View {
 
             HStack(spacing: 2) {
                 ForEach(weekdayLabels, id: \.self) { label in
+                    // Staat direct op de ondergrond (het maandraster zit niet in
+                    // een GlassCard): sinds de v4-orbs is `muted` daar te licht.
                     Text(label)
                         .font(BovexaTheme.TypeStyle.caption.weight(.medium))
-                        .foregroundStyle(BovexaTheme.Colors.muted)
+                        .foregroundStyle(BovexaTheme.Colors.inkSoft)
                         .frame(maxWidth: .infinity)
                 }
             }

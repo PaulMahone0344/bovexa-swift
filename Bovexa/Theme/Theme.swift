@@ -90,6 +90,41 @@ enum BovexaTheme {
         static let pillGlass = [Color.white.opacity(0.78), Color.white.opacity(0.60)]
     }
 
+    /// v4: kleurvelden in de ondergrond. Glas breekt licht op *randen*, niet op
+    /// egale vlakken — v3 blurde de velden zo ver (110-120) dat er alleen mist
+    /// overbleef en het glas optisch mat werd. Deze orbs zijn strakker en staan
+    /// zo dat hun rand door de kaartkolom loopt (kaarten lopen van ±5% tot ±95%
+    /// van de schermbreedte), zodat elke kaart iets te breken heeft.
+    ///
+    /// Middelpunt en diameter zijn fracties: x/diameter van de schermbreedte,
+    /// y van de schermhoogte.
+    enum Orb {
+        /// Koel veld linksboven; loopt tot ±0.58w, dwars door de hero-kaart.
+        static let coolCenter = CGPoint(x: 0.10, y: 0.13)
+        static let coolDiameter: CGFloat = 0.95
+        static let coolBlur: CGFloat = 45
+        static let coolOpacity: Double = 0.48
+
+        /// Warm tegenwicht rechtsonder; linkerrand op ±0.45w.
+        static let warmCenter = CGPoint(x: 0.88, y: 0.74)
+        static let warmDiameter: CGFloat = 0.85
+        static let warmBlur: CGFloat = 48
+        static let warmOpacity: Double = 0.44
+
+        /// Derde veld in de kaartzone (Tijdlijn / lijstkaarten). Middelpunt staat
+        /// bewust *achter* de kaarten, zodat de afval van de orb over het
+        /// kaartoppervlak loopt — dat verloop is wat het glas laat breken.
+        static let midCenter = CGPoint(x: 0.72, y: 0.46)
+        static let midDiameter: CGFloat = 0.70
+        static let midBlur: CGFloat = 42
+        static let midOpacity: Double = 0.44
+
+        /// Lichtstreek langs de bovenrand. v3 zette hem op 0.55 over 28% van de
+        /// hoogte — dat waste precies de zone uit waar de hero-kaart staat.
+        static let topLightOpacity: Double = 0.22
+        static let topLightHeight: CGFloat = 0.20
+    }
+
     enum Radius {
         static let sm: CGFloat = 14
         static let md: CGFloat = 20

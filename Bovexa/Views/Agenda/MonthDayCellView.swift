@@ -83,7 +83,7 @@ struct MonthDayCellView: View {
             if result.overflow > 0 {
                 Text("+\(result.overflow)")
                     .font(.system(size: 9, weight: .medium))
-                    .foregroundStyle(BovexaTheme.Colors.muted)
+                    .foregroundStyle(BovexaTheme.Colors.inkSoft)
             }
         }
         .padding(.horizontal, 2)

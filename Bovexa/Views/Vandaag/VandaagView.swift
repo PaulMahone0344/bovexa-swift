@@ -27,9 +27,13 @@ struct VandaagView: View {
                 ScrollView {
                     VStack(alignment: .leading, spacing: BovexaTheme.Space.lg) {
                         HStack(alignment: .center) {
+                            // `muted` staat hier direct op de ondergrond, niet op
+                            // glas: sinds de v4-orbs is die ondergrond op deze plek
+                            // verzadigd teal en haalde muted nog maar 2.4:1.
+                            // `inkSoft` houdt het rustig én leesbaar.
                             Text(todayLine)
                                 .font(BovexaTheme.TypeStyle.subheadline)
-                                .foregroundStyle(BovexaTheme.Colors.muted)
+                                .foregroundStyle(BovexaTheme.Colors.inkSoft)
 
                             Spacer()
 

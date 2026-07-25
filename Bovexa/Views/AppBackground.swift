@@ -2,10 +2,16 @@ import SwiftUI
 
 /// Achtergrond achter elk scherm.
 ///
-/// v3: "daglicht" — koele teal-mist bovenin die naar warm zand onderin zakt,
-/// met twee kleurvelden voor atmosfeer en een lichtstreek langs de bovenrand.
-/// Liquid Glass werkt alleen als er kleurverschil ónder het glas doorschijnt;
-/// de v2-ondergrond was bijna-wit, waardoor het glas optisch verdween.
+/// v4: "daglicht" met vorm. De richting blijft v3 — koele teal-mist bovenin die
+/// naar warm zand onderin zakt — maar de kleurvelden zijn strakker en staan zo
+/// dat hun rand door de kaartkolom loopt. Reden: glas breekt licht op randen,
+/// niet op egale vlakken; v3 blurde de velden tot mist en het glas werd mat.
+/// Alle waardes komen uit `BovexaTheme.Orb`.
+///
+/// Bewust statisch: trage drift is geprobeerd en weer verwijderd. Bij een blur
+/// van 55-65pt levert een verschuiving die klein genoeg is om rustig te blijven
+/// een kleurverschil van hooguit 4/255 op — onzichtbaar, terwijl het scherm wel
+/// continu opnieuw getekend wordt.
 struct AppBackground: View {
     var body: some View {
         ZStack {
@@ -17,31 +23,62 @@ struct AppBackground: View {
             .ignoresSafeArea()
 
             GeometryReader { geo in
-                // Koel veld linksboven — geeft de bovenkant van elk scherm diepte.
-                Circle()
-                    .fill(BovexaTheme.Colors.teal.opacity(0.30))
-                    .frame(width: geo.size.width * 1.1)
-                    .blur(radius: 110)
-                    .offset(x: -geo.size.width * 0.38, y: -geo.size.height * 0.22)
+                orb(
+                    color: BovexaTheme.Colors.teal,
+                    opacity: BovexaTheme.Orb.coolOpacity,
+                    center: BovexaTheme.Orb.coolCenter,
+                    diameter: BovexaTheme.Orb.coolDiameter,
+                    blur: BovexaTheme.Orb.coolBlur,
+                    in: geo.size
+                )
 
-                // Warm veld rechtsonder — tegenwicht, houdt de onderkant zacht.
-                Circle()
-                    .fill(BovexaTheme.Colors.warm.opacity(0.20))
-                    .frame(width: geo.size.width * 0.85)
-                    .blur(radius: 120)
-                    .offset(x: geo.size.width * 0.45, y: geo.size.height * 0.62)
+                orb(
+                    color: BovexaTheme.Colors.tealLight,
+                    opacity: BovexaTheme.Orb.midOpacity,
+                    center: BovexaTheme.Orb.midCenter,
+                    diameter: BovexaTheme.Orb.midDiameter,
+                    blur: BovexaTheme.Orb.midBlur,
+                    in: geo.size
+                )
+
+                orb(
+                    color: BovexaTheme.Colors.warm,
+                    opacity: BovexaTheme.Orb.warmOpacity,
+                    center: BovexaTheme.Orb.warmCenter,
+                    diameter: BovexaTheme.Orb.warmDiameter,
+                    blur: BovexaTheme.Orb.warmBlur,
+                    in: geo.size
+                )
 
                 // Lichtstreek langs de bovenrand: laat glas aan de bovenkant
                 // oplichten, zoals licht dat over een oppervlak strijkt.
                 LinearGradient(
-                    colors: [Color.white.opacity(0.55), Color.white.opacity(0)],
+                    colors: [
+                        Color.white.opacity(BovexaTheme.Orb.topLightOpacity),
+                        Color.white.opacity(0),
+                    ],
                     startPoint: .top,
                     endPoint: .bottom
                 )
-                .frame(height: geo.size.height * 0.28)
+                .frame(height: geo.size.height * BovexaTheme.Orb.topLightHeight)
             }
             .ignoresSafeArea()
         }
+    }
+
+    private func orb(
+        color: Color,
+        opacity: Double,
+        center: CGPoint,
+        diameter: CGFloat,
+        blur: CGFloat,
+        in size: CGSize
+    ) -> some View {
+        Circle()
+            .fill(color.opacity(opacity))
+            .frame(width: size.width * diameter, height: size.width * diameter)
+            .blur(radius: blur)
+            .position(x: size.width * center.x, y: size.height * center.y)
     }
 }
 
