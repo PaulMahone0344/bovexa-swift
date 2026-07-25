@@ -11,7 +11,7 @@ struct WeekBusyCard: View {
         GlassCard {
             VStack(alignment: .leading, spacing: BovexaTheme.Space.sm) {
                 Text("Deze week")
-                    .font(.system(size: BovexaTheme.TypeScale.title, weight: .semibold))
+                    .font(BovexaTheme.TypeStyle.headline)
                     .foregroundStyle(BovexaTheme.Colors.ink)
 
                 HStack(spacing: BovexaTheme.Space.md) {
@@ -21,7 +21,7 @@ struct WeekBusyCard: View {
                                 .fill(BovexaTheme.Colors.teal.opacity(dotOpacity(for: counts[safe: index] ?? 0)))
                                 .frame(width: 10, height: 10)
                             Text(label)
-                                .font(.system(size: BovexaTheme.TypeScale.tiny))
+                                .font(BovexaTheme.TypeStyle.caption)
                                 .foregroundStyle(BovexaTheme.Colors.muted)
                         }
                         .frame(maxWidth: .infinity)

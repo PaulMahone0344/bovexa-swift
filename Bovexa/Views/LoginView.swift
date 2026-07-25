@@ -20,10 +20,10 @@ struct LoginView: View {
                 VStack(spacing: BovexaTheme.Space.xl) {
                     VStack(spacing: BovexaTheme.Space.xs) {
                         Text("Bovexa Flow")
-                            .font(.system(size: BovexaTheme.TypeScale.h1, weight: .bold))
+                            .font(BovexaTheme.TypeStyle.largeTitle)
                             .foregroundStyle(BovexaTheme.Colors.ink)
                         Text("Log in om verder te gaan")
-                            .font(.system(size: BovexaTheme.TypeScale.body))
+                            .font(BovexaTheme.TypeStyle.subheadline)
                             .foregroundStyle(BovexaTheme.Colors.muted)
                     }
                     .padding(.top, BovexaTheme.Space.xxl)
@@ -51,15 +51,17 @@ struct LoginView: View {
                                 }
 
                                 Button(showPassword ? "Verberg" : "Toon") {
-                                    showPassword.toggle()
+                                    withAnimation(.snappy) {
+                                        showPassword.toggle()
+                                    }
                                 }
-                                .font(.system(size: BovexaTheme.TypeScale.small, weight: .medium))
+                                .font(BovexaTheme.TypeStyle.footnote.weight(.medium))
                                 .foregroundStyle(BovexaTheme.Colors.accent)
                             }
 
                             if let errorMessage {
                                 Text(errorMessage)
-                                    .font(.system(size: BovexaTheme.TypeScale.small))
+                                    .font(BovexaTheme.TypeStyle.footnote)
                                     .foregroundStyle(BovexaTheme.Colors.danger)
                                     .frame(maxWidth: .infinity, alignment: .leading)
                             }
@@ -73,17 +75,14 @@ struct LoginView: View {
                                         ProgressView().tint(BovexaTheme.Colors.white)
                                     } else {
                                         Text("Inloggen")
-                                            .font(.system(size: BovexaTheme.TypeScale.title, weight: .semibold))
-                                            .foregroundStyle(BovexaTheme.Colors.white)
+                                            .font(BovexaTheme.TypeStyle.headline)
                                     }
                                     Spacer()
                                 }
-                                .padding(.vertical, BovexaTheme.Space.sm)
-                                .background(
-                                    LinearGradient(colors: BovexaTheme.Gradients.teal, startPoint: .leading, endPoint: .trailing)
-                                )
-                                .clipShape(RoundedRectangle(cornerRadius: BovexaTheme.Radius.md, style: .continuous))
+                                .frame(maxWidth: .infinity)
+                                .padding(.vertical, BovexaTheme.Space.xs)
                             }
+                            .buttonStyle(.glassProminentBrand)
                             .disabled(isSubmitting || email.isEmpty || password.isEmpty)
                             .opacity(isSubmitting || email.isEmpty || password.isEmpty ? 0.6 : 1)
                         }
@@ -98,10 +97,10 @@ struct LoginView: View {
     private func field(placeholder: String, @ViewBuilder content: () -> some View) -> some View {
         VStack(alignment: .leading, spacing: BovexaTheme.Space.xs) {
             Text(placeholder)
-                .font(.system(size: BovexaTheme.TypeScale.tiny, weight: .medium))
+                .font(BovexaTheme.TypeStyle.footnote.weight(.medium))
                 .foregroundStyle(BovexaTheme.Colors.muted)
             content()
-                .font(.system(size: BovexaTheme.TypeScale.body))
+                .font(BovexaTheme.TypeStyle.body)
                 .foregroundStyle(BovexaTheme.Colors.ink)
                 .padding(BovexaTheme.Space.sm)
                 .background(BovexaTheme.Colors.glassSoft)
@@ -113,6 +112,16 @@ struct LoginView: View {
         isSubmitting = true
         await authStore.signIn(email: email, password: password)
         isSubmitting = false
+
+        // Haptic op het bestaande fase-overgangsmoment — geen nieuwe state, alleen feedback.
+        switch authStore.phase {
+        case .loggedIn:
+            Haptics.success()
+        case .loggedOut(let message) where message != nil:
+            Haptics.warning()
+        default:
+            break
+        }
     }
 }
 

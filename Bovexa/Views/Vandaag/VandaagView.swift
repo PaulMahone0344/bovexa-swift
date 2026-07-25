@@ -35,25 +35,42 @@ struct VandaagView: View {
 
                         if let next = viewModel.nextEvent, let userId = currentUser?.id {
                             VStack(alignment: .leading, spacing: BovexaTheme.Space.sm) {
-                                Text("Volgende afspraak")
-                                    .font(.system(size: BovexaTheme.TypeScale.title, weight: .semibold))
-                                    .foregroundStyle(BovexaTheme.Colors.ink)
-                                    .frame(maxWidth: .infinity, alignment: .leading)
+                                Label {
+                                    Text("Volgende afspraak")
+                                        .font(BovexaTheme.TypeStyle.headline)
+                                        .foregroundStyle(BovexaTheme.Colors.ink)
+                                } icon: {
+                                    Image(systemName: "clock")
+                                        .font(BovexaTheme.TypeStyle.headline)
+                                        .foregroundStyle(BovexaTheme.Colors.teal)
+                                }
+                                .frame(maxWidth: .infinity, alignment: .leading)
 
+                                // Belangrijkste kaart op het scherm: prominenter glas via een
+                                // extra teal glow bovenop GlassCard's eigen schaduw (design-taal:
+                                // "belangrijke kaarten prominenter glas, lijst-rijen subtieler").
                                 GlassCard {
                                     Button {
+                                        Haptics.selection()
                                         selectedEvent = next
                                     } label: {
                                         AppointmentRow(event: next, currentUserId: userId, memberColors: viewModel.memberColors)
                                     }
                                     .buttonStyle(.plain)
                                 }
+                                .shadow(
+                                    color: BovexaTheme.Shadow.tealGlowColor.opacity(BovexaTheme.Shadow.tealGlowOpacity),
+                                    radius: BovexaTheme.Shadow.tealGlowRadius,
+                                    x: 0,
+                                    y: BovexaTheme.Shadow.tealGlowOffsetY
+                                )
                             }
+                            .transition(.opacity)
                         }
 
                         VStack(alignment: .leading, spacing: BovexaTheme.Space.sm) {
                             Text("Tijdlijn")
-                                .font(.system(size: BovexaTheme.TypeScale.title, weight: .semibold))
+                                .font(BovexaTheme.TypeStyle.headline)
                                 .foregroundStyle(BovexaTheme.Colors.ink)
                                 .frame(maxWidth: .infinity, alignment: .leading)
 
@@ -64,13 +81,14 @@ struct VandaagView: View {
                                         .frame(maxWidth: .infinity, alignment: .center)
                                 } else if viewModel.todayEvents.isEmpty {
                                     Text("Nog niks gepland vandaag…")
-                                        .font(.system(size: BovexaTheme.TypeScale.body))
+                                        .font(BovexaTheme.TypeStyle.body)
                                         .foregroundStyle(BovexaTheme.Colors.muted)
                                         .frame(maxWidth: .infinity, alignment: .leading)
                                 } else if let userId = currentUser?.id {
                                     VStack(spacing: 0) {
                                         ForEach(viewModel.todayEvents) { event in
                                             Button {
+                                                Haptics.selection()
                                                 selectedEvent = event
                                             } label: {
                                                 AppointmentRow(event: event, currentUserId: userId, memberColors: viewModel.memberColors)
@@ -78,7 +96,7 @@ struct VandaagView: View {
                                             .buttonStyle(.plain)
 
                                             if event.id != viewModel.todayEvents.last?.id {
-                                                Divider().overlay(BovexaTheme.Colors.edge)
+                                                Divider().overlay(BovexaTheme.Colors.edgeSoft)
                                             }
                                         }
                                     }
@@ -89,7 +107,8 @@ struct VandaagView: View {
                         WeekBusyCard(counts: viewModel.weekBusyCounts)
                     }
                     .padding(BovexaTheme.Space.xl)
-                    .padding(.bottom, 90) // ruimte voor de zwevende tabbalk
+                    .padding(.bottom, 90) // ruimte voor de tabbalk onderin
+                    .animation(.smooth(duration: 0.3), value: viewModel.nextEvent?.id)
                 }
             }
             .navigationDestination(item: $selectedEvent) { event in
@@ -100,6 +119,8 @@ struct VandaagView: View {
                     )
                 }
             }
+            .navigationTitle("Vandaag")
+            .navigationBarTitleDisplayMode(.large)
         }
         .task {
             await refresh()

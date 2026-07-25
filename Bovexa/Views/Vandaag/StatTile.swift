@@ -7,10 +7,10 @@ struct StatTile: View {
     var body: some View {
         VStack(alignment: .leading, spacing: BovexaTheme.Space.xs) {
             Text(value)
-                .font(.system(size: BovexaTheme.TypeScale.h2, weight: .bold))
+                .font(BovexaTheme.TypeStyle.statNumber)
                 .foregroundStyle(BovexaTheme.Colors.ink)
             Text(label)
-                .font(.system(size: BovexaTheme.TypeScale.small))
+                .font(BovexaTheme.TypeStyle.statLabel)
                 .foregroundStyle(BovexaTheme.Colors.muted)
         }
         .frame(maxWidth: .infinity, alignment: .leading)

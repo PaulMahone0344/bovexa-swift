@@ -11,9 +11,10 @@ struct AppointmentRow: View {
     var body: some View {
         HStack(spacing: BovexaTheme.Space.md) {
             Text(EventHelpers.fmtTime(event.start))
-                .font(.system(size: BovexaTheme.TypeScale.small, weight: .semibold))
+                .font(BovexaTheme.TypeStyle.footnote.weight(.semibold))
                 .foregroundStyle(BovexaTheme.Colors.muted)
-                .frame(width: 44, alignment: .leading)
+                .monospacedDigit()
+                .frame(minWidth: 44, alignment: .leading)
 
             ZStack {
                 if isColleague {
@@ -29,18 +30,18 @@ struct AppointmentRow: View {
             VStack(alignment: .leading, spacing: 2) {
                 HStack(spacing: BovexaTheme.Space.xs) {
                     Text(event.title)
-                        .font(.system(size: BovexaTheme.TypeScale.body, weight: .medium))
+                        .font(BovexaTheme.TypeStyle.body.weight(.medium))
                         .foregroundStyle(BovexaTheme.Colors.ink)
                         .lineLimit(1)
                     if isColleague, let firstName = memberColors.firstName(for: event.owner) {
                         Text(firstName)
-                            .font(.system(size: BovexaTheme.TypeScale.tiny, weight: .medium))
+                            .font(BovexaTheme.TypeStyle.caption.weight(.medium))
                             .foregroundStyle(memberColors.color(for: event.owner))
                     }
                 }
                 if let location = event.location, !location.isEmpty {
                     Text(location)
-                        .font(.system(size: BovexaTheme.TypeScale.small))
+                        .font(BovexaTheme.TypeStyle.footnote)
                         .foregroundStyle(BovexaTheme.Colors.muted)
                         .lineLimit(1)
                 }
@@ -49,7 +50,7 @@ struct AppointmentRow: View {
             Spacer(minLength: BovexaTheme.Space.sm)
 
             Text(EventHelpers.durationLabel(event))
-                .font(.system(size: BovexaTheme.TypeScale.small))
+                .font(BovexaTheme.TypeStyle.footnote)
                 .foregroundStyle(BovexaTheme.Colors.muted)
         }
         .padding(.vertical, BovexaTheme.Space.xs)
