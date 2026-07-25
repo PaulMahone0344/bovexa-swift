@@ -33,6 +33,26 @@ final class PBClient {
         return try await send(request)
     }
 
+    /// Registratie (valkuil A) — publieke create op agenda_users, nog geen token.
+    func register(email: String, password: String, naam: String) async throws -> AgendaUser {
+        var request = URLRequest(url: baseURL.appendingPathComponent("/api/collections/agenda_users/records"))
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.httpBody = try JSONEncoder().encode([
+            "email": email, "password": password, "passwordConfirm": password, "naam": naam,
+        ])
+        return try await send(request)
+    }
+
+    /// Stuurt een herstelmail; PB antwoordt zonder body, dus geen decode nodig.
+    func requestPasswordReset(email: String) async throws {
+        var request = URLRequest(url: baseURL.appendingPathComponent("/api/collections/agenda_users/request-password-reset"))
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.httpBody = try JSONEncoder().encode(["email": email])
+        _ = try await perform(request)
+    }
+
     func getFullList<T: Decodable>(_ type: T.Type, collection: String, filter: String, sort: String? = nil, expand: String? = nil, token: String) async throws -> [T] {
         var results: [T] = []
         var page = 1

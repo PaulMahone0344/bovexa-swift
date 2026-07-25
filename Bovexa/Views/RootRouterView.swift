@@ -17,7 +17,11 @@ struct RootRouterView: View {
             case .loggedOut:
                 LoginView()
             case .loggedIn:
-                RootTabView()
+                if authStore.justRegistered {
+                    OnboardingView()
+                } else {
+                    RootTabView()
+                }
             }
         }
         .environmentObject(authStore)
@@ -31,8 +35,9 @@ struct RootRouterView: View {
         }
         .onChange(of: authStore.phase) { _, phase in
             // Valkuil G, uitkomst 1: code kwam binnen terwijl nog niet ingelogd —
-            // na een geslaagde login/registratie alsnog verwerken.
-            guard case .loggedIn = phase, let code = joinCoordinator.pendingCode else { return }
+            // na een geslaagde login alsnog verwerken. Net geregistreerd? Dan
+            // handelt OnboardingView de voorgevulde code zelf af (valkuil B).
+            guard case .loggedIn = phase, !authStore.justRegistered, let code = joinCoordinator.pendingCode else { return }
             joinCoordinator.pendingCode = nil
             handle(code: code)
         }
