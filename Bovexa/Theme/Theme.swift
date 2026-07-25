@@ -1,8 +1,8 @@
 import SwiftUI
 
-/// Design-tokens voor Bovexa Flow — geport uit ~/Desktop/agenda-app/src/theme/tokens.ts
-/// en themes.ts. Donkere gradient-achtergrond met teal accent, glaskaarten
-/// (geen losse hexcodes buiten dit bestand).
+/// Design-tokens voor Bovexa Flow — 1:1 het "standaard"-thema uit
+/// ~/Desktop/agenda-app/src/theme/tokens.ts: licht teal-grijs oppervlak,
+/// witte glaskaarten, teal accent (geen losse hexcodes buiten dit bestand).
 enum BovexaTheme {
 
     enum Category: String, CaseIterable, Decodable {
@@ -20,20 +20,20 @@ enum BovexaTheme {
     }
 
     enum Colors {
-        // achtergrond-gradient
-        static let bgTop = Color(hex: "#0D2422")
-        static let bgBottom = Color(hex: "#081513")
-        static let page = Color(hex: "#0A1B19")
+        // achtergrond-gradient (licht teal-grijs, zoals de mockup)
+        static let bgTop = Color(hex: "#DCE7E7")
+        static let bgBottom = Color(hex: "#EDF3F2")
+        static let page = Color(hex: "#DFE8E8")
 
-        // inkt (licht op donkere achtergrond)
-        static let ink = Color(hex: "#F2F7F6")
-        static let inkSoft = Color(hex: "#DCEAE8")
-        static let muted = Color(hex: "#8FA6A4")
+        // inkt (donker op licht oppervlak)
+        static let ink = Color(hex: "#10191A")
+        static let inkSoft = Color(hex: "#203133")
+        static let muted = Color(hex: "#5F6D70")
 
         // merk / teal accent
         static let teal = Color(hex: "#58AEB7")
         static let tealDark = Color(hex: "#2F858F")
-        static let accent = Color(hex: "#7FCBD1")
+        static let accent = Color(hex: "#2F858F")
 
         // categorie-accenten (focus/social/body/afwezig — work gebruikt teal)
         static let categoryBlue = Color(hex: "#7EB3DC")
@@ -41,20 +41,20 @@ enum BovexaTheme {
         static let categoryLilac = Color(hex: "#C8B7E8")
         static let categoryAmber = Color(hex: "#E9B84F")
 
-        // glas
-        static let glassSoft = Color(hex: "#122B29")
-        static let glass = Color(hex: "#173634")
-        static let glassStrong = Color(hex: "#1D3F3C")
-        static let edge = Color.white.opacity(0.10)
-        static let edgeSoft = Color.white.opacity(0.055)
+        // glas (wit-transparant op het lichte oppervlak)
+        static let glassSoft = Color.white.opacity(0.42)
+        static let glass = Color.white.opacity(0.52)
+        static let glassStrong = Color.white.opacity(0.62)
+        static let edge = Color.white.opacity(0.72)
+        static let edgeSoft = Color.white.opacity(0.58)
 
         // navbar-chrome
-        static let navSurface = Color(hex: "#0F2624")
-        static let navBorder = Color.white.opacity(0.09)
-        static let navInactive = Color(hex: "#7FA3A0")
+        static let navSurface = Color.white.opacity(0.88)
+        static let navBorder = Color.white.opacity(0.68)
+        static let navInactive = Color(hex: "#5C6B78")
 
         // status
-        static let danger = Color(hex: "#F0736A")
+        static let danger = Color(hex: "#E45F55")
         static let white = Color.white
     }
 
@@ -68,9 +68,9 @@ enum BovexaTheme {
 
         static let background = [BovexaTheme.Colors.bgTop, BovexaTheme.Colors.bgBottom]
 
-        static let cardGlass = [Color(hex: "#1A3D3A"), Color(hex: "#12302D")]
-        static let raisedGlass = [Color(hex: "#234C48"), Color(hex: "#1B3F3B")]
-        static let pillGlass = [Color(hex: "#20443F"), Color(hex: "#183633")]
+        static let cardGlass = [Color.white.opacity(0.70), Color.white.opacity(0.50)]
+        static let raisedGlass = [Color.white.opacity(0.74), Color.white.opacity(0.54)]
+        static let pillGlass = [Color.white.opacity(0.78), Color.white.opacity(0.60)]
     }
 
     enum Radius {
@@ -100,18 +100,18 @@ enum BovexaTheme {
     }
 
     enum Shadow {
-        static let cardColor = Color(hex: "#03080F")
-        static let cardOpacity: Double = 0.28
+        static let cardColor = Color(hex: "#375255")
+        static let cardOpacity: Double = 0.18
         static let cardRadius: CGFloat = 24
         static let cardOffsetY: CGFloat = 16
 
-        static let softColor = Color(hex: "#03080F")
-        static let softOpacity: Double = 0.20
+        static let softColor = Color(hex: "#3C5C60")
+        static let softOpacity: Double = 0.13
         static let softRadius: CGFloat = 16
         static let softOffsetY: CGFloat = 10
 
         static let tealGlowColor = Color(hex: "#2A8994")
-        static let tealGlowOpacity: Double = 0.30
+        static let tealGlowOpacity: Double = 0.26
         static let tealGlowRadius: CGFloat = 18
         static let tealGlowOffsetY: CGFloat = 14
     }

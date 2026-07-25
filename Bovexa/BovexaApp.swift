@@ -5,7 +5,7 @@ struct BovexaApp: App {
     var body: some Scene {
         WindowGroup {
             RootRouterView()
-                .preferredColorScheme(.dark)
+                .preferredColorScheme(.light)
         }
     }
 }
