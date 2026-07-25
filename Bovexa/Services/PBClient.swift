@@ -62,11 +62,36 @@ final class PBClient {
     }
 
     func postCustom<T: Decodable>(_ type: T.Type, path: String, token: String) async throws -> T {
+        try await postCustom(type, path: path, body: [:], token: token)
+    }
+
+    /// POST met een JSON-body naar een custom route (geen collection-record) —
+    /// gebruikt door de company/team-routes (valkuil A: alles via routes).
+    func postCustom<T: Decodable>(_ type: T.Type, path: String, body: [String: Any], token: String) async throws -> T {
         var request = URLRequest(url: baseURL.appendingPathComponent(path))
         request.httpMethod = "POST"
         request.setValue(token, forHTTPHeaderField: "Authorization")
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        request.httpBody = Data("{}".utf8)
+        request.httpBody = try JSONSerialization.data(withJSONObject: body)
+        return try await send(request)
+    }
+
+    /// Multipart POST voor bestandsupload (logo) — enige plek in de app die dit nodig heeft.
+    func postMultipart<T: Decodable>(_ type: T.Type, path: String, fieldName: String, fileName: String, mimeType: String, fileData: Data, token: String) async throws -> T {
+        let boundary = "Boundary-\(UUID().uuidString)"
+        var request = URLRequest(url: baseURL.appendingPathComponent(path))
+        request.httpMethod = "POST"
+        request.setValue(token, forHTTPHeaderField: "Authorization")
+        request.setValue("multipart/form-data; boundary=\(boundary)", forHTTPHeaderField: "Content-Type")
+
+        var body = Data()
+        body.append("--\(boundary)\r\n".data(using: .utf8)!)
+        body.append("Content-Disposition: form-data; name=\"\(fieldName)\"; filename=\"\(fileName)\"\r\n".data(using: .utf8)!)
+        body.append("Content-Type: \(mimeType)\r\n\r\n".data(using: .utf8)!)
+        body.append(fileData)
+        body.append("\r\n--\(boundary)--\r\n".data(using: .utf8)!)
+        request.httpBody = body
+
         return try await send(request)
     }
 
