@@ -69,7 +69,25 @@ final class PBClient {
         return try await send(request)
     }
 
-    private func send<T: Decodable>(_ request: URLRequest) async throws -> T {
+    /// PATCH op een losse record — body is een los JSON-object (geen uniform Encodable-type,
+    /// zie EventUpdatePayload), dus JSONSerialization i.p.v. JSONEncoder.
+    func updateRecord<T: Decodable>(_ type: T.Type, collection: String, id: String, body: [String: Any], token: String) async throws -> T {
+        var request = URLRequest(url: baseURL.appendingPathComponent("/api/collections/\(collection)/records/\(id)"))
+        request.httpMethod = "PATCH"
+        request.setValue(token, forHTTPHeaderField: "Authorization")
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.httpBody = try JSONSerialization.data(withJSONObject: body)
+        return try await send(request)
+    }
+
+    func deleteRecord(collection: String, id: String, token: String) async throws {
+        var request = URLRequest(url: baseURL.appendingPathComponent("/api/collections/\(collection)/records/\(id)"))
+        request.httpMethod = "DELETE"
+        request.setValue(token, forHTTPHeaderField: "Authorization")
+        _ = try await perform(request)
+    }
+
+    private func perform(_ request: URLRequest) async throws -> Data {
         let data: Data
         let response: URLResponse
         do {
@@ -83,7 +101,11 @@ final class PBClient {
             let message = (try? decoder.decode(PBErrorBody.self, from: data))?.message ?? "Er ging iets mis."
             throw PBError.server(status: http.statusCode, message: message)
         }
+        return data
+    }
 
+    private func send<T: Decodable>(_ request: URLRequest) async throws -> T {
+        let data = try await perform(request)
         do {
             return try decoder.decode(T.self, from: data)
         } catch {

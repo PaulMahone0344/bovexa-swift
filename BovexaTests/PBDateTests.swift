@@ -23,4 +23,11 @@ struct PBDateTests {
     @Test func parseInvalidStringReturnsNil() {
         #expect(PBDate.parse("niet-een-datum") == nil)
     }
+
+    @Test func formatRoundTripsThroughParse() {
+        let original = PBDate.parse("2026-08-03 09:15:00.000Z")!
+        let formatted = PBDate.format(original)
+        #expect(formatted == "2026-08-03 09:15:00.000Z")
+        #expect(PBDate.parse(formatted) == original)
+    }
 }

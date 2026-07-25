@@ -18,4 +18,9 @@ enum PBDate {
             ?? withoutMillis.date(from: string)
             ?? ISO8601DateFormatter().date(from: string)
     }
+
+    /// Voor update-payloads (valkuil E): altijd UTC met milliseconden, zoals PocketBase teruggeeft.
+    static func format(_ date: Date) -> String {
+        withMillis.string(from: date)
+    }
 }

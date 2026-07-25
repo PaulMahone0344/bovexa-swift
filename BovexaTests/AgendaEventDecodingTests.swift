@@ -6,23 +6,53 @@ struct AgendaEventDecodingTests {
     @Test func decodeFullFixture() throws {
         let json = """
         {
-          "id": "ev1", "owner": "u1", "calendar": "work", "category": "work",
+          "id": "ev1", "owner": "u1", "org": "org1", "calendar": "work", "category": "work",
           "title": "Klant Jansen", "start": "2026-07-24 09:00:00.000Z",
           "end": "2026-07-24 10:00:00.000Z", "all_day": false,
-          "location": "Tiel", "notes": "Meenemen: offerte",
-          "klant_naam": "Jansen", "assignee_status": {"u2": "accepted"}
+          "location": "Tiel", "notes": "Meenemen: offerte", "visibility": "company",
+          "viewers": ["u2", "u3"], "assignee": ["u2"], "reminder_min": 15,
+          "klant_naam": "Jansen", "klant_telefoon": "0612345678",
+          "assignee_status": {"u2": "accepted"}
         }
         """.data(using: .utf8)!
         let event = try JSONDecoder().decode(AgendaEvent.self, from: json)
         #expect(event.id == "ev1")
         #expect(event.owner == "u1")
+        #expect(event.org == "org1")
         #expect(event.category == .work)
         #expect(event.title == "Klant Jansen")
         #expect(event.location == "Tiel")
         #expect(event.klantNaam == "Jansen")
+        #expect(event.klantTelefoon == "0612345678")
+        #expect(event.visibilityRaw == "company")
+        #expect(event.viewers == ["u2", "u3"])
+        #expect(event.assignee == ["u2"])
+        #expect(event.reminderMin == 15)
         #expect(event.assigneeStatus["u2"] == "accepted")
         #expect(event.end != nil)
         #expect(event.allDay == false)
+    }
+
+    @Test func decodeAssigneeAsLegacySingleStringNormalizesToArray() throws {
+        // Oudere records hadden een los string-id i.p.v. een array (vóór punt F).
+        let json = """
+        {"id":"ev1","owner":"u1","title":"Iets","start":"2026-07-24 09:00:00.000Z","all_day":false,"assignee":"u2"}
+        """.data(using: .utf8)!
+        let event = try JSONDecoder().decode(AgendaEvent.self, from: json)
+        #expect(event.assignee == ["u2"])
+    }
+
+    @Test func decodeMissingAssigneeAndViewersDefaultToEmptyArray() throws {
+        let json = """
+        {"id":"ev1","owner":"u1","title":"Iets","start":"2026-07-24 09:00:00.000Z","all_day":false}
+        """.data(using: .utf8)!
+        let event = try JSONDecoder().decode(AgendaEvent.self, from: json)
+        #expect(event.assignee.isEmpty)
+        #expect(event.viewers.isEmpty)
+        #expect(event.org == nil)
+        #expect(event.visibilityRaw == nil)
+        #expect(event.reminderMin == nil)
+        #expect(event.klantTelefoon == nil)
     }
 
     @Test func decodeMissingAssigneeStatusDefaultsToEmpty() throws {

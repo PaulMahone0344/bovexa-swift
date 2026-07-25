@@ -21,12 +21,20 @@ struct AgendaEvent: Decodable, Identifiable {
     let assigneeStatus: [String: String]
     let seriesId: String?
     let occurrenceDate: String?
+    let org: String?
+    let visibilityRaw: String?
+    let viewers: [String]
+    let assignee: [String]
+    let reminderMin: Int?
+    let klantTelefoon: String?
 
     init(
         id: String, owner: String, calendar: String?, category: BovexaTheme.Category?,
         title: String, start: Date, end: Date?, allDay: Bool, recurrence: String?,
         location: String?, notes: String?, klantNaam: String?,
-        assigneeStatus: [String: String], seriesId: String?, occurrenceDate: String?
+        assigneeStatus: [String: String], seriesId: String?, occurrenceDate: String?,
+        org: String? = nil, visibilityRaw: String? = nil, viewers: [String] = [],
+        assignee: [String] = [], reminderMin: Int? = nil, klantTelefoon: String? = nil
     ) {
         self.id = id
         self.owner = owner
@@ -43,6 +51,12 @@ struct AgendaEvent: Decodable, Identifiable {
         self.assigneeStatus = assigneeStatus
         self.seriesId = seriesId
         self.occurrenceDate = occurrenceDate
+        self.org = org
+        self.visibilityRaw = visibilityRaw
+        self.viewers = viewers
+        self.assignee = assignee
+        self.reminderMin = reminderMin
+        self.klantTelefoon = klantTelefoon
     }
 
     /// Kopie met andere id/tijd/serie — gebruikt door RecurrenceExpander om een
@@ -52,7 +66,9 @@ struct AgendaEvent: Decodable, Identifiable {
             id: id, owner: owner, calendar: calendar, category: category, title: title,
             start: start, end: end, allDay: allDay, recurrence: recurrence, location: location,
             notes: notes, klantNaam: klantNaam, assigneeStatus: assigneeStatus,
-            seriesId: seriesId, occurrenceDate: occurrenceDate
+            seriesId: seriesId, occurrenceDate: occurrenceDate,
+            org: org, visibilityRaw: visibilityRaw, viewers: viewers,
+            assignee: assignee, reminderMin: reminderMin, klantTelefoon: klantTelefoon
         )
     }
 
@@ -64,6 +80,11 @@ struct AgendaEvent: Decodable, Identifiable {
         case assigneeStatus = "assignee_status"
         case seriesId = "series_id"
         case occurrenceDate = "occurrence_date"
+        case org
+        case visibilityRaw = "visibility"
+        case viewers, assignee
+        case reminderMin = "reminder_min"
+        case klantTelefoon = "klant_telefoon"
     }
 
     init(from decoder: Decoder) throws {
@@ -86,11 +107,25 @@ struct AgendaEvent: Decodable, Identifiable {
         assigneeStatus = Self.decodeOptional(c, .assigneeStatus) ?? [:]
         seriesId = Self.decodeOptional(c, .seriesId)
         occurrenceDate = Self.decodeOptional(c, .occurrenceDate)
+        org = Self.decodeOptional(c, .org)
+        visibilityRaw = Self.decodeOptional(c, .visibilityRaw)
+        viewers = Self.decodeOptional(c, .viewers) ?? []
+        assignee = Self.decodeAssigneeIds(c)
+        reminderMin = Self.decodeOptional(c, .reminderMin)
+        klantTelefoon = Self.decodeOptional(c, .klantTelefoon)
     }
 
     /// Ontbrekende sleutel, null, of een onverwacht type → nil in plaats van crash.
     private static func decodeOptional<T: Decodable>(_ c: KeyedDecodingContainer<CodingKeys>, _ key: CodingKeys, as type: T.Type = T.self) -> T? {
         (try? c.decodeIfPresent(T.self, forKey: key)) ?? nil
+    }
+
+    /// Oudere records hebben nog een los string-id i.p.v. een array (vóór punt F) —
+    /// zie assigneesOf() in de RN-app. Beide vormen normaliseren naar [String].
+    private static func decodeAssigneeIds(_ c: KeyedDecodingContainer<CodingKeys>) -> [String] {
+        if let array: [String] = decodeOptional(c, .assignee) { return array }
+        if let single: String = decodeOptional(c, .assignee), !single.isEmpty { return [single] }
+        return []
     }
 }
 
