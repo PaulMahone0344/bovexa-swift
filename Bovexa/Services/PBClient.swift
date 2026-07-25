@@ -137,6 +137,47 @@ final class PBClient {
         return try await send(request)
     }
 
+    /// Wat er met de avatar moet gebeuren bij een profiel-update (valkuil J).
+    enum AvatarUpdate {
+        case file(fileName: String, mimeType: String, fileData: Data)
+        case remove
+    }
+
+    /// Multipart PATCH voor profiel bewerken (valkuil J, zelfde patroon als het
+    /// bedrijfslogo): naam altijd mee, avatar optioneel als bestand of als lege
+    /// waarde om 'm te verwijderen.
+    func updateProfile(id: String, naam: String, avatar: AvatarUpdate?, token: String) async throws -> AgendaUser {
+        let boundary = "Boundary-\(UUID().uuidString)"
+        var request = URLRequest(url: baseURL.appendingPathComponent("/api/collections/agenda_users/records/\(id)"))
+        request.httpMethod = "PATCH"
+        request.setValue(token, forHTTPHeaderField: "Authorization")
+        request.setValue("multipart/form-data; boundary=\(boundary)", forHTTPHeaderField: "Content-Type")
+
+        var body = Data()
+        func appendTextField(_ name: String, _ value: String) {
+            body.append("--\(boundary)\r\n".data(using: .utf8)!)
+            body.append("Content-Disposition: form-data; name=\"\(name)\"\r\n\r\n".data(using: .utf8)!)
+            body.append("\(value)\r\n".data(using: .utf8)!)
+        }
+        appendTextField("naam", naam)
+        switch avatar {
+        case .file(let fileName, let mimeType, let fileData):
+            body.append("--\(boundary)\r\n".data(using: .utf8)!)
+            body.append("Content-Disposition: form-data; name=\"avatar\"; filename=\"\(fileName)\"\r\n".data(using: .utf8)!)
+            body.append("Content-Type: \(mimeType)\r\n\r\n".data(using: .utf8)!)
+            body.append(fileData)
+            body.append("\r\n".data(using: .utf8)!)
+        case .remove:
+            appendTextField("avatar", "")
+        case nil:
+            break
+        }
+        body.append("--\(boundary)--\r\n".data(using: .utf8)!)
+        request.httpBody = body
+
+        return try await send(request)
+    }
+
     /// Valkuil I: verwijderen is onomkeerbaar — de server ruimt gekoppelde data
     /// op via cascade, hier alleen de aanroep zelf.
     func deleteAccount(id: String, token: String) async throws {

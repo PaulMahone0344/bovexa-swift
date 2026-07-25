@@ -146,7 +146,9 @@ struct ProfielView: View {
             ComingSoonView(title: "Mijn klanten")
         }
         .sheet(isPresented: $showProfielBewerken) {
-            ComingSoonView(title: "Profiel bewerken")
+            if let user = currentUser {
+                ProfielBewerkenView(user: user)
+            }
         }
         .sheet(isPresented: $showWachtwoord) {
             ComingSoonView(title: "Wachtwoord wijzigen")

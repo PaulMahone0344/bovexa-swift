@@ -106,6 +106,14 @@ final class AuthStore: ObservableObject {
         }
     }
 
+    /// Profiel bewerken (valkuil J): server stuurt het volledige bijgewerkte
+    /// record terug, dus geen aparte authRefresh nodig.
+    func updateProfile(naam: String, avatar: PBClient.AvatarUpdate?) async throws {
+        guard case .loggedIn(let user) = phase, let token else { return }
+        let updated = try await client.updateProfile(id: user.id, naam: naam, avatar: avatar, token: token)
+        phase = .loggedIn(updated)
+    }
+
     /// Valkuil I: onomkeerbaar. De view vraagt zelf om bevestiging vóórdat dit aangeroepen wordt.
     func deleteAccount() async throws {
         guard case .loggedIn(let user) = phase, let token else { return }

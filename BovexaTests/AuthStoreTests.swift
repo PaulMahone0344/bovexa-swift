@@ -220,4 +220,33 @@ struct AuthStoreTests {
         #expect(store.phase == .loggedOut(errorMessage: nil))
         #expect(tokenStore.load() == nil)
     }
+
+    // MARK: - Profiel bewerken (valkuil J)
+
+    @Test func updateProfileSendsMultipartPatchAndUpdatesPhase() async throws {
+        let store = AuthStore(client: makeClient(), tokenStore: InMemoryTokenStore())
+        URLProtocolStub.requestHandler = { _ in
+            (200, """
+            {"token":"tok-1","record":{"id":"u1","email":"a@b.nl","naam":"Ibrahim"}}
+            """.data(using: .utf8)!)
+        }
+        await store.signIn(email: "a@b.nl", password: "geheim123")
+
+        URLProtocolStub.requestHandler = { request in
+            #expect(request.httpMethod == "PATCH")
+            #expect(request.url!.path == "/api/collections/agenda_users/records/u1")
+            let contentType = request.value(forHTTPHeaderField: "Content-Type") ?? ""
+            #expect(contentType.hasPrefix("multipart/form-data"))
+            return (200, """
+            {"id":"u1","email":"a@b.nl","naam":"Ibrahim K.","avatar":"foto.jpg"}
+            """.data(using: .utf8)!)
+        }
+        try await store.updateProfile(naam: "Ibrahim K.", avatar: nil)
+        guard case .loggedIn(let user) = store.phase else {
+            Issue.record("verwachtte loggedIn, kreeg \(store.phase)")
+            return
+        }
+        #expect(user.naam == "Ibrahim K.")
+        #expect(user.avatar == "foto.jpg")
+    }
 }
