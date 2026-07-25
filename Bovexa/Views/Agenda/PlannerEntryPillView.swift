@@ -1,9 +1,12 @@
 import SwiftUI
 
-/// Plan-pill onderaan Agenda (altijd zichtbaar): tekstveld + AI-knop. Geport uit de
-/// plan-pill in agenda.tsx (RN) — mic-knop komt in plak 4.
+/// Plan-pill onderaan Agenda (altijd zichtbaar): tekstveld + microfoon + AI-knop.
+/// Geport uit de plan-pill in agenda.tsx (RN).
 struct PlannerEntryPillView: View {
     @Binding var text: String
+    var micAvailable: Bool = false
+    var listening: Bool = false
+    var onMicTap: () -> Void = {}
     let onSubmit: () -> Void
     let onOpenPlanner: () -> Void
 
@@ -15,6 +18,10 @@ struct PlannerEntryPillView: View {
                 .font(BovexaTheme.TypeStyle.subheadline)
                 .submitLabel(.send)
                 .onSubmit(onSubmit)
+
+            if micAvailable {
+                MicButtonView(listening: listening, size: 36, onTap: onMicTap)
+            }
 
             Button {
                 Haptics.selection()

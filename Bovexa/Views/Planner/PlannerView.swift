@@ -2,13 +2,15 @@ import SwiftUI
 
 /// AI-planner chatscherm — geport uit planner.tsx. Startkaart met voorbeeld-chips,
 /// chat-thread, quick-reply-chips, concept-kaarten, "Even kijken…", "Opnieuw proberen",
-/// reset, en het bevestig-blok (zichtbaarheid/toewijzen/herinnering/"Zet in agenda").
-/// Mic-knop komt in plak 4 — de composer hieronder is voorlopig tekst-only.
+/// reset, bevestig-blok (zichtbaarheid/toewijzen/herinnering/"Zet in agenda") en een
+/// mic-knop in de composer om te dicteren (valkuil J).
 struct PlannerView: View {
     @StateObject private var viewModel: PlannerViewModel
+    @StateObject private var speech = SpeechToTextService()
     @ObservedObject var memberColors: MemberColors
     @Environment(\.dismiss) private var dismiss
     @State private var input = ""
+    @State private var speechAlertMessage: String?
 
     private let hasOrg: Bool
     private let seed: String?
@@ -112,6 +114,17 @@ struct PlannerView: View {
                 onConfirmed(date)
                 dismiss()
             }
+        }
+        .onChange(of: speech.transcript) { _, transcript in
+            if !transcript.isEmpty { input = transcript }
+        }
+        .onChange(of: speech.error) { _, error in
+            if let error { speechAlertMessage = error }
+        }
+        .alert("Spraak", isPresented: Binding(get: { speechAlertMessage != nil }, set: { if !$0 { speechAlertMessage = nil } })) {
+            Button("Oké", role: .cancel) {}
+        } message: {
+            Text(speechAlertMessage ?? "")
         }
     }
 
@@ -274,6 +287,12 @@ struct PlannerView: View {
                 .submitLabel(.send)
                 .onSubmit(submit)
 
+            if speech.available {
+                MicButtonView(listening: speech.listening, size: 34) {
+                    Task { await speech.toggle() }
+                }
+            }
+
             Button(action: submit) {
                 Image(systemName: "arrow.up")
                     .font(.system(size: 17, weight: .semibold))
@@ -299,6 +318,7 @@ struct PlannerView: View {
 
     private func submit() {
         guard canSend else { return }
+        if speech.listening { speech.stop() }
         let text = input
         input = ""
         Task { await viewModel.sendText(text) }

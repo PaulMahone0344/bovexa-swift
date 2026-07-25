@@ -6,6 +6,7 @@ struct DayView: View {
     @EnvironmentObject private var authStore: AuthStore
     @ObservedObject var viewModel: AgendaViewModel
     let currentUserId: String
+    var onPlanAtHour: (Int, Date) -> Void = { _, _ in }
 
     private var currentUserOrgId: String? {
         if case .loggedIn(let user) = authStore.phase { return user.defaultOrg }
@@ -31,7 +32,8 @@ struct DayView: View {
                                     events: viewModel.eventsOnDay(day),
                                     currentUserId: currentUserId,
                                     memberColors: viewModel.memberColors,
-                                    onSelectEvent: { selectedEvent = $0 }
+                                    onSelectEvent: { selectedEvent = $0 },
+                                    onLongPressEmptyHour: { hour in onPlanAtHour(hour, day) }
                                 )
                                 .containerRelativeFrame(.horizontal)
                                 .id(day)

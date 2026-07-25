@@ -9,6 +9,7 @@ struct DaySheetView: View {
     @ObservedObject var memberColors: MemberColors
     let onOpenDay: () -> Void
     let onSelectEvent: (AgendaEvent) -> Void
+    var onPlanAppointment: () -> Void = {}
 
     var body: some View {
         NavigationStack {
@@ -28,6 +29,14 @@ struct DaySheetView: View {
 
                     if events.isEmpty {
                         EmptyStateView(systemImage: "calendar", text: "Geen afspraken.")
+                        Button {
+                            Haptics.selection()
+                            onPlanAppointment()
+                        } label: {
+                            Label("Afspraak plannen", systemImage: "plus")
+                        }
+                        .buttonStyle(.glassProminentBrand)
+                        .frame(maxWidth: .infinity)
                         Spacer()
                     } else {
                         ScrollView {

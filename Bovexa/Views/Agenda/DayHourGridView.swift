@@ -8,6 +8,7 @@ struct DayHourGridView: View {
     let currentUserId: String
     @ObservedObject var memberColors: MemberColors
     let onSelectEvent: (AgendaEvent) -> Void
+    var onLongPressEmptyHour: (Int) -> Void = { _ in }
 
     private let hourHeight: CGFloat = 60
     private let gutterWidth: CGFloat = 40
@@ -74,6 +75,12 @@ struct DayHourGridView: View {
                         .frame(height: 1)
                 }
                 .frame(height: hourHeight, alignment: .top)
+                .frame(maxWidth: .infinity)
+                .contentShape(Rectangle())
+                .onLongPressGesture(minimumDuration: 0.42) {
+                    Haptics.selection()
+                    onLongPressEmptyHour(hour)
+                }
                 .id(hour)
             }
         }

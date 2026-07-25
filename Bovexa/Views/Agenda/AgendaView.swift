@@ -3,12 +3,14 @@ import SwiftUI
 struct AgendaView: View {
     @EnvironmentObject private var authStore: AuthStore
     @StateObject private var viewModel = AgendaViewModel()
+    @StateObject private var speech = SpeechToTextService()
     @State private var selectedEvent: AgendaEvent?
     @State private var showSearch = false
     @State private var showYearOverview = false
     @State private var pillText = ""
     @State private var plannerSeed: String?
     @State private var showPlanner = false
+    @State private var speechAlertMessage: String?
 
     private var currentUser: AgendaUser? {
         if case .loggedIn(let user) = authStore.phase { return user }
@@ -18,19 +20,37 @@ struct AgendaView: View {
     var body: some View {
         Group {
             if viewModel.viewKind == .dag, let userId = currentUser?.id {
-                DayView(viewModel: viewModel, currentUserId: userId)
+                DayView(
+                    viewModel: viewModel, currentUserId: userId,
+                    onPlanAtHour: { hour, day in openPlanner(seed: PlannerSlotSeed.forHour(hour, on: day)) }
+                )
             } else {
                 monthOrListContent
             }
         }
         .safeAreaInset(edge: .bottom) {
-            PlannerEntryPillView(text: $pillText, onSubmit: openPlannerFromPill, onOpenPlanner: openPlannerFromPill)
+            PlannerEntryPillView(
+                text: $pillText, micAvailable: speech.available, listening: speech.listening,
+                onMicTap: { Task { await speech.toggle() } },
+                onSubmit: openPlannerFromPill, onOpenPlanner: openPlannerFromPill
+            )
         }
         .task {
             await refresh()
         }
         .onAppear {
             Task { await refresh() }
+        }
+        .onChange(of: speech.transcript) { _, transcript in
+            if !transcript.isEmpty { pillText = transcript }
+        }
+        .onChange(of: speech.error) { _, error in
+            if let error { speechAlertMessage = error }
+        }
+        .alert("Spraak", isPresented: Binding(get: { speechAlertMessage != nil }, set: { if !$0 { speechAlertMessage = nil } })) {
+            Button("Oké", role: .cancel) {}
+        } message: {
+            Text(speechAlertMessage ?? "")
         }
         .sheet(item: $viewModel.daySheetTarget) { target in
             if let userId = currentUser?.id {
@@ -43,6 +63,10 @@ struct AgendaView: View {
                     onSelectEvent: { event in
                         viewModel.closeDaySheet()
                         selectedEvent = event
+                    },
+                    onPlanAppointment: {
+                        viewModel.closeDaySheet()
+                        openPlanner(seed: PlannerSlotSeed.forHour(7, on: target.day))
                     }
                 )
             }
@@ -59,8 +83,12 @@ struct AgendaView: View {
     }
 
     private func openPlannerFromPill() {
-        let seed = pillText.trimmingCharacters(in: .whitespacesAndNewlines)
+        if speech.listening { speech.stop() }
+        openPlanner(seed: pillText.trimmingCharacters(in: .whitespacesAndNewlines))
         pillText = ""
+    }
+
+    private func openPlanner(seed: String) {
         plannerSeed = seed.isEmpty ? nil : seed
         showPlanner = true
     }

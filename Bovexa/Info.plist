@@ -22,6 +22,10 @@
 	<string>1</string>
 	<key>NSCalendarsWriteOnlyAccessUsageDescription</key>
 	<string>Bovexa Flow kan nieuwe afspraken ook in je iPhone Agenda zetten.</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>Bovexa Flow gebruikt de microfoon om je planning te dicteren.</string>
+	<key>NSSpeechRecognitionUsageDescription</key>
+	<string>Bovexa Flow gebruikt spraakherkenning om je planning te dicteren.</string>
 	<key>UILaunchScreen</key>
 	<dict/>
 	<key>UISupportedInterfaceOrientations</key>
