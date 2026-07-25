@@ -4,6 +4,7 @@ import SwiftUI
 /// van maand, vandaag gemarkeerd, dag-cel tikken opent de DaySheet.
 struct MonthGridView: View {
     @ObservedObject var viewModel: AgendaViewModel
+    let onYearTap: () -> Void
 
     private let columns = Array(repeating: GridItem(.flexible(), spacing: 2), count: 7)
     private let weekdayLabels = ["Ma", "Di", "Wo", "Do", "Vr", "Za", "Zo"]
@@ -54,9 +55,14 @@ struct MonthGridView: View {
 
             Spacer()
 
-            Text(monthTitle)
-                .font(.system(size: BovexaTheme.TypeScale.title, weight: .semibold))
-                .foregroundStyle(BovexaTheme.Colors.ink)
+            HStack(spacing: BovexaTheme.Space.xs) {
+                Text(monthName)
+                Button(action: onYearTap) {
+                    Text(yearText).underline()
+                }
+            }
+            .font(.system(size: BovexaTheme.TypeScale.title, weight: .semibold))
+            .foregroundStyle(BovexaTheme.Colors.ink)
 
             Spacer()
 
@@ -69,10 +75,16 @@ struct MonthGridView: View {
         .foregroundStyle(BovexaTheme.Colors.ink)
     }
 
-    private var monthTitle: String {
+    private var monthName: String {
         let formatter = DateFormatter()
         formatter.locale = Locale(identifier: "nl_NL")
-        formatter.dateFormat = "MMMM yyyy"
+        formatter.dateFormat = "MMMM"
         return formatter.string(from: viewModel.displayedMonth).capitalized
+    }
+
+    private var yearText: String {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "yyyy"
+        return formatter.string(from: viewModel.displayedMonth)
     }
 }

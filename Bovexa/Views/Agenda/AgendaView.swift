@@ -4,6 +4,8 @@ struct AgendaView: View {
     @EnvironmentObject private var authStore: AuthStore
     @StateObject private var viewModel = AgendaViewModel()
     @State private var selectedEvent: AgendaEvent?
+    @State private var showSearch = false
+    @State private var showYearOverview = false
 
     private var currentUser: AgendaUser? {
         if case .loggedIn(let user) = authStore.phase { return user }
@@ -54,7 +56,7 @@ struct AgendaView: View {
                         AgendaListView(viewModel: viewModel, currentUserId: userId, now: Date.init, selectedEvent: $selectedEvent)
                     } else {
                         ScrollView {
-                            MonthGridView(viewModel: viewModel)
+                            MonthGridView(viewModel: viewModel, onYearTap: { showYearOverview = true })
                                 .padding(BovexaTheme.Space.xl)
                         }
                     }
@@ -68,6 +70,22 @@ struct AgendaView: View {
                     )
                 }
             }
+            .sheet(isPresented: $showSearch) {
+                if let userId = currentUser?.id {
+                    SearchView(
+                        userId: userId, orgId: currentUser?.defaultOrg, token: authStore.token ?? "",
+                        currentUserOrgId: currentUser?.defaultOrg, memberColors: viewModel.memberColors
+                    )
+                }
+            }
+            .sheet(isPresented: $showYearOverview) {
+                if let userId = currentUser?.id {
+                    YearOverviewView(userId: userId, orgId: currentUser?.defaultOrg, token: authStore.token ?? "") { date in
+                        showYearOverview = false
+                        viewModel.openDayView(date)
+                    }
+                }
+            }
         }
     }
 
@@ -78,6 +96,15 @@ struct AgendaView: View {
                 .foregroundStyle(BovexaTheme.Colors.ink)
 
             Spacer()
+
+            Button {
+                showSearch = true
+            } label: {
+                Image(systemName: "magnifyingglass")
+                    .font(.system(size: 20, weight: .medium))
+                    .foregroundStyle(BovexaTheme.Colors.ink)
+            }
+            .padding(.trailing, BovexaTheme.Space.md)
 
             Menu {
                 ForEach(AgendaViewKind.allCases.filter { $0 != .dag }, id: \.self) { kind in
