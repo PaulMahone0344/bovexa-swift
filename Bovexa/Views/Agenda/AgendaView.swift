@@ -93,6 +93,16 @@ struct AgendaView: View {
         showPlanner = true
     }
 
+    private func categoryLabel(_ category: BovexaTheme.Category) -> String {
+        switch category {
+        case .work: return "Werk"
+        case .focus: return "Focus"
+        case .social: return "Sociaal"
+        case .body: return "Lichaam"
+        case .afwezig: return "Afwezig"
+        }
+    }
+
     @ViewBuilder
     private var monthOrListContent: some View {
         NavigationStack {
@@ -104,7 +114,14 @@ struct AgendaView: View {
                 } else {
                     ScrollView {
                         MonthGridView(viewModel: viewModel, onYearTap: { showYearOverview = true })
-                            .padding(BovexaTheme.Space.xl)
+                            .padding(.horizontal, BovexaTheme.Space.xl)
+                            // Boven de maandregel stond 24pt bovenop de ruimte
+                            // die de grote titel al meebrengt; dat was een gat.
+                            .padding(.top, BovexaTheme.Space.xs)
+                            // De laatste week liep tegen de plan-knop en de
+                            // tabbalk aan, waardoor de kalender eronder leek
+                            // door te lopen.
+                            .padding(.bottom, BovexaTheme.Space.tabBarClearance)
                     }
                 }
             }
@@ -129,6 +146,17 @@ struct AgendaView: View {
                                 } else {
                                     Text(kind.label)
                                 }
+                            }
+                        }
+
+                        // De kleuren zijn nergens uitgelegd; een nieuwe gebruiker
+                        // ziet turquoise/geel/paars zonder te weten wat ze
+                        // betekenen. Het lagen-menu is de plek waar je toch al
+                        // kijkt als je de weergave wilt begrijpen.
+                        Section("Kleuren") {
+                            ForEach(BovexaTheme.Category.allCases, id: \.self) { category in
+                                Label(categoryLabel(category), systemImage: "circle.fill")
+                                    .foregroundStyle(BovexaTheme.categoryColor(for: category))
                             }
                         }
                     } label: {

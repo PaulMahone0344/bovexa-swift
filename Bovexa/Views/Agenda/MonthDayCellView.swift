@@ -67,25 +67,42 @@ struct MonthDayCellView: View {
         .padding(.horizontal, 3)
     }
 
+    /// Twee chips i.p.v. drie. Bij drie was elke titel afgekapt ("Werke…",
+    /// "Inspe…") en moest je de dag alsnog openen om te zien wat er stond. Met
+    /// twee is er ruimte voor een leesbare regel, en de rest gaat naar "+N meer".
     private var titleChips: some View {
-        let result = MonthDensity.titleChips(for: events, max: 3)
+        let result = MonthDensity.titleChips(for: events, max: 2)
         return VStack(alignment: .leading, spacing: 2) {
             ForEach(result.shown) { event in
                 Text(event.title)
-                    .font(.system(size: 9, weight: .medium))
+                    // 9.5pt met krappe padding: bij 10pt paste "Inspectie" net
+                    // niet en brak het middenin het woord af.
+                    .font(.system(size: 9.5, weight: .medium))
                     .foregroundStyle(BovexaTheme.Colors.ink)
-                    .lineLimit(1)
-                    .padding(.horizontal, 4)
-                    .padding(.vertical, 1.5)
-                    .background(EventHelpers.eventColor(event).opacity(0.38))
+                    .lineLimit(2)
+                    .multilineTextAlignment(.leading)
+                    .minimumScaleFactor(0.8)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.horizontal, 3)
+                    .padding(.vertical, 2)
+                    .background(EventHelpers.eventColor(event).opacity(chipOpacity(event)))
                     .clipShape(RoundedRectangle(cornerRadius: 4, style: .continuous))
             }
             if result.overflow > 0 {
-                Text("+\(result.overflow)")
-                    .font(.system(size: 9, weight: .medium))
+                Text("+\(result.overflow) meer")
+                    .font(.system(size: 9, weight: .semibold))
                     .foregroundStyle(BovexaTheme.Colors.inkSoft)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.75)
+                    .padding(.horizontal, 4)
             }
         }
         .padding(.horizontal, 2)
+    }
+
+    /// Gewone afspraken rustiger, uitzonderingen sterker. Alles even hard
+    /// gekleurd maakte een volle maand tot ruis waarin niets opvalt.
+    private func chipOpacity(_ event: AgendaEvent) -> Double {
+        event.category == .afwezig ? 0.55 : 0.28
     }
 }

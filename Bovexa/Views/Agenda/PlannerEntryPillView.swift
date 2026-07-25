@@ -1,7 +1,9 @@
 import SwiftUI
 
-/// Plan-pill onderaan Agenda (altijd zichtbaar): tekstveld + microfoon + AI-knop.
-/// Geport uit de plan-pill in agenda.tsx (RN).
+/// Plan-ingang onderaan Agenda: standaard één ronde AI-knop, die uitklapt naar
+/// tekstveld + microfoon zodra je hem aantikt. Geport uit de plan-pill in
+/// agenda.tsx (RN), maar daar stond de balk altijd open — op een maandoverzicht
+/// kost dat permanent ongeveer een kalenderweek aan ruimte.
 struct PlannerEntryPillView: View {
     @Binding var text: String
     var micAvailable: Bool = false
@@ -10,14 +12,72 @@ struct PlannerEntryPillView: View {
     let onSubmit: () -> Void
     let onOpenPlanner: () -> Void
 
-    @State private var pulse = false
+    @State private var expanded = false
+    @FocusState private var fieldFocused: Bool
 
     var body: some View {
+        Group {
+            if expanded {
+                fullPill
+            } else {
+                collapsedButton
+            }
+        }
+        .animation(.snappy(duration: 0.25), value: expanded)
+        .onChange(of: listening) { _, isListening in
+            // Dicteren start ook vanuit ingeklapte staat; klap dan open zodat
+            // je het transcript ziet groeien.
+            if isListening { expanded = true }
+        }
+    }
+
+    /// Ingeklapt: alleen de AI-knop, rechts uitgelijnd.
+    private var collapsedButton: some View {
+        HStack {
+            Spacer()
+            Button {
+                Haptics.selection()
+                expanded = true
+                fieldFocused = true
+            } label: {
+                sparkleCircle(size: 52, icon: 20)
+            }
+            .accessibilityLabel("Planning typen of inspreken")
+        }
+        .padding(.horizontal, BovexaTheme.Space.lg)
+        .padding(.bottom, BovexaTheme.Space.sm)
+    }
+
+    private func sparkleCircle(size: CGFloat, icon: CGFloat) -> some View {
+        Image(systemName: "sparkles")
+            .font(.system(size: icon, weight: .semibold))
+            .foregroundStyle(BovexaTheme.Colors.white)
+            .frame(width: size, height: size)
+            .background(LinearGradient(colors: BovexaTheme.Gradients.teal, startPoint: .topLeading, endPoint: .bottomTrailing))
+            .clipShape(Circle())
+            .shadow(color: BovexaTheme.Shadow.tealGlowColor.opacity(0.28), radius: 10, x: 0, y: 5)
+    }
+
+    private var fullPill: some View {
         HStack(spacing: BovexaTheme.Space.sm) {
+            Button {
+                fieldFocused = false
+                expanded = false
+            } label: {
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 15, weight: .semibold))
+                    .foregroundStyle(BovexaTheme.Colors.muted)
+            }
+            .accessibilityLabel("Invoer sluiten")
+
             TextField("Typ of spreek een planning", text: $text)
                 .font(BovexaTheme.TypeStyle.subheadline)
                 .submitLabel(.send)
-                .onSubmit(onSubmit)
+                .focused($fieldFocused)
+                .onSubmit {
+                    onSubmit()
+                    expanded = false
+                }
 
             if micAvailable {
                 MicButtonView(listening: listening, size: 36, onTap: onMicTap)
@@ -26,19 +86,9 @@ struct PlannerEntryPillView: View {
             Button {
                 Haptics.selection()
                 onOpenPlanner()
+                expanded = false
             } label: {
-                Image(systemName: "sparkles")
-                    .font(.system(size: 17, weight: .semibold))
-                    .foregroundStyle(BovexaTheme.Colors.white)
-                    .frame(width: 40, height: 40)
-                    .background(LinearGradient(colors: BovexaTheme.Gradients.teal, startPoint: .topLeading, endPoint: .bottomTrailing))
-                    .clipShape(Circle())
-                    .scaleEffect(pulse ? 1.08 : 1.0)
-            }
-            .onAppear {
-                withAnimation(.easeInOut(duration: 1.2).repeatForever(autoreverses: true)) {
-                    pulse = true
-                }
+                sparkleCircle(size: 40, icon: 17)
             }
         }
         .padding(.horizontal, BovexaTheme.Space.md)
