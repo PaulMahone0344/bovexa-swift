@@ -26,6 +26,7 @@ targets:
       base:
         SWIFT_VERSION: "5.0"
         TARGETED_DEVICE_FAMILY: "1"
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
         DEVELOPMENT_TEAM: R7V2WLVDDF
         CODE_SIGN_STYLE: Automatic
   BovexaTests:
