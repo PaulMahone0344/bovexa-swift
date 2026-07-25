@@ -249,4 +249,62 @@ struct AuthStoreTests {
         #expect(user.naam == "Ibrahim K.")
         #expect(user.avatar == "foto.jpg")
     }
+
+    // MARK: - Wachtwoord wijzigen (valkuil C)
+
+    @Test func changePasswordUpdatesThenSilentlyRelogsInWithNewPassword() async throws {
+        let store = AuthStore(client: makeClient(), tokenStore: InMemoryTokenStore())
+        URLProtocolStub.requestHandler = { _ in
+            (200, """
+            {"token":"tok-oud","record":{"id":"u1","email":"a@b.nl","naam":"Ibrahim"}}
+            """.data(using: .utf8)!)
+        }
+        await store.signIn(email: "a@b.nl", password: "oudwachtwoord")
+
+        var sawPatch = false
+        var sawReauth = false
+        URLProtocolStub.requestHandler = { request in
+            if request.httpMethod == "PATCH" {
+                sawPatch = true
+                #expect(request.url!.path == "/api/collections/agenda_users/records/u1")
+                return (200, """
+                {"id":"u1","email":"a@b.nl","naam":"Ibrahim"}
+                """.data(using: .utf8)!)
+            }
+            sawReauth = true
+            #expect(request.url!.path.hasSuffix("/auth-with-password"))
+            return (200, """
+            {"token":"tok-nieuw","record":{"id":"u1","email":"a@b.nl","naam":"Ibrahim"}}
+            """.data(using: .utf8)!)
+        }
+        try await store.changePassword(current: "oudwachtwoord", new: "nieuwwachtwoord")
+
+        #expect(sawPatch)
+        #expect(sawReauth)
+        guard case .loggedIn = store.phase else {
+            Issue.record("verwachtte loggedIn, kreeg \(store.phase)")
+            return
+        }
+    }
+
+    @Test func changePasswordWrongCurrentThrowsAndKeepsOldToken() async throws {
+        let tokenStore = InMemoryTokenStore()
+        let store = AuthStore(client: makeClient(), tokenStore: tokenStore)
+        URLProtocolStub.requestHandler = { _ in
+            (200, """
+            {"token":"tok-oud","record":{"id":"u1","email":"a@b.nl","naam":"Ibrahim"}}
+            """.data(using: .utf8)!)
+        }
+        await store.signIn(email: "a@b.nl", password: "oudwachtwoord")
+
+        URLProtocolStub.requestHandler = { _ in
+            (400, """
+            {"data":{},"message":"Failed to update record.","status":400}
+            """.data(using: .utf8)!)
+        }
+        await #expect(throws: PBError.self) {
+            try await store.changePassword(current: "fout", new: "nieuwwachtwoord")
+        }
+        #expect(tokenStore.load() == "tok-oud")
+    }
 }

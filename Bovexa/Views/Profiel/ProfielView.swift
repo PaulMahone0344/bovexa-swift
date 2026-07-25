@@ -151,7 +151,7 @@ struct ProfielView: View {
             }
         }
         .sheet(isPresented: $showWachtwoord) {
-            ComingSoonView(title: "Wachtwoord wijzigen")
+            WachtwoordView()
         }
         .alert("Account verwijderen", isPresented: $showDeleteConfirm) {
             Button("Annuleren", role: .cancel) {}

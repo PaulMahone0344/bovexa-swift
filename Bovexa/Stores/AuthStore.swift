@@ -114,6 +114,17 @@ final class AuthStore: ObservableObject {
         phase = .loggedIn(updated)
     }
 
+    /// Wachtwoord wijzigen (valkuil C): na de update is het oude token ongeldig —
+    /// direct stil opnieuw inloggen zodat de gebruiker er niets van merkt.
+    func changePassword(current: String, new: String) async throws {
+        guard case .loggedIn(let user) = phase, let token else { return }
+        _ = try await client.changePassword(id: user.id, oldPassword: current, newPassword: new, token: token)
+        let response = try await client.authWithPassword(email: user.email, password: new)
+        self.token = response.token
+        tokenStore.save(response.token)
+        phase = .loggedIn(response.record)
+    }
+
     /// Valkuil I: onomkeerbaar. De view vraagt zelf om bevestiging vóórdat dit aangeroepen wordt.
     func deleteAccount() async throws {
         guard case .loggedIn(let user) = phase, let token else { return }

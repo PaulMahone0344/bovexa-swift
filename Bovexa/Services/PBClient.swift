@@ -178,6 +178,14 @@ final class PBClient {
         return try await send(request)
     }
 
+    /// Valkuil C: PB invalideert alle tokens na een wachtwoord-wijziging — de
+    /// aanroeper logt daarom direct stil opnieuw in met het nieuwe wachtwoord.
+    func changePassword(id: String, oldPassword: String, newPassword: String, token: String) async throws -> AgendaUser {
+        try await updateRecord(AgendaUser.self, collection: "agenda_users", id: id, body: [
+            "oldPassword": oldPassword, "password": newPassword, "passwordConfirm": newPassword,
+        ], token: token)
+    }
+
     /// Valkuil I: verwijderen is onomkeerbaar — de server ruimt gekoppelde data
     /// op via cascade, hier alleen de aanroep zelf.
     func deleteAccount(id: String, token: String) async throws {
