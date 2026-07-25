@@ -1,11 +1,14 @@
 import SwiftUI
 
-/// Donkere gradient-achtergrond met zachte teal orbs, achter elk scherm.
+/// Achtergrond-gradient met zachte teal orbs, achter elk scherm.
+/// v2 (Liquid Glass restyle): gebruikt de subtielere `Gradients.backgroundSubtle`
+/// i.p.v. `Gradients.background` — het glas (`GlassCard`, tabbalk) moet optisch
+/// het werk doen, niet de ondergrond. Zie DESIGN-NOTES.md.
 struct AppBackground: View {
     var body: some View {
         ZStack {
             LinearGradient(
-                colors: BovexaTheme.Gradients.background,
+                colors: BovexaTheme.Gradients.backgroundSubtle,
                 startPoint: .top,
                 endPoint: .bottom
             )

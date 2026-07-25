@@ -1,6 +1,9 @@
 import SwiftUI
 
-/// Glaskaart: verloop-vulling + rand + zachte schaduw, basis voor alle kaarten in de app.
+/// Glaskaart v2 (Liquid Glass restyle): echt systeemglas via `.glassEffect`
+/// i.p.v. de v1 geschilderde verloop-vulling. Publieke API (radius/padding/
+/// content) is ongewijzigd zodat bestaande call-sites door de hele app blijven
+/// werken — zie DESIGN-NOTES.md.
 struct GlassCard<Content: View>: View {
     var radius: CGFloat = BovexaTheme.Radius.lg
     var padding: CGFloat = BovexaTheme.Space.lg
@@ -9,18 +12,10 @@ struct GlassCard<Content: View>: View {
     var body: some View {
         content()
             .padding(padding)
-            .background(
-                LinearGradient(
-                    colors: BovexaTheme.Gradients.cardGlass,
-                    startPoint: .top,
-                    endPoint: .bottom
-                )
+            .glassEffect(
+                .regular,
+                in: RoundedRectangle(cornerRadius: radius, style: .continuous)
             )
-            .overlay(
-                RoundedRectangle(cornerRadius: radius, style: .continuous)
-                    .strokeBorder(BovexaTheme.Colors.edge, lineWidth: 1)
-            )
-            .clipShape(RoundedRectangle(cornerRadius: radius, style: .continuous))
             .shadow(
                 color: BovexaTheme.Shadow.softColor.opacity(BovexaTheme.Shadow.softOpacity),
                 radius: BovexaTheme.Shadow.softRadius,

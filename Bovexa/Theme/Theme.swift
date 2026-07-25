@@ -68,6 +68,11 @@ enum BovexaTheme {
 
         static let background = [BovexaTheme.Colors.bgTop, BovexaTheme.Colors.bgBottom]
 
+        /// v2 (Liquid Glass restyle): subtielere, minder verzadigde achtergrond dan
+        /// `background` — het glas moet het werk doen, niet de ondergrond.
+        /// Zie DESIGN-NOTES.md. Oude token `background` blijft ongewijzigd bestaan.
+        static let backgroundSubtle = [Color(hex: "#E7EFEE"), Color(hex: "#F4F7F6")]
+
         static let cardGlass = [Color.white.opacity(0.70), Color.white.opacity(0.50)]
         static let raisedGlass = [Color.white.opacity(0.74), Color.white.opacity(0.54)]
         static let pillGlass = [Color.white.opacity(0.78), Color.white.opacity(0.60)]
@@ -99,6 +104,26 @@ enum BovexaTheme {
         static let tiny: CGFloat = 11
     }
 
+    /// v2 (Liquid Glass restyle): Dynamic Type-rollen i.p.v. vaste px-groottes,
+    /// zodat tekst meeschaalt met de systeem-tekstgrootte-instelling van de
+    /// gebruiker. `TypeScale` hierboven blijft intact voor schermen die nog niet
+    /// zijn omgezet (plak 2-4) — beide tokensets bestaan tijdelijk naast elkaar.
+    enum TypeStyle {
+        static let largeTitle: Font = .largeTitle.bold()
+        static let title: Font = .title.weight(.semibold)
+        static let title2: Font = .title2.weight(.semibold)
+        static let title3: Font = .title3.weight(.semibold)
+        static let headline: Font = .headline
+        static let body: Font = .body
+        static let subheadline: Font = .subheadline
+        static let footnote: Font = .footnote
+        static let caption: Font = .caption
+
+        /// SF Pro Rounded, voor cijfers/statistieken (stat-tegels, tellers).
+        static let statNumber: Font = .system(.title, design: .rounded, weight: .bold)
+        static let statLabel: Font = .system(.footnote, design: .rounded, weight: .medium)
+    }
+
     enum Shadow {
         static let cardColor = Color(hex: "#375255")
         static let cardOpacity: Double = 0.18
@@ -114,5 +139,20 @@ enum BovexaTheme {
         static let tealGlowOpacity: Double = 0.26
         static let tealGlowRadius: CGFloat = 18
         static let tealGlowOffsetY: CGFloat = 14
+    }
+
+    /// v2 (Liquid Glass restyle) tokens: bouwstenen voor GlassCard v2 en de
+    /// nieuwe knopstijlen. Zie DESIGN-NOTES.md — `.glassEffect` bestaat en
+    /// compileert op deze deploymentTarget (iOS 26), dus geen material-fallback
+    /// nodig.
+    enum Glass {
+        /// Standaard hoekradius voor glaskaarten (zelfde als `Radius.lg`,
+        /// hier als eigen token zodat glas-call-sites niet impliciet aan
+        /// `Radius` gekoppeld hoeven te zijn).
+        static let cardRadius: CGFloat = BovexaTheme.Radius.lg
+
+        /// Teal-tint voor prominente/interactieve glaselementen (primaire knop,
+        /// geselecteerde staat). Zelfde merkkleur als `Colors.teal`.
+        static let tint: Color = BovexaTheme.Colors.teal
     }
 }
