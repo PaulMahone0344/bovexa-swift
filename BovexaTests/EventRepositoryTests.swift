@@ -79,6 +79,21 @@ struct EventRepositoryTests {
         #expect(events.map(\.id) == ["b"])
     }
 
+    @Test func fetchOwnEventsFiltersToOwnerAndExpandsRecurrence() async throws {
+        URLProtocolStub.requestHandler = { request in
+            let filter = self.filterValue(from: request)
+            #expect(filter == "owner = \"u1\"")
+            let json = """
+            {"items":[{"id":"a","owner":"u1","title":"Eigen","start":"2026-08-03 09:00:00.000Z","all_day":false}],
+             "page":1,"perPage":200,"totalItems":1,"totalPages":1}
+            """.data(using: .utf8)!
+            return (200, json)
+        }
+        let repo = makeRepository()
+        let events = try await repo.fetchOwnEvents(userId: "u1", token: "tok")
+        #expect(events.map(\.id) == ["a"])
+    }
+
     @Test func listMembersReturnsNilOnFailureInsteadOfThrowing() async {
         URLProtocolStub.requestHandler = { _ in
             let json = """

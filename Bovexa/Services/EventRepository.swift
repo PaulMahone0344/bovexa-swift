@@ -22,6 +22,14 @@ final class EventRepository {
         return RecurrenceExpander.expand(items.excludingDeclined(for: userId))
     }
 
+    /// Eigen afspraken (incl. herhalingen uitgeklapt) — voor de dubbele-boeking-check.
+    func fetchOwnEvents(userId: String, token: String) async throws -> [AgendaEvent] {
+        let items = try await client.getFullList(
+            AgendaEvent.self, collection: "agenda_events", filter: "owner = \"\(userId)\"", sort: "start", token: token
+        )
+        return RecurrenceExpander.expand(items)
+    }
+
     /// Faalt stil (geen bedrijf gekoppeld, netwerkfout, ...) — dan gewoon geen kleuren/logo.
     func listMembers(token: String) async -> MembersResponse? {
         try? await client.postCustom(MembersResponse.self, path: "/api/agenda/company/members", token: token)

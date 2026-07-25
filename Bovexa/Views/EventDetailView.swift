@@ -11,12 +11,16 @@ struct EventDetailView: View {
 
     @State private var showDeleteConfirm = false
     @State private var isDeleting = false
+    @State private var isEditing = false
+
+    private let token: String
 
     init(event: AgendaEvent, currentUserId: String, currentUserOrgId: String?, token: String, memberColors: MemberColors) {
         _viewModel = StateObject(wrappedValue: EventDetailViewModel(
             event: event, currentUserId: currentUserId, currentUserOrgId: currentUserOrgId, token: token
         ))
         self.memberColors = memberColors
+        self.token = token
     }
 
     private var event: AgendaEvent { viewModel.event }
@@ -27,26 +31,38 @@ struct EventDetailView: View {
             AppBackground()
 
             ScrollView {
-                VStack(spacing: BovexaTheme.Space.lg) {
-                    detailCard
+                if isEditing {
+                    EventEditorView(
+                        event: event, currentUserId: viewModel.currentUserId, token: token, members: memberColors.members,
+                        onCancel: { isEditing = false },
+                        onSaved: { updated in
+                            viewModel.applyEditorSave(updated)
+                            isEditing = false
+                        }
+                    )
+                    .padding(BovexaTheme.Space.xl)
+                } else {
+                    VStack(spacing: BovexaTheme.Space.lg) {
+                        detailCard
 
-                    if !event.assignee.isEmpty {
-                        assigneesCard
-                    }
+                        if !event.assignee.isEmpty {
+                            assigneesCard
+                        }
 
-                    if viewModel.showVisibilityPicker {
-                        VisibilityPickerView(value: viewModel.normalizedVisibility, companyName: memberColors.orgName ?? "Bedrijf") { value in
-                            Task { await viewModel.changeVisibility(value) }
+                        if viewModel.showVisibilityPicker {
+                            VisibilityPickerView(value: viewModel.normalizedVisibility, companyName: memberColors.orgName ?? "Bedrijf") { value in
+                                Task { await viewModel.changeVisibility(value) }
+                            }
                         }
                     }
+                    .padding(BovexaTheme.Space.xl)
                 }
-                .padding(BovexaTheme.Space.xl)
             }
         }
         .navigationTitle("")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
-            if viewModel.canDelete {
+            if !isEditing && viewModel.canDelete {
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button {
                         showDeleteConfirm = true
@@ -54,6 +70,15 @@ struct EventDetailView: View {
                         Image(systemName: "trash")
                     }
                     .disabled(isDeleting)
+                }
+            }
+            if !isEditing && viewModel.canEdit {
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button {
+                        isEditing = true
+                    } label: {
+                        Image(systemName: "pencil")
+                    }
                 }
             }
         }
@@ -237,45 +262,3 @@ struct EventDetailView: View {
     }
 }
 
-/// Wrappende chip-rij via het Layout-protocol (iOS 16+) — voor kleine lijsten
-/// (toegewezenen) volstaat dit, geen aparte library nodig.
-private struct FlowLayout: Layout {
-    var spacing: CGFloat
-
-    func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
-        let maxWidth = proposal.width ?? .infinity
-        var x: CGFloat = 0
-        var y: CGFloat = 0
-        var rowHeight: CGFloat = 0
-
-        for subview in subviews {
-            let size = subview.sizeThatFits(.unspecified)
-            if x + size.width > maxWidth, x > 0 {
-                x = 0
-                y += rowHeight + spacing
-                rowHeight = 0
-            }
-            x += size.width + spacing
-            rowHeight = max(rowHeight, size.height)
-        }
-        return CGSize(width: maxWidth.isFinite ? maxWidth : x, height: y + rowHeight)
-    }
-
-    func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) {
-        var x = bounds.minX
-        var y = bounds.minY
-        var rowHeight: CGFloat = 0
-
-        for subview in subviews {
-            let size = subview.sizeThatFits(.unspecified)
-            if x + size.width > bounds.maxX, x > bounds.minX {
-                x = bounds.minX
-                y += rowHeight + spacing
-                rowHeight = 0
-            }
-            subview.place(at: CGPoint(x: x, y: y), proposal: ProposedViewSize(size))
-            x += size.width + spacing
-            rowHeight = max(rowHeight, size.height)
-        }
-    }
-}

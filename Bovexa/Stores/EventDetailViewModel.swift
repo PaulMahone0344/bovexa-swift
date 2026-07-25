@@ -45,6 +45,11 @@ final class EventDetailViewModel: ObservableObject {
         event.visibilityRaw == "private" ? "private" : "company"
     }
 
+    /// EventEditor heeft al opgeslagen — de detailweergave toont gewoon de nieuwe waarden.
+    func applyEditorSave(_ updated: AgendaEvent) {
+        event = updated
+    }
+
     func delete() async -> Bool {
         guard canDelete else { return false }
         do {
