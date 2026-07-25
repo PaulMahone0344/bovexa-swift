@@ -9,6 +9,8 @@ final class VandaagViewModel: ObservableObject {
     @Published private(set) var todayEvents: [AgendaEvent] = []
     @Published private(set) var nextEvent: AgendaEvent?
     @Published private(set) var appointmentCount = 0
+    /// Bijregel bij het afspraken-cijfer als er hele-dag-blokken zijn.
+    @Published private(set) var awayNote: String?
     @Published private(set) var plannedHoursText = "0 uur"
     @Published private(set) var weekBusyCounts: [Int] = Array(repeating: 0, count: 7)
     @Published private(set) var orgLogoURL: URL?
@@ -45,7 +47,8 @@ final class VandaagViewModel: ObservableObject {
         let today = EventHelpers.eventsOnDay(events, day: now()).sorted { $0.start < $1.start }
         todayEvents = today
         nextEvent = EventHelpers.nextUpcoming(today, now: now())
-        appointmentCount = VandaagStats.appointmentCount(today)
+        appointmentCount = VandaagStats.timedCount(today)
+        awayNote = VandaagStats.awayNote(today)
         plannedHoursText = VandaagStats.formatHours(VandaagStats.plannedHours(today))
         weekBusyCounts = VandaagStats.weekBusyCounts(events, referenceDate: now())
     }

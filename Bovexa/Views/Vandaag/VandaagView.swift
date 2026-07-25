@@ -37,28 +37,18 @@ struct VandaagView: View {
 
                             Spacer()
 
-                            // Het bedrijfslogo stond als brede banner midden in
-                            // het scherm en domineerde de compositie; hier is het
-                            // een rustig merkteken op de kopregel.
-                            //
-                            // Het is een upload van het bedrijf zelf, dus de
-                            // kleuren liggen niet vast en botsen soms met het
-                            // teal-palet. Een eigen glasplaatje eronder geeft het
-                            // een eigen vlak, zodat het als merkteken leest en
-                            // niet als een losse afbeelding die op de ondergrond
-                            // zweeft. Niet grijs maken: dat verminkt huisstijlen
-                            // die wél kloppen.
+                            // Het bedrijfslogo is een upload van het bedrijf zelf.
+                            // Groter of met een eigen vlak eromheen gaat het als
+                            // advertentie lezen; hier blijft het een klein
+                            // merkteken naast de datum, zonder kader.
                             if let logoURL = viewModel.orgLogoURL {
                                 AsyncImage(url: logoURL) { image in
                                     image.resizable().scaledToFit()
                                 } placeholder: {
                                     Color.clear
                                 }
-                                .frame(maxWidth: 116, maxHeight: 22)
-                                .padding(.horizontal, BovexaTheme.Space.sm)
-                                .padding(.vertical, BovexaTheme.Space.xs)
-                                .background(BovexaTheme.Colors.glassStrong, in: Capsule())
-                                .overlay(Capsule().stroke(BovexaTheme.Colors.edgeSoft, lineWidth: 0.8))
+                                .frame(maxWidth: 84, maxHeight: 16)
+                                .opacity(0.75)
                             }
                         }
                         .padding(.horizontal, 2)
@@ -80,7 +70,10 @@ struct VandaagView: View {
                         WeekBusyCard(counts: viewModel.weekBusyCounts)
                     }
                     .padding(BovexaTheme.Space.xl)
-                    .padding(.bottom, 120) // ruimte voor de tabbalk onderin
+                    // De zwevende tabbalk ligt óver de content. Zonder deze
+                    // marge staat de laatste kaart er half achter zodra je
+                    // helemaal naar beneden scrolt.
+                    .padding(.bottom, BovexaTheme.Space.tabBarClearance)
                     .animation(.smooth(duration: 0.3), value: viewModel.nextEvent?.id)
                 }
             }
@@ -108,7 +101,11 @@ struct VandaagView: View {
     private var statsRow: some View {
         HStack(spacing: BovexaTheme.Space.md) {
             GlassCard(padding: BovexaTheme.Space.md, emphasis: .quiet) {
-                StatTile(value: "\(viewModel.appointmentCount)", label: "afspraken")
+                StatTile(
+                    value: "\(viewModel.appointmentCount)",
+                    label: "afspraken",
+                    note: viewModel.awayNote
+                )
             }
             GlassCard(padding: BovexaTheme.Space.md, emphasis: .quiet) {
                 StatTile(value: viewModel.plannedHoursText, label: "geplande uren")

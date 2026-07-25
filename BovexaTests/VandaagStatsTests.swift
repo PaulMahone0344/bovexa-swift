@@ -17,6 +17,51 @@ struct VandaagStatsTests {
         )
     }
 
+    private func makeAllDay(start: Date, end: Date?) -> AgendaEvent {
+        AgendaEvent(
+            id: "afw", owner: "u1", calendar: nil, category: .afwezig, title: "Vakantie",
+            start: start, end: end, allDay: true, recurrence: nil, location: nil, notes: nil,
+            klantNaam: nil, assigneeStatus: [:], seriesId: nil, occurrenceDate: nil
+        )
+    }
+
+    // Een hele-dag-blok (vakantie/ziek/vrij) is geen afspraak en telt ook niet
+    // mee in de geplande uren — anders leest "4 afspraken · 27 uur" op een dag
+    // met drie afspraken en één vakantiedag.
+
+    @Test func allDayEventIsNotCountedAsAppointment() {
+        let events = [
+            makeEvent(start: date(2026, 7, 24, 9), end: date(2026, 7, 24, 10)),
+            makeAllDay(start: date(2026, 7, 24, 0), end: nil),
+        ]
+        #expect(VandaagStats.timedCount(events) == 1)
+        #expect(VandaagStats.allDayCount(events) == 1)
+    }
+
+    @Test func allDayEventWithEndDoesNotInflatePlannedHours() {
+        let events = [
+            makeEvent(start: date(2026, 7, 24, 9), end: date(2026, 7, 24, 10)),
+            makeAllDay(start: date(2026, 7, 24, 0), end: date(2026, 7, 24, 23, 59)),
+        ]
+        #expect(VandaagStats.plannedHours(events) == 1.0)
+    }
+
+    @Test func awayNoteIsNilWithoutAllDayEvents() {
+        let events = [makeEvent(start: date(2026, 7, 24, 9), end: date(2026, 7, 24, 10))]
+        #expect(VandaagStats.awayNote(events) == nil)
+    }
+
+    @Test func awayNoteIsSingularForOneAndPluralForMore() {
+        let one = [makeAllDay(start: date(2026, 7, 24, 0), end: nil)]
+        #expect(VandaagStats.awayNote(one) == "1 afwezigheid")
+
+        let two = [
+            makeAllDay(start: date(2026, 7, 24, 0), end: nil),
+            makeAllDay(start: date(2026, 7, 24, 0), end: nil),
+        ]
+        #expect(VandaagStats.awayNote(two) == "2 afwezigheden")
+    }
+
     @Test func appointmentCountMatchesArrayCount() {
         let events = [
             makeEvent(start: date(2026, 7, 24, 9), end: date(2026, 7, 24, 10)),

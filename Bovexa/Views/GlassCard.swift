@@ -57,27 +57,30 @@ struct GlassCard<Content: View>: View {
         .allowsHitTesting(false)
     }
 
+    // v4: schaduwen lichter en korter. De vorige waardes (radius 26 met een
+    // gloed van 0.30) gaven elke kaart een wolk eronder, wat het scherm zacht
+    // en onscherp maakte. Minder blur zet de kaartrand strakker neer.
     private var shadowColor: Color {
         switch emphasis {
-        case .hero: return BovexaTheme.Shadow.tealGlowColor.opacity(0.30)
-        case .standard: return BovexaTheme.Shadow.softColor.opacity(0.16)
-        case .quiet: return BovexaTheme.Shadow.softColor.opacity(0.08)
+        case .hero: return BovexaTheme.Shadow.tealGlowColor.opacity(0.18)
+        case .standard: return BovexaTheme.Shadow.softColor.opacity(0.10)
+        case .quiet: return BovexaTheme.Shadow.softColor.opacity(0.05)
         }
     }
 
     private var shadowRadius: CGFloat {
         switch emphasis {
-        case .hero: return 26
-        case .standard: return 16
-        case .quiet: return 8
+        case .hero: return 16
+        case .standard: return 10
+        case .quiet: return 5
         }
     }
 
     private var shadowOffset: CGFloat {
         switch emphasis {
-        case .hero: return 16
-        case .standard: return 9
-        case .quiet: return 4
+        case .hero: return 9
+        case .standard: return 5
+        case .quiet: return 3
         }
     }
 

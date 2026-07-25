@@ -18,12 +18,17 @@ enum BovexaTab: String, CaseIterable, Identifiable {
     /// v3: vijf duidelijk verschillende silhouetten (zon, kalender, lijst,
     /// gebouw, persoon). De v2-set had twee persoon-iconen en twee cirkels,
     /// waardoor de tabs op klein formaat op elkaar leken.
+    ///
+    /// v4: `building.2.fill` en `checklist` eruit. Het gebouw was een blok van
+    /// massieve rechthoeken en de checklist een vinkje plus een rondje plus twee
+    /// streepjes — samen te veel detail op tabbalk-formaat. Koffer en vinkje in
+    /// een cirkel hebben één duidelijke vorm.
     var icon: String {
         switch self {
         case .vandaag: return "sun.horizon.fill"
         case .agenda: return "calendar"
-        case .dagtaken: return "checklist"
-        case .bedrijf: return "building.2.fill"
+        case .dagtaken: return "checkmark.circle.fill"
+        case .bedrijf: return "briefcase.fill"
         case .profiel: return "person.fill"
         }
     }

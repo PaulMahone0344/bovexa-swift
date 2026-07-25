@@ -6,8 +6,29 @@ enum VandaagStats {
         events.count
     }
 
+    /// Echte afspraken: hele-dag-blokken (vakantie/ziek/vrij) tellen niet mee.
+    /// "4 afspraken" op een dag met drie afspraken en één vakantiedag klopte niet.
+    static func timedCount(_ events: [AgendaEvent]) -> Int {
+        events.filter { !$0.allDay }.count
+    }
+
+    static func allDayCount(_ events: [AgendaEvent]) -> Int {
+        events.filter(\.allDay).count
+    }
+
+    /// Bijregel onder het afspraken-cijfer, of nil als er niets afwezigs is.
+    static func awayNote(_ events: [AgendaEvent]) -> String? {
+        let count = allDayCount(events)
+        guard count > 0 else { return nil }
+        return count == 1 ? "1 afwezigheid" : "\(count) afwezigheden"
+    }
+
+    /// Hele-dag-blokken tellen niet mee: met een eindtijd erop zouden ze er in
+    /// één klap 24 uur bij optellen.
     static func plannedHours(_ events: [AgendaEvent]) -> Double {
-        let totalMinutes = events.reduce(0) { $0 + (EventHelpers.durationMin($1) ?? 0) }
+        let totalMinutes = events
+            .filter { !$0.allDay }
+            .reduce(0) { $0 + (EventHelpers.durationMin($1) ?? 0) }
         return Double(totalMinutes) / 60.0
     }
 

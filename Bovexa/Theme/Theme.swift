@@ -31,7 +31,10 @@ enum BovexaTheme {
         // inkt (donker op licht oppervlak, met teal-zweem)
         static let ink = Color(hex: "#0E1A1C")
         static let inkSoft = Color(hex: "#24393B")
-        static let muted = Color(hex: "#62787A")
+        /// v4: donkerder dan de oorspronkelijke #62787A. Die haalde op glas maar
+        /// 4.1:1 — net onder AA, en op vol zonlicht onleesbaar. Nu 5.5:1, en nog
+        /// steeds duidelijk ondergeschikt aan `ink` en `inkSoft`.
+        static let muted = Color(hex: "#4E6467")
 
         // merk / teal accent
         static let teal = Color(hex: "#2AA1AD")
@@ -140,6 +143,11 @@ enum BovexaTheme {
         static let lg: CGFloat = 18
         static let xl: CGFloat = 24
         static let xxl: CGFloat = 32
+
+        /// Ruimte onderaan scrollende schermen. De zwevende tabbalk ligt óver de
+        /// content: capsule (±54pt) + thuisindicator (±34pt) + ademruimte.
+        /// Nagemeten op iPhone 17 Pro: de balk beslaat ±94pt vanaf de onderrand.
+        static let tabBarClearance: CGFloat = 104
     }
 
     enum TypeScale {

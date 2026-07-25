@@ -3,6 +3,8 @@ import SwiftUI
 struct StatTile: View {
     let value: String
     let label: String
+    /// Optionele bijregel, bv. "1 afwezigheid" naast het aantal afspraken.
+    var note: String?
 
     var body: some View {
         VStack(alignment: .leading, spacing: BovexaTheme.Space.xs) {
@@ -11,7 +13,12 @@ struct StatTile: View {
                 .foregroundStyle(BovexaTheme.Colors.ink)
             Text(label)
                 .font(BovexaTheme.TypeStyle.statLabel)
-                .foregroundStyle(BovexaTheme.Colors.muted)
+                .foregroundStyle(BovexaTheme.Colors.inkSoft)
+            if let note {
+                Text(note)
+                    .font(BovexaTheme.TypeStyle.caption)
+                    .foregroundStyle(BovexaTheme.categoryColor(for: .afwezig))
+            }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
     }
