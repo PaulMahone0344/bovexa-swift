@@ -1,11 +1,15 @@
 import SwiftUI
 
-/// Zichtbare legenda in de Agenda (m7 plak 6) — niet weggestopt in het lagen-menu.
+/// Legenda als eigen sheet, op de plek waar de iOS Agenda zijn agendalijst heeft:
+/// achter een knop in de chrome, niet inline boven de kalender. Als kaart in de
+/// maandweergave nam hij vaste hoogte weg en dwong hij een inklap-mechaniek dat de
+/// lijst half verstopte; in een sheet is er ruimte en staat de lijst altijd open.
 /// Kleur wijzigen werkt overal meteen door (LabelStore is de gedeelde bron voor
 /// EventHelpers.eventColor). Verwijderen alleen zichtbaar voor admins (valkuil G);
 /// verwijderde labels laten afspraken netjes terugvallen (valkuil H, in LabelStore).
 struct LegendeView: View {
     @StateObject private var viewModel: LegendeViewModel
+    @Environment(\.dismiss) private var dismiss
     /// Rechtstreeks observeren, net als elke andere view die labels tekent. Via
     /// `viewModel.labelStore` lezen werkt niet: een geneste ObservableObject laat
     /// de buitenste niet publiceren, dus de legenda hertekende nooit als de labels
@@ -17,7 +21,6 @@ struct LegendeView: View {
     @State private var renameText = ""
     @State private var colorPickingLabelId: String?
     @State private var pendingDelete: AgendaLabel?
-    @State private var isExpanded = false
     @State private var showNewLabelForm = false
     @State private var newLabelName = ""
     @State private var newLabelColor = BovexaTheme.LabelPalette.options[0].hex
@@ -47,33 +50,58 @@ struct LegendeView: View {
     }
 
     var body: some View {
-        GlassCard {
-            VStack(alignment: .leading, spacing: BovexaTheme.Space.sm) {
-                header
+        NavigationStack {
+            ZStack {
+                AppBackground()
 
-                if labelStore.orderedLabels.isEmpty {
-                    Text("Nog geen labels. Voeg er één toe om afspraken makkelijker terug te zien.")
-                        .font(BovexaTheme.TypeStyle.footnote)
-                        .foregroundStyle(BovexaTheme.Colors.muted)
-                    newLabelButton
-                } else if isExpanded {
-                    VStack(spacing: 0) {
-                        ForEach(labelStore.orderedLabels) { label in
-                            labelRow(label)
-                            if label.id != labelStore.orderedLabels.last?.id || showsExternalCalendarRow {
-                                Divider().overlay(BovexaTheme.Colors.edgeSoft)
+                ScrollView {
+                    VStack(alignment: .leading, spacing: BovexaTheme.Space.lg) {
+                        if labelStore.orderedLabels.isEmpty {
+                            EmptyStateView(
+                                systemImage: "tag",
+                                text: "Nog geen labels. Voeg er één toe om afspraken makkelijker terug te zien.",
+                                surface: .background
+                            )
+                        } else {
+                            // Beide acties zijn onzichtbaar zonder deze regel: de
+                            // naam en de stip zijn knoppen, maar zien er niet als
+                            // knop uit. Apple zet daar een (i) naast; één regel
+                            // uitleg is lichter en zegt hetzelfde.
+                            Text("Tik een naam om te hernoemen, of de stip voor een andere kleur.")
+                                .font(BovexaTheme.TypeStyle.footnote)
+                                .foregroundStyle(BovexaTheme.Colors.inkSoft)
+
+                            GlassCard(padding: BovexaTheme.Space.md) {
+                                VStack(spacing: 0) {
+                                    ForEach(labelStore.orderedLabels) { label in
+                                        labelRow(label)
+                                        if label.id != labelStore.orderedLabels.last?.id || showsExternalCalendarRow {
+                                            Divider().overlay(BovexaTheme.Colors.edgeSoft)
+                                        }
+                                    }
+                                    if showsExternalCalendarRow {
+                                        externalCalendarRow.padding(.vertical, BovexaTheme.Space.sm)
+                                    }
+                                }
                             }
                         }
-                        if showsExternalCalendarRow {
-                            externalCalendarRow.padding(.vertical, BovexaTheme.Space.xs)
+
+                        if showNewLabelForm {
+                            newLabelForm
+                        } else {
+                            newLabelButton
                         }
                     }
-                    newLabelButton
-                } else {
-                    collapsedStrip
+                    .padding(BovexaTheme.Space.xl)
                 }
-
-                if showNewLabelForm { newLabelForm }
+            }
+            .navigationTitle("Legenda")
+            .navigationBarTitleDisplayMode(.large)
+            .toolbar {
+                ToolbarItem(placement: .topBarLeading) {
+                    Button { dismiss() } label: { Image(systemName: "chevron.left") }
+                        .accessibilityLabel("Sluiten")
+                }
             }
         }
         .task { await viewModel.loadRole() }
@@ -101,62 +129,6 @@ struct LegendeView: View {
         } message: {
             Text("Kon dit niet opslaan. Probeer het nog een keer.")
         }
-    }
-
-    /// Kop is de schakelaar. Ingeklapt blijft de legenda zichtbaar als strip, want
-    /// de opdrachtgever vroeg om "niet weggestopt"; uitgeklapt vulde hij bij veel
-    /// labels het halve scherm en duwde hij de maandkalender weg — de kaart staat
-    /// buiten de ScrollView, dus daar viel niet langs te scrollen.
-    private var header: some View {
-        Button {
-            Haptics.selection()
-            withAnimation(.snappy) { isExpanded.toggle() }
-        } label: {
-            HStack(spacing: BovexaTheme.Space.xs) {
-                Text("LEGENDA")
-                    .font(BovexaTheme.TypeStyle.caption.weight(.bold))
-                    .foregroundStyle(BovexaTheme.Colors.accent)
-                    .tracking(0.3)
-                Spacer()
-                if !labelStore.orderedLabels.isEmpty {
-                    Text(isExpanded ? "Klaar" : "Wijzigen")
-                        .font(BovexaTheme.TypeStyle.footnote.weight(.semibold))
-                        .foregroundStyle(BovexaTheme.Colors.accent)
-                    Image(systemName: "chevron.down")
-                        .font(.system(size: 11, weight: .bold))
-                        .foregroundStyle(BovexaTheme.Colors.accent)
-                        .rotationEffect(.degrees(isExpanded ? 180 : 0))
-                }
-            }
-            .contentShape(Rectangle())
-        }
-        .buttonStyle(.plain)
-        .disabled(labelStore.orderedLabels.isEmpty)
-    }
-
-    /// Ingeklapte weergave: stip plus naam per label, horizontaal scrollend zodat
-    /// tien labels de kaart niet laten groeien.
-    private var collapsedStrip: some View {
-        ScrollView(.horizontal, showsIndicators: false) {
-            HStack(spacing: BovexaTheme.Space.sm) {
-                ForEach(labelStore.orderedLabels) { label in
-                    HStack(spacing: 6) {
-                        Circle()
-                            .fill(Color(hex: label.kleur))
-                            .frame(width: 10, height: 10)
-                        Text(label.naam)
-                            .font(BovexaTheme.TypeStyle.footnote)
-                            .foregroundStyle(BovexaTheme.Colors.ink)
-                            .lineLimit(1)
-                    }
-                }
-                if showsExternalCalendarRow {
-                    externalCalendarRow
-                }
-            }
-            .padding(.vertical, 2)
-        }
-        .scrollBounceBehavior(.basedOnSize, axes: .horizontal)
     }
 
     private func labelRow(_ label: AgendaLabel) -> some View {

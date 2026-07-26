@@ -6,6 +6,7 @@ struct AgendaView: View {
     @StateObject private var speech = SpeechToTextService()
     @State private var selectedEvent: AgendaEvent?
     @State private var showSearch = false
+    @State private var showLegende = false
     @State private var showYearOverview = false
     @State private var pillText = ""
     @State private var plannerSeed: String?
@@ -107,12 +108,6 @@ struct AgendaView: View {
                 AppBackground()
 
                 VStack(spacing: 0) {
-                    if let userId = currentUser?.id, let org = currentUser?.defaultOrg {
-                        LegendeView(userId: userId, org: org, token: authStore.token ?? "", labelStore: viewModel.labelStore)
-                            .padding(.horizontal, BovexaTheme.Space.xl)
-                            .padding(.top, BovexaTheme.Space.xs)
-                    }
-
                     if viewModel.viewKind == .lijst, let userId = currentUser?.id {
                         AgendaListView(viewModel: viewModel, currentUserId: userId, now: Date.init, selectedEvent: $selectedEvent)
                     } else {
@@ -147,6 +142,15 @@ struct AgendaView: View {
                     } label: {
                         Image(systemName: "magnifyingglass")
                     }
+                    .accessibilityLabel("Zoeken")
+                }
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button {
+                        showLegende = true
+                    } label: {
+                        Image(systemName: "tag")
+                    }
+                    .accessibilityLabel("Legenda")
                 }
                 ToolbarItem(placement: .topBarTrailing) {
                     Menu {
@@ -182,6 +186,11 @@ struct AgendaView: View {
                         currentUserOrgId: currentUser?.defaultOrg, memberColors: viewModel.memberColors,
                         labelStore: viewModel.labelStore
                     )
+                }
+            }
+            .sheet(isPresented: $showLegende) {
+                if let userId = currentUser?.id, let org = currentUser?.defaultOrg {
+                    LegendeView(userId: userId, org: org, token: authStore.token ?? "", labelStore: viewModel.labelStore)
                 }
             }
             .sheet(isPresented: $showYearOverview) {
