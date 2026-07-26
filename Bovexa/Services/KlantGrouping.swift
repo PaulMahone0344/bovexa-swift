@@ -1,7 +1,10 @@
 import Foundation
 
-/// Groepeert afspraken op klantnaam (valkuil F/G) — geport uit groupByKlant in
-/// ~/Desktop/agenda-app/src/lib/events.ts. Afspraken zonder klantnaam (leeg, of
+/// Groepeert afspraken op wie erbij hoort (valkuil F/G): een gekoppeld contact
+/// (m8) wint van de losse klantnaam-tekst — zie ContactDisplay. Omdat een contact
+/// altijd dezelfde naam oplevert, lost dit meteen het dubbele-kaarten-probleem bij
+/// tikfouten op voor elke afspraak die een contact heeft. Geport uit groupByKlant
+/// in ~/Desktop/agenda-app/src/lib/events.ts. Afspraken zonder naam (leeg, of
 /// gemaskeerd door de server, valkuil G) horen niet in de lijst.
 enum KlantGrouping {
     static func group(_ events: [AgendaEvent]) -> [KlantGroup] {
@@ -11,14 +14,14 @@ enum KlantGrouping {
         var eventsByKey: [String: [AgendaEvent]] = [:]
 
         for event in events {
-            guard let naam = event.klantNaam?.trimmingCharacters(in: .whitespacesAndNewlines), !naam.isEmpty else { continue }
+            guard let naam = ContactDisplay.naam(for: event)?.trimmingCharacters(in: .whitespacesAndNewlines), !naam.isEmpty else { continue }
             let key = naam.lowercased()
             if names[key] == nil {
                 order.append(key)
                 names[key] = naam
                 eventsByKey[key] = []
             }
-            if phones[key] == nil, let phone = event.klantTelefoon, !phone.isEmpty {
+            if phones[key] == nil, let phone = ContactDisplay.telefoon(for: event), !phone.isEmpty {
                 phones[key] = phone
             }
             eventsByKey[key, default: []].append(event)

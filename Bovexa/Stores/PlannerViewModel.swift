@@ -18,6 +18,7 @@ final class PlannerViewModel: ObservableObject {
     @Published var reminderMin = 0
     @Published var assignee: [String] = []
     @Published var label: String?
+    @Published var contactId: String?
 
     @Published private(set) var saving = false
     /// Niet-nil ⇒ caller toont "Dubbele boeking"-alert; proceedPastOverlap() gaat door,
@@ -229,7 +230,7 @@ final class PlannerViewModel: ObservableObject {
                 let payload = AppointmentPayloadBuilder.build(
                     appointment: appointment, ownerId: userId, rawInput: rawInput.isEmpty ? appointment.title : rawInput,
                     org: org, visibility: visibility, viewers: viewers, assignees: effectiveAssignees, reminderMin: reminderMin,
-                    label: org != nil ? label : nil
+                    label: org != nil ? label : nil, contact: contactId
                 )
                 let created = try await repository.createEvent(body: payload.requestBody, token: token)
                 if reminderMin > 0 {

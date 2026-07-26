@@ -63,12 +63,12 @@ struct EventEditorView: View {
                     fieldLabel("Duur")
                     StepperRow(value: "\(viewModel.durationMin) min", onMinus: { viewModel.changeDuration(by: -15) }, onPlus: { viewModel.changeDuration(by: 15) })
 
-                    fieldLabel("Klant (optioneel)")
-                    TextField("Naam van de klant", text: $viewModel.klantNaam)
-                        .textFieldStyle(EditorFieldStyle())
-                    TextField("Telefoon (optioneel)", text: $viewModel.klantTelefoon)
-                        .keyboardType(.phonePad)
-                        .textFieldStyle(EditorFieldStyle())
+                    fieldLabel("Contact (optioneel)")
+                    ContactPickerView(
+                        selectedContactId: $viewModel.contactId,
+                        existingKlantNaam: viewModel.klantNaam,
+                        userId: currentUserId, token: token
+                    )
 
                     fieldLabel("Notitie")
                     TextEditor(text: $viewModel.notes)

@@ -276,6 +276,20 @@ struct PlannerView: View {
                         LabelPickerView(labelStore: labelStore, selectedLabelId: $viewModel.label, org: org, token: token)
                     }
                 }
+
+                GlassCard {
+                    VStack(alignment: .leading, spacing: BovexaTheme.Space.sm) {
+                        Text("CONTACT")
+                            .font(BovexaTheme.TypeStyle.caption.weight(.bold))
+                            .foregroundStyle(BovexaTheme.Colors.accent)
+                            .tracking(0.3)
+                        ContactPickerView(
+                            selectedContactId: $viewModel.contactId,
+                            existingKlantNaam: viewModel.ready?.first?.klantNaam ?? "",
+                            userId: viewModel.ownerId, token: token
+                        )
+                    }
+                }
             }
 
             ReminderChipsView(minutesBefore: $viewModel.reminderMin)

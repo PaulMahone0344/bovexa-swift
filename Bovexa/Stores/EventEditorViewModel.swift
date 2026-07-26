@@ -15,6 +15,7 @@ final class EventEditorViewModel: ObservableObject {
     @Published var reminderMin: Int
     @Published var assignee: [String]
     @Published var label: String?
+    @Published var contactId: String?
 
     @Published private(set) var isSaving = false
     @Published var titleMissingAlert = false
@@ -47,6 +48,7 @@ final class EventEditorViewModel: ObservableObject {
         reminderMin = event.reminderMin ?? 0
         assignee = event.assignee
         label = event.label
+        contactId = event.contact
     }
 
     func shiftDay(_ days: Int) {
@@ -96,7 +98,7 @@ final class EventEditorViewModel: ObservableObject {
         let payload = EventEditorPayloadBuilder.build(
             title: title, category: category, start: start, end: end, notes: notes,
             klantNaam: klantNaam, klantTelefoon: klantTelefoon, reminderMin: reminderMin,
-            assignee: assignee, originalEvent: originalEvent, label: label
+            assignee: assignee, originalEvent: originalEvent, label: label, contact: contactId
         )
         do {
             let updated = try await repository.updateEvent(recordId: EventHelpers.eventRecordId(originalEvent), payload: payload, token: token)

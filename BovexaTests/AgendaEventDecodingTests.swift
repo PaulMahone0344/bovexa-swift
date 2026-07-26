@@ -63,6 +63,28 @@ struct AgendaEventDecodingTests {
         #expect(event.assigneeStatus.isEmpty)
     }
 
+    // MARK: - contact (m8)
+
+    @Test func decodeContactAndExpandedContact() throws {
+        let json = """
+        {"id":"ev1","owner":"u1","title":"Iets","start":"2026-07-24 09:00:00.000Z","all_day":false,
+         "contact":"c1","expand":{"contact":{"id":"c1","eigenaar":"u1","naam":"Karim","telefoon":"0611111111","notitie":""}}}
+        """.data(using: .utf8)!
+        let event = try JSONDecoder().decode(AgendaEvent.self, from: json)
+        #expect(event.contact == "c1")
+        #expect(event.expand?.contact?.naam == "Karim")
+    }
+
+    @Test func decodeMissingContactAndExpandDefaultToNil() throws {
+        let json = """
+        {"id":"ev1","owner":"u1","title":"Iets","start":"2026-07-24 09:00:00.000Z","all_day":false,"klant_naam":"Jansen"}
+        """.data(using: .utf8)!
+        let event = try JSONDecoder().decode(AgendaEvent.self, from: json)
+        #expect(event.contact == nil)
+        #expect(event.expand == nil)
+        #expect(event.klantNaam == "Jansen")
+    }
+
     @Test func decodeUnknownCategoryDoesNotCrashAndIsNil() throws {
         let json = """
         {"id":"ev1","owner":"u1","title":"Iets","start":"2026-07-24 09:00:00.000Z","all_day":false,"category":"onbekend"}

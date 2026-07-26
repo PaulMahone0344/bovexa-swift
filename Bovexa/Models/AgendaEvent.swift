@@ -30,6 +30,14 @@ struct AgendaEvent: Decodable, Identifiable {
     /// Label-id (m7, agenda_labels). Ontbreekt of verwijst niet meer naar een
     /// bestaand label: EventHelpers.eventColor valt dan netjes terug (valkuil H).
     let label: String?
+    /// Contact-id (m8, agenda_contacten). Ontbreekt bij oude afspraken (valkuil D):
+    /// ContactDisplay valt dan terug op klantNaam/klantTelefoon.
+    let contact: String?
+    let expand: Expand?
+
+    struct Expand: Decodable, Equatable {
+        let contact: AgendaContact?
+    }
 
     init(
         id: String, owner: String, calendar: String?, category: BovexaTheme.Category?,
@@ -38,7 +46,7 @@ struct AgendaEvent: Decodable, Identifiable {
         assigneeStatus: [String: String], seriesId: String?, occurrenceDate: String?,
         org: String? = nil, visibilityRaw: String? = nil, viewers: [String] = [],
         assignee: [String] = [], reminderMin: Int? = nil, klantTelefoon: String? = nil,
-        label: String? = nil
+        label: String? = nil, contact: String? = nil, expand: Expand? = nil
     ) {
         self.id = id
         self.owner = owner
@@ -62,6 +70,8 @@ struct AgendaEvent: Decodable, Identifiable {
         self.reminderMin = reminderMin
         self.klantTelefoon = klantTelefoon
         self.label = label
+        self.contact = contact
+        self.expand = expand
     }
 
     /// Kopie met andere id/tijd/serie — gebruikt door RecurrenceExpander om een
@@ -73,7 +83,8 @@ struct AgendaEvent: Decodable, Identifiable {
             notes: notes, klantNaam: klantNaam, assigneeStatus: assigneeStatus,
             seriesId: seriesId, occurrenceDate: occurrenceDate,
             org: org, visibilityRaw: visibilityRaw, viewers: viewers,
-            assignee: assignee, reminderMin: reminderMin, klantTelefoon: klantTelefoon, label: label
+            assignee: assignee, reminderMin: reminderMin, klantTelefoon: klantTelefoon, label: label,
+            contact: contact, expand: expand
         )
     }
 
@@ -86,7 +97,8 @@ struct AgendaEvent: Decodable, Identifiable {
             notes: notes, klantNaam: klantNaam, assigneeStatus: assigneeStatus,
             seriesId: seriesId, occurrenceDate: occurrenceDate,
             org: org, visibilityRaw: visibilityRaw, viewers: viewers,
-            assignee: assignee, reminderMin: reminderMin, klantTelefoon: klantTelefoon, label: label
+            assignee: assignee, reminderMin: reminderMin, klantTelefoon: klantTelefoon, label: label,
+            contact: contact, expand: expand
         )
     }
 
@@ -99,7 +111,8 @@ struct AgendaEvent: Decodable, Identifiable {
             notes: notes, klantNaam: klantNaam, assigneeStatus: assigneeStatus,
             seriesId: seriesId, occurrenceDate: occurrenceDate,
             org: org, visibilityRaw: visibilityRaw, viewers: viewers,
-            assignee: assignee, reminderMin: reminderMin, klantTelefoon: klantTelefoon, label: label
+            assignee: assignee, reminderMin: reminderMin, klantTelefoon: klantTelefoon, label: label,
+            contact: contact, expand: expand
         )
     }
 
@@ -112,7 +125,23 @@ struct AgendaEvent: Decodable, Identifiable {
             notes: notes, klantNaam: klantNaam, assigneeStatus: assigneeStatus,
             seriesId: seriesId, occurrenceDate: occurrenceDate,
             org: org, visibilityRaw: visibilityRaw, viewers: viewers,
-            assignee: assignee, reminderMin: reminderMin, klantTelefoon: klantTelefoon, label: label
+            assignee: assignee, reminderMin: reminderMin, klantTelefoon: klantTelefoon, label: label,
+            contact: contact, expand: expand
+        )
+    }
+
+    /// Kopie met ander contact — voor optimistische UI-updates bij het kiezen van
+    /// een contact in EventEditor (m8). `expand` wordt niet meegenomen: de server
+    /// stuurt die pas terug bij de volgende fetch met `expand=contact`.
+    func withContact(_ contact: String?) -> AgendaEvent {
+        AgendaEvent(
+            id: id, owner: owner, calendar: calendar, category: category, title: title,
+            start: start, end: end, allDay: allDay, recurrence: recurrence, location: location,
+            notes: notes, klantNaam: klantNaam, assigneeStatus: assigneeStatus,
+            seriesId: seriesId, occurrenceDate: occurrenceDate,
+            org: org, visibilityRaw: visibilityRaw, viewers: viewers,
+            assignee: assignee, reminderMin: reminderMin, klantTelefoon: klantTelefoon, label: label,
+            contact: contact, expand: nil
         )
     }
 
@@ -129,7 +158,7 @@ struct AgendaEvent: Decodable, Identifiable {
         case viewers, assignee
         case reminderMin = "reminder_min"
         case klantTelefoon = "klant_telefoon"
-        case label
+        case label, contact, expand
     }
 
     init(from decoder: Decoder) throws {
@@ -159,6 +188,8 @@ struct AgendaEvent: Decodable, Identifiable {
         reminderMin = Self.decodeOptional(c, .reminderMin)
         klantTelefoon = Self.decodeOptional(c, .klantTelefoon)
         label = Self.decodeOptional(c, .label)
+        contact = Self.decodeOptional(c, .contact)
+        expand = Self.decodeOptional(c, .expand)
     }
 
     /// Ontbrekende sleutel, null, of een onverwacht type → nil in plaats van crash.

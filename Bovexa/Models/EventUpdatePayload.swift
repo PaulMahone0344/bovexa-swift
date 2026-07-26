@@ -17,11 +17,14 @@ struct EventUpdatePayload {
     /// Gekozen label-id (m7). Ontbreekt de keuze: veld weglaten, niet leegmaken
     /// (plan: "geen label laat het veld weg").
     let label: String?
+    /// Gekozen contact-id (m8). Aanwezig ⇒ klant_naam/klant_telefoon blijven weg
+    /// (valkuil D: die twee zijn alleen voor afspraken zonder contact).
+    let contact: String?
 
     init(
         title: String, category: BovexaTheme.Category, start: Date, end: Date, notes: String,
         klantNaam: String, klantTelefoon: String, reminderMin: Int, assignee: [String],
-        viewers: [String], assigneeStatus: [String: String], label: String? = nil
+        viewers: [String], assigneeStatus: [String: String], label: String? = nil, contact: String? = nil
     ) {
         self.title = title
         self.category = category
@@ -35,6 +38,7 @@ struct EventUpdatePayload {
         self.viewers = viewers
         self.assigneeStatus = assigneeStatus
         self.label = label
+        self.contact = contact
     }
 
     var requestBody: [String: Any] {
@@ -44,13 +48,17 @@ struct EventUpdatePayload {
             "start": PBDate.format(start),
             "end": PBDate.format(end),
             "notes": notes,
-            "klant_naam": klantNaam,
-            "klant_telefoon": klantTelefoon,
             "reminder_min": reminderMin,
             "assignee": assignee,
             "viewers": viewers,
             "assignee_status": assigneeStatus,
         ]
+        if let contact {
+            body["contact"] = contact
+        } else {
+            body["klant_naam"] = klantNaam
+            body["klant_telefoon"] = klantTelefoon
+        }
         if let label { body["label"] = label }
         return body
     }

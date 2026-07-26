@@ -144,7 +144,7 @@ struct EventDetailView: View {
                     detailRow(icon: "mappin.and.ellipse", text: location)
                 }
 
-                if let klant = event.klantNaam, !klant.isEmpty {
+                if let klant = ContactDisplay.naam(for: event), !klant.isEmpty {
                     detailRow(icon: "person", text: klant)
                 }
 

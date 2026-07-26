@@ -23,12 +23,15 @@ struct AppointmentCreatePayload {
     /// Gekozen label-id (m7). Ontbreekt de keuze: veld weglaten (valkuil H —
     /// bestaand gedrag mag niet veranderen zonder label).
     let label: String?
+    /// Gekozen contact-id (m8). Aanwezig ⇒ klant_naam/klant_telefoon blijven weg
+    /// (valkuil D: die twee zijn alleen voor afspraken zonder contact).
+    let contact: String?
 
     init(
         owner: String, org: String, title: String, category: BovexaTheme.Category, calendar: String,
         location: String, recurrence: String, klantNaam: String, klantTelefoon: String, start: Date, end: Date,
         visibility: String, viewers: [String], assignee: [String], rawInput: String, reminderMin: Int,
-        assigneeStatus: [String: String], label: String? = nil
+        assigneeStatus: [String: String], label: String? = nil, contact: String? = nil
     ) {
         self.owner = owner
         self.org = org
@@ -48,6 +51,7 @@ struct AppointmentCreatePayload {
         self.reminderMin = reminderMin
         self.assigneeStatus = assigneeStatus
         self.label = label
+        self.contact = contact
     }
 
     var requestBody: [String: Any] {
@@ -59,8 +63,6 @@ struct AppointmentCreatePayload {
             "calendar": calendar,
             "location": location,
             "recurrence": recurrence,
-            "klant_naam": klantNaam,
-            "klant_telefoon": klantTelefoon,
             "start": PBDate.format(start),
             "end": PBDate.format(end),
             "visibility": visibility,
@@ -71,6 +73,12 @@ struct AppointmentCreatePayload {
             "reminder_min": reminderMin,
             "assignee_status": assigneeStatus,
         ]
+        if let contact {
+            body["contact"] = contact
+        } else {
+            body["klant_naam"] = klantNaam
+            body["klant_telefoon"] = klantTelefoon
+        }
         if let label { body["label"] = label }
         return body
     }

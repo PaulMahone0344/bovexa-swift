@@ -3,12 +3,12 @@ import Foundation
 @testable import Bovexa
 
 struct KlantGroupingTests {
-    private func event(id: String, klantNaam: String?, klantTelefoon: String? = nil, start: Date) -> AgendaEvent {
+    private func event(id: String, klantNaam: String?, klantTelefoon: String? = nil, start: Date, expand: AgendaEvent.Expand? = nil) -> AgendaEvent {
         AgendaEvent(
             id: id, owner: "me", calendar: nil, category: nil, title: "Afspraak \(id)",
             start: start, end: nil, allDay: false, recurrence: nil, location: nil, notes: nil,
             klantNaam: klantNaam, assigneeStatus: [:], seriesId: nil, occurrenceDate: nil,
-            klantTelefoon: klantTelefoon
+            klantTelefoon: klantTelefoon, contact: expand?.contact?.id, expand: expand
         )
     }
 
@@ -66,6 +66,32 @@ struct KlantGroupingTests {
 
     @Test func emptyEventsProduceEmptyGroups() {
         #expect(KlantGrouping.group([]).isEmpty)
+    }
+
+    // MARK: - contact (m8)
+
+    @Test func contactNaamWinsOverTypoedKlantNaamAndDedupesTheGroup() {
+        let contact = AgendaContact(id: "c1", eigenaar: "u1", naam: "Van der Berg", telefoon: "0611111111", notitie: "")
+        let events = [
+            event(id: "a", klantNaam: "Van der Berg", start: date(100), expand: AgendaEvent.Expand(contact: contact)),
+            event(id: "b", klantNaam: "van der berg", start: date(200), expand: AgendaEvent.Expand(contact: contact)),
+        ]
+        let groups = KlantGrouping.group(events)
+        #expect(groups.count == 1)
+        #expect(groups[0].naam == "Van der Berg")
+        #expect(groups[0].events.map(\.id) == ["a", "b"])
+    }
+
+    @Test func mixOfContactLinkedAndPlainKlantNaamGroupsCorrectly() {
+        let contact = AgendaContact(id: "c1", eigenaar: "u1", naam: "Jansen", telefoon: "", notitie: "")
+        let events = [
+            event(id: "linked", klantNaam: "Jansen", start: date(100), expand: AgendaEvent.Expand(contact: contact)),
+            event(id: "legacy", klantNaam: "Jansen", start: date(200)),
+            event(id: "other", klantNaam: "Pietersen", start: date(300)),
+        ]
+        let groups = KlantGrouping.group(events)
+        #expect(groups.map(\.naam) == ["Jansen", "Pietersen"])
+        #expect(groups[0].events.map(\.id) == ["linked", "legacy"])
     }
 
     // MARK: - split (komend/eerder rond een vast "nu")
