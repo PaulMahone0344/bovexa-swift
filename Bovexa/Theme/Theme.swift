@@ -196,6 +196,34 @@ enum BovexaTheme {
         static let tealGlowOffsetY: CGFloat = 14
     }
 
+    /// Vaste kleurenset voor labels (m7, valkuil F): geen vrije kleurkiezer, want
+    /// die levert op het lichte glas onleesbare combinaties op (bv. lichtgeel op
+    /// wit). Elke optie is gecontroleerd op leesbaarheid en te onderscheiden van
+    /// de rest, in dezelfde donkere-op-licht-glas stijl als `MemberColors.palette`.
+    /// Richting uit de schermafbeelding van de opdrachtgever: rood, oranje, geel,
+    /// groen, teal, blauw, donkerblauw, paars, roze, bruin, grijs.
+    enum LabelPalette {
+        struct Option: Identifiable, Equatable {
+            var id: String { hex }
+            let name: String
+            let hex: String
+        }
+
+        static let options: [Option] = [
+            Option(name: "Rood", hex: "#D6524B"),
+            Option(name: "Oranje", hex: "#E08A3C"),
+            Option(name: "Geel", hex: "#C99A16"),
+            Option(name: "Groen", hex: "#4F9E5C"),
+            Option(name: "Teal", hex: "#2E9C97"),
+            Option(name: "Blauw", hex: "#3E87D6"),
+            Option(name: "Donkerblauw", hex: "#2C5C99"),
+            Option(name: "Paars", hex: "#8E5BD1"),
+            Option(name: "Roze", hex: "#D45AA4"),
+            Option(name: "Bruin", hex: "#A56A3E"),
+            Option(name: "Grijs", hex: "#6B7280"),
+        ]
+    }
+
     /// v2 (Liquid Glass restyle) tokens: bouwstenen voor GlassCard v2 en de
     /// nieuwe knopstijlen. Zie DESIGN-NOTES.md — `.glassEffect` bestaat en
     /// compileert op deze deploymentTarget (iOS 26), dus geen material-fallback

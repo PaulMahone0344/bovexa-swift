@@ -49,6 +49,23 @@ struct ThemeTests {
         }
         #expect(BovexaTheme.Category.allCases.count == 5)
     }
+
+    @Test func labelPaletteHasBetweenTenAndTwelveOptions() {
+        #expect(BovexaTheme.LabelPalette.options.count >= 10)
+        #expect(BovexaTheme.LabelPalette.options.count <= 12)
+    }
+
+    @Test func labelPaletteHexesAreAllDistinct() {
+        let hexes = BovexaTheme.LabelPalette.options.map(\.hex)
+        #expect(Set(hexes).count == hexes.count)
+    }
+
+    @Test func labelPaletteOptionsHaveNonEmptyNames() {
+        for option in BovexaTheme.LabelPalette.options {
+            #expect(!option.name.isEmpty)
+            #expect(option.hex.hasPrefix("#"))
+        }
+    }
 }
 
 private extension Int {
