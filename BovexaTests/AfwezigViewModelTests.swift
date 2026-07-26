@@ -90,6 +90,52 @@ struct AfwezigViewModelTests {
         #expect(vm.tooLong == false)
     }
 
+    // MARK: - reason "Anders" (klantverzoek 26 juli)
+
+    @Test func canSaveIsFalseWhenAndersHasNoToelichting() {
+        let vm = makeViewModel()
+        vm.pickDay(day(3))
+        vm.reason = .anders
+        #expect(vm.canSave == false)
+    }
+
+    @Test func canSaveIsFalseWhenAndersToelichtingIsOnlyWhitespace() {
+        let vm = makeViewModel()
+        vm.pickDay(day(3))
+        vm.reason = .anders
+        vm.andersToelichting = "   "
+        #expect(vm.canSave == false)
+    }
+
+    @Test func canSaveIsTrueWhenAndersHasToelichting() {
+        let vm = makeViewModel()
+        vm.pickDay(day(3))
+        vm.reason = .anders
+        vm.andersToelichting = "Tandarts"
+        #expect(vm.canSave == true)
+    }
+
+    @Test func saveWithAndersUsesToelichtingAsTitleButRawInputStaysGeneric() async {
+        let vm = makeViewModel(org: "org1")
+        vm.pickDay(day(3))
+        vm.reason = .anders
+        vm.andersToelichting = "Tandarts"
+
+        var createdBodies: [[String: Any]] = []
+        URLProtocolStub.requestHandler = { request in
+            let data = self.bodyData(from: request)
+            createdBodies.append((try? JSONSerialization.jsonObject(with: data) as? [String: Any]) ?? [:])
+            return (200, Data("""
+            {"id":"ev1","owner":"u1","title":"Tandarts","start":"2026-08-03 12:00:00.000Z","all_day":true}
+            """.utf8))
+        }
+        await vm.save()
+
+        #expect(createdBodies.count == 1)
+        #expect(createdBodies[0]["title"] as? String == "Tandarts")
+        #expect(createdBodies[0]["raw_input"] as? String == "afwezig: anders")
+    }
+
     @Test func canSaveIsFalseWhenTooLong() {
         let vm = makeViewModel()
         vm.pickDay(day(1))

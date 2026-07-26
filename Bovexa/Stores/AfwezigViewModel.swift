@@ -6,6 +6,8 @@ import Foundation
 @MainActor
 final class AfwezigViewModel: ObservableObject {
     @Published var reason: AfwezigReason = .vakantie
+    /// Verplichte toelichting bij reason == .anders (klantverzoek 26 juli).
+    @Published var andersToelichting: String = ""
     @Published private(set) var from: Date?
     @Published private(set) var to: Date?
     @Published var cursorMonth: Date
@@ -56,7 +58,18 @@ final class AfwezigViewModel: ObservableObject {
 
     private var partialDayRangeIsValid: Bool { effectiveHeleDag || endTime > startTime }
 
-    var canSave: Bool { from != nil && !tooLong && !saving && partialDayRangeIsValid }
+    /// "Anders" blokkeert doorgeven zolang er geen toelichting is (klantverzoek 26 juli).
+    private var andersToelichtingIsValid: Bool {
+        reason != .anders || !andersToelichting.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+    }
+
+    var canSave: Bool { from != nil && !tooLong && !saving && partialDayRangeIsValid && andersToelichtingIsValid }
+
+    /// Titel van het hele-dag-blok: bij "Anders" de ingevulde toelichting, anders
+    /// gewoon het label (plan: raw_input blijft wel altijd "afwezig: <reden>").
+    private var effectiveTitle: String {
+        reason == .anders ? andersToelichting.trimmingCharacters(in: .whitespacesAndNewlines) : reason.label
+    }
 
     private static func defaultTime(hour: Int, calendar: Calendar, reference: Date) -> Date {
         calendar.date(bySettingHour: hour, minute: 0, second: 0, of: reference) ?? reference
@@ -98,7 +111,7 @@ final class AfwezigViewModel: ObservableObject {
         do {
             for day in days {
                 let payload = AfwezigCreatePayload(
-                    owner: userId, org: org ?? "", title: reason.label,
+                    owner: userId, org: org ?? "", title: effectiveTitle,
                     calendar: org != nil ? "work" : "private",
                     visibility: org != nil ? "company" : "private",
                     start: partial ? AfwezigRange.combine(day: day, time: startTime, calendar: calendar) : day,

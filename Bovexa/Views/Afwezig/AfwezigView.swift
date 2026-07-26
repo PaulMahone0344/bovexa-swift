@@ -85,6 +85,18 @@ struct AfwezigView: View {
                     reasonChip(reason)
                 }
             }
+
+            if viewModel.reason == .anders {
+                TextField("Toelichting (verplicht)", text: $viewModel.andersToelichting)
+                    .padding(.horizontal, BovexaTheme.Space.md)
+                    .frame(minHeight: 44)
+                    .background(BovexaTheme.Colors.glass)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: BovexaTheme.Radius.md, style: .continuous)
+                            .strokeBorder(BovexaTheme.Colors.edge, lineWidth: 1)
+                    )
+                    .clipShape(RoundedRectangle(cornerRadius: BovexaTheme.Radius.md, style: .continuous))
+            }
         }
     }
 
