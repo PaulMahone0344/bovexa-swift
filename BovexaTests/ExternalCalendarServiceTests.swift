@@ -6,10 +6,19 @@ final class FakeDeviceCalendarReader: DeviceCalendarReading, @unchecked Sendable
     var accessGranted = true
     var calendars: [DeviceCalendarInfo] = [DeviceCalendarInfo(id: "cal1", title: "Werk")]
     var eventsToReturn: [DeviceCalendarEvent] = []
+    /// Los van `accessGranted`: dit is wat de systeemstatus zegt vóór er iets gevraagd is.
+    var alreadyAuthorized = false
     private(set) var requestedIntervals: [DateInterval] = []
     private(set) var requestedCalendarIds: [Set<String>] = []
+    private(set) var requestCount = 0
 
-    func requestFullAccess() async -> Bool { accessGranted }
+    var hasFullAccess: Bool { alreadyAuthorized }
+
+    func requestFullAccess() async -> Bool {
+        requestCount += 1
+        if accessGranted { alreadyAuthorized = true }
+        return accessGranted
+    }
     func availableCalendars() -> [DeviceCalendarInfo] { calendars }
 
     func events(in interval: DateInterval, calendarIds: Set<String>) -> [DeviceCalendarEvent] {
@@ -69,6 +78,22 @@ struct ExternalCalendarServiceTests {
         let service = ExternalCalendarService(reader: reader)
         let result = await service.events(in: interval(), calendarIds: ["cal1"])
         #expect(result.map(\.id) == ["ev1"])
+    }
+
+    @Test func calendarsIfAuthorizedIsEmptyAndAsksNothingWhenAccessNotGrantedYet() {
+        let reader = FakeDeviceCalendarReader()
+        reader.alreadyAuthorized = false
+        let service = ExternalCalendarService(reader: reader)
+        #expect(service.calendarsIfAuthorized().isEmpty)
+        #expect(reader.requestCount == 0)
+    }
+
+    @Test func calendarsIfAuthorizedReturnsCalendarsWithoutAskingWhenAccessAlreadyGranted() {
+        let reader = FakeDeviceCalendarReader()
+        reader.alreadyAuthorized = true
+        let service = ExternalCalendarService(reader: reader)
+        #expect(service.calendarsIfAuthorized() == [DeviceCalendarInfo(id: "cal1", title: "Werk")])
+        #expect(reader.requestCount == 0)
     }
 
     @Test func noCalendarIdsSelectedReturnsEmptyWithoutCallingReader() async {

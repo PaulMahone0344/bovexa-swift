@@ -179,18 +179,43 @@ struct ProfielViewModelTests {
         let reader = FakeDeviceCalendarReader()
         reader.accessGranted = false
         let vm = ProfielViewModel(externalCalendarService: ExternalCalendarService(reader: reader), defaults: makeDefaults())
-        await vm.loadExternalCalendars()
+        await vm.requestExternalCalendarAccess()
         #expect(vm.externalCalendars.isEmpty)
         #expect(vm.externalCalendarAccessDenied)
+        #expect(!vm.externalCalendarAccessGranted)
     }
 
     @Test func externalCalendarsAppearWithPermission() async {
         let reader = FakeDeviceCalendarReader()
         reader.calendars = [DeviceCalendarInfo(id: "cal1", title: "Werk"), DeviceCalendarInfo(id: "cal2", title: "Verjaardagen")]
         let vm = ProfielViewModel(externalCalendarService: ExternalCalendarService(reader: reader), defaults: makeDefaults())
-        await vm.loadExternalCalendars()
+        await vm.requestExternalCalendarAccess()
         #expect(vm.externalCalendars == reader.calendars)
         #expect(!vm.externalCalendarAccessDenied)
+        #expect(vm.externalCalendarAccessGranted)
+    }
+
+    /// Het openen van Profiel mag de systeemprompt niet oproepen: één keer "Sta niet
+    /// toe" is definitief, dus die vraag hoort bij een tik van de gebruiker.
+    @Test func openingProfielDoesNotAskForCalendarAccess() {
+        let reader = FakeDeviceCalendarReader()
+        let vm = ProfielViewModel(externalCalendarService: ExternalCalendarService(reader: reader), defaults: makeDefaults())
+        vm.loadExternalCalendarsIfAuthorized()
+        #expect(reader.requestCount == 0)
+        #expect(vm.externalCalendars.isEmpty)
+        #expect(!vm.externalCalendarAccessGranted)
+        #expect(!vm.externalCalendarAccessDenied)
+    }
+
+    @Test func openingProfielShowsCalendarsWhenAccessWasAlreadyGiven() {
+        let reader = FakeDeviceCalendarReader()
+        reader.alreadyAuthorized = true
+        reader.calendars = [DeviceCalendarInfo(id: "cal1", title: "Werk")]
+        let vm = ProfielViewModel(externalCalendarService: ExternalCalendarService(reader: reader), defaults: makeDefaults())
+        vm.loadExternalCalendarsIfAuthorized()
+        #expect(reader.requestCount == 0)
+        #expect(vm.externalCalendars == reader.calendars)
+        #expect(vm.externalCalendarAccessGranted)
     }
 
     @Test func noneSelectedByDefaultMeansNothingToShow() {

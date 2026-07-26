@@ -258,6 +258,9 @@ struct ProfielView: View {
     }
 
     /// Welke toestelagenda's in Bovexa Flow te zien zijn (m9 plak 3, valkuil F/I).
+    /// De toegangsvraag hangt aan de knop hieronder en niet aan het openen van het
+    /// scherm: één keer "Sta niet toe" is definitief, dus die vraag moet komen op het
+    /// moment dat de gebruiker er zelf om vraagt.
     @ViewBuilder
     private var externalCalendarsPickerRow: some View {
         if viewModel.externalCalendarAccessDenied {
@@ -265,7 +268,22 @@ struct ProfielView: View {
                 .font(BovexaTheme.TypeStyle.caption)
                 .foregroundStyle(BovexaTheme.Colors.muted)
                 .padding(.top, BovexaTheme.Space.xs)
-        } else if !viewModel.externalCalendars.isEmpty {
+        } else if !viewModel.externalCalendarAccessGranted {
+            Button {
+                Haptics.selection()
+                Task { await viewModel.requestExternalCalendarAccess() }
+            } label: {
+                Label("Agenda's van dit toestel tonen", systemImage: "calendar.badge.plus")
+                    .font(BovexaTheme.TypeStyle.footnote.weight(.semibold))
+            }
+            .buttonStyle(.glassSecondaryBrand)
+            .padding(.top, BovexaTheme.Space.xs)
+        } else if viewModel.externalCalendars.isEmpty {
+            Text("Geen agenda's op dit toestel gevonden.")
+                .font(BovexaTheme.TypeStyle.caption)
+                .foregroundStyle(BovexaTheme.Colors.muted)
+                .padding(.top, BovexaTheme.Space.xs)
+        } else {
             VStack(alignment: .leading, spacing: BovexaTheme.Space.xs) {
                 Text("Tonen in Bovexa Flow")
                     .font(BovexaTheme.TypeStyle.caption.weight(.semibold))
@@ -331,7 +349,7 @@ struct ProfielView: View {
     private func refresh() async {
         guard let user = currentUser else { return }
         await viewModel.load(userId: user.id, orgId: user.defaultOrg, token: authStore.token ?? "")
-        await viewModel.loadExternalCalendars()
+        viewModel.loadExternalCalendarsIfAuthorized()
     }
 
     private func deleteAccount() async {

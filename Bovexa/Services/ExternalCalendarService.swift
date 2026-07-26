@@ -27,6 +27,8 @@ struct DeviceCalendarEvent {
 /// `DeviceCalendarWriting` (m3). Volledige toegang nodig (valkuil F), niet de
 /// write-only toegang die de bestaande sync gebruikt.
 protocol DeviceCalendarReading {
+    /// Al gegeven toegang uitlezen ZONDER de systeemprompt op te roepen.
+    var hasFullAccess: Bool { get }
     func requestFullAccess() async -> Bool
     func availableCalendars() -> [DeviceCalendarInfo]
     func events(in interval: DateInterval, calendarIds: Set<String>) -> [DeviceCalendarEvent]
@@ -34,6 +36,10 @@ protocol DeviceCalendarReading {
 
 final class EKEventStoreCalendarReader: DeviceCalendarReading {
     private let store = EKEventStore()
+
+    var hasFullAccess: Bool {
+        EKEventStore.authorizationStatus(for: .event) == .fullAccess
+    }
 
     func requestFullAccess() async -> Bool {
         await withCheckedContinuation { continuation in
@@ -79,8 +85,19 @@ final class ExternalCalendarService {
         self.reader = reader
     }
 
+    var hasFullAccess: Bool { reader.hasFullAccess }
+
+    /// Voor het openen van Profiel: nooit een prompt, alleen uitlezen wat al mag.
+    /// Een systeemprompt die de gebruiker niet zelf heeft aangevraagd leest als een
+    /// app die te veel wil — en één keer "Sta niet toe" is definitief.
+    func calendarsIfAuthorized() -> [DeviceCalendarInfo] {
+        guard reader.hasFullAccess else { return [] }
+        return reader.availableCalendars()
+    }
+
     /// Voor Profiel (m9 plak 3): granted onderscheidt "geweigerd" van "wel toegang, geen
     /// agenda's op het toestel" (valkuil F) zodat de uitlegregel alleen bij weigering komt.
+    /// Roept wél de systeemprompt op — alleen aanroepen na een expliciete tik.
     func loadCalendars() async -> (granted: Bool, calendars: [DeviceCalendarInfo]) {
         let granted = await reader.requestFullAccess()
         return (granted, granted ? reader.availableCalendars() : [])

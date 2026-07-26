@@ -12,6 +12,8 @@ final class ProfielViewModel: ObservableObject {
     /// Agenda's van het toestel (m9 plak 3) — leeg zolang niet geladen of geweigerd.
     @Published private(set) var externalCalendars: [DeviceCalendarInfo] = []
     @Published private(set) var externalCalendarAccessDenied = false
+    /// Toegang staat al aan: de lijst mag getoond worden zonder iets te vragen.
+    @Published private(set) var externalCalendarAccessGranted = false
     @Published private(set) var selectedExternalCalendarIds: Set<String>
 
     private let repository: EventRepository
@@ -55,11 +57,20 @@ final class ProfielViewModel: ObservableObject {
         DeviceCalendarSyncPreference.setEnabled(enabled, defaults: defaults)
     }
 
+    /// Bij het openen van Profiel: alleen uitlezen wat al mag. Nooit vragen — de
+    /// systeemprompt voor volledige agendatoegang hoort bij een tik van de
+    /// gebruiker, niet bij het openen van een tabblad.
+    func loadExternalCalendarsIfAuthorized() {
+        externalCalendarAccessGranted = externalCalendarService.hasFullAccess
+        externalCalendars = externalCalendarService.calendarsIfAuthorized()
+    }
+
     /// Valkuil F: geweigerde toegang geeft een lege lijst en een uitlegregel, nooit een
-    /// kapot scherm.
-    func loadExternalCalendars() async {
+    /// kapot scherm. Roept de systeemprompt op, dus alleen na een expliciete tik.
+    func requestExternalCalendarAccess() async {
         let result = await externalCalendarService.loadCalendars()
         externalCalendars = result.calendars
+        externalCalendarAccessGranted = result.granted
         externalCalendarAccessDenied = !result.granted
     }
 
