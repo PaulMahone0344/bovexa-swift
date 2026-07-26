@@ -15,6 +15,12 @@ struct DayHourGridView: View {
     private let gutterWidth: CGFloat = 40
     private let hours = Array(0..<24)
 
+    /// Breedte van één afwezigheidsstrook.
+    private static let absenceLaneWidth: CGFloat = 22
+    /// Het uur waar het raster op opent; de naam in een afwezigheidsbaan zakt
+    /// hiernaartoe zodat hij zichtbaar is zodra je de dag opent.
+    private static let scrollAnchorHour = 7
+
     /// Afwezigheid krijgt een baan over het raster (m7 plak 4), geen chip meer —
     /// het chipje bovenaan blijft voor overige hele-dag-zaken.
     private var allDayEvents: [AgendaEvent] { events.filter { $0.allDay && $0.category != .afwezig } }
@@ -27,10 +33,18 @@ struct DayHourGridView: View {
                     allDayChips
 
                     GeometryReader { geo in
+                        let grid = max(geo.size.width - gutterWidth, 40)
+                        let bands = AbsenceLayout.bands(events, dayStart: Calendar.current.startOfDay(for: day))
+                        // Stroken en afspraken delen de breedte in plaats van over
+                        // elkaar heen te liggen: de blokken begonnen anders bovenop
+                        // de strook, waardoor die er half onder verdween.
+                        let laneWidth = laneWidth(bandCount: bands.count, gridWidth: grid)
+                        let laneInset = laneWidth == 0 ? 0 : CGFloat(bands.count) * (laneWidth + 2)
+
                         ZStack(alignment: .topLeading) {
                             hourLines
-                            absenceBands(availableWidth: geo.size.width - gutterWidth)
-                            eventBlocks(availableWidth: geo.size.width - gutterWidth)
+                            absenceBands(bands, laneWidth: laneWidth)
+                            eventBlocks(availableWidth: grid - laneInset, xInset: laneInset)
                         }
                     }
                     .frame(height: hourHeight * 24)
@@ -91,32 +105,44 @@ struct DayHourGridView: View {
         }
     }
 
-    /// Banen over het raster voor afwezigheid (m7 plak 4): één afwezige beslaat de
-    /// volle beschikbare breedte, meerdere staan naast elkaar aan de linkerkant
-    /// (AbsenceLayout — niet gestapeld, niet over elkaar heen), elk in de
-    /// persoonskleur zodra er meer dan één is, anders in de afwezig-kleur.
-    private func absenceBands(availableWidth: CGFloat) -> some View {
-        let dayStart = Calendar.current.startOfDay(for: day)
-        let bands = AbsenceLayout.bands(events, dayStart: dayStart)
-        let safeWidth = max(availableWidth, 40)
+    /// Nooit meer dan een derde van het raster opeisen, ook niet bij veel
+    /// afwezigen; de rest blijft voor de afspraken.
+    private func laneWidth(bandCount: Int, gridWidth: CGFloat) -> CGFloat {
+        guard bandCount > 0 else { return 0 }
+        return min(Self.absenceLaneWidth, gridWidth / 3 / CGFloat(bandCount))
+    }
 
-        return ForEach(bands, id: \.event.id) { band in
-            let columnWidth = safeWidth / CGFloat(band.columnCount)
-            let color = band.columnCount > 1 ? memberColors.color(for: band.event.owner) : BovexaTheme.categoryColor(for: .afwezig)
-
+    /// Banen over het raster voor afwezigheid (m7 plak 4): smalle strook per
+    /// afwezige, links tegen de urenkolom, in diens persoonskleur.
+    ///
+    /// Eerder vulde één afwezige de volle breedte. Een hele-dag-vakantie legde dan
+    /// een amberwaas over het complete raster: over het blauw dooft amber uit tot
+    /// vaal grijsbeige en je eigen afspraken lagen middenin die soep. Een smalle
+    /// strook zegt hetzelfde — deze persoon is de hele dag weg — zonder de dag te
+    /// verkleuren.
+    private func absenceBands(_ bands: [AbsenceBand], laneWidth: CGFloat) -> some View {
+        ForEach(bands, id: \.event.id) { band in
             Button {
                 Haptics.selection()
                 onSelectEvent(band.event)
             } label: {
-                AbsenceBandView(name: memberColors.firstName(for: band.event.owner) ?? band.event.title, color: color)
+                AbsenceBandView(
+                    name: memberColors.firstName(for: band.event.owner) ?? band.event.title,
+                    color: memberColors.color(for: band.event.owner),
+                    // De naam stond bovenaan de baan, dus bij een hele-dag-baan op
+                    // 00:00 — en daar kijk je nooit, want het raster opent op 07:00.
+                    // Je zag een gekleurde strook zonder te weten van wie. Nu zakt
+                    // het label mee naar het uur waar je binnenkomt.
+                    labelOffset: max(0, CGFloat(Self.scrollAnchorHour) * hourHeight - hourHeight * band.startMinutes / 60)
+                )
             }
             .buttonStyle(.plain)
-            .frame(width: max(columnWidth - 2, 8), height: max(hourHeight * band.durationMinutes / 60 - 2, 16))
-            .offset(x: gutterWidth + CGFloat(band.column) * columnWidth + 1, y: hourHeight * band.startMinutes / 60)
+            .frame(width: laneWidth, height: max(hourHeight * band.durationMinutes / 60 - 2, 16))
+            .offset(x: gutterWidth + CGFloat(band.column) * (laneWidth + 2), y: hourHeight * band.startMinutes / 60)
         }
     }
 
-    private func eventBlocks(availableWidth: CGFloat) -> some View {
+    private func eventBlocks(availableWidth: CGFloat, xInset: CGFloat) -> some View {
         let positioned = DayViewLayout.layout(timedEvents)
         let dayStart = Calendar.current.startOfDay(for: day)
         let safeWidth = max(availableWidth, 40)
@@ -135,7 +161,7 @@ struct DayHourGridView: View {
             .buttonStyle(.plain)
             .frame(width: max(columnWidth - 4, 24), height: max(hourHeight * durationMinutes / 60 - 2, 16), alignment: .topLeading)
             .offset(
-                x: gutterWidth + CGFloat(item.column) * columnWidth + 2,
+                x: gutterWidth + xInset + CGFloat(item.column) * columnWidth + 2,
                 y: hourHeight * startOffsetMinutes / 60
             )
         }
@@ -148,22 +174,32 @@ struct DayHourGridView: View {
 private struct AbsenceBandView: View {
     let name: String
     let color: Color
+    /// Hoe ver de initiaal vanaf de bovenkant van de baan zakt, zodat hij op het
+    /// uur staat waar het raster opent in plaats van op 00:00.
+    let labelOffset: CGFloat
+
+    private var initial: String {
+        guard let first = name.first else { return "?" }
+        return String(first).uppercased()
+    }
 
     var body: some View {
         RoundedRectangle(cornerRadius: 6, style: .continuous)
-            .fill(color.opacity(0.24))
+            .fill(color.opacity(0.26))
             .overlay(
                 RoundedRectangle(cornerRadius: 6, style: .continuous)
-                    .strokeBorder(color.opacity(0.4), lineWidth: 1)
+                    .strokeBorder(color.opacity(0.55), lineWidth: 1)
             )
             .overlay(alignment: .top) {
-                Text(name)
-                    .font(.system(size: 10, weight: .bold, design: .rounded))
-                    .foregroundStyle(color)
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.6)
-                    .padding(.horizontal, 3)
-                    .padding(.top, 4)
+                // Een initiaal in plaats van de volle naam: de strook is smal, en
+                // dit is dezelfde markering als in de tijdlijn op Vandaag. Wie het
+                // precies is staat in het detail als je de baan aantikt.
+                Text(initial)
+                    .font(.system(size: 11, weight: .bold, design: .rounded))
+                    .foregroundStyle(BovexaTheme.Colors.white)
+                    .frame(width: 18, height: 18)
+                    .background(Circle().fill(color))
+                    .offset(y: labelOffset + 4)
             }
     }
 }
