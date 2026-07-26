@@ -49,6 +49,13 @@ final class BedrijfViewModel: ObservableObject {
     var seatsMax: Int? { membersResponse?.seatsMax }
     var joinCode: String? { membersResponse?.joinCode }
 
+    /// Regel op de bedrijfskaart. seats_max 0 betekent onbeperkt (zelfde afspraak
+    /// als TeambeheerViewModel.full), dus dan geen "2 van 0 plekken" tonen.
+    var seatsText: String? {
+        guard let seatsMax, seatsMax > 0 else { return nil }
+        return "\(members.count) van \(seatsMax) plekken"
+    }
+
     /// Favorieten bovenaan, daarna alfabetisch; zoekbalk verschijnt vanaf 6 leden
     /// (view beslist, dit is puur de gefilterde/gesorteerde data).
     var visibleMembers: [CompanyMember] {

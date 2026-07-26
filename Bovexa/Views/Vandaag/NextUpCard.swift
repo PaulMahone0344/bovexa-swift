@@ -19,6 +19,7 @@ struct NextUpCard: View {
                 onOpen(event)
             } label: {
                 upcoming(event)
+                    .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
         } else if hadEventsToday {

@@ -198,6 +198,7 @@ struct DagtakenView: View {
                             .font(BovexaTheme.TypeStyle.footnote)
                             .foregroundStyle(BovexaTheme.Colors.inkSoft)
                     }
+                    .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
 

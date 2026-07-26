@@ -117,6 +117,7 @@ struct KlantenView: View {
                     }
                 }
             }
+            .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
     }
@@ -146,6 +147,7 @@ struct KlantenView: View {
                 Spacer()
             }
             .padding(.vertical, BovexaTheme.Space.xs)
+            .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
     }

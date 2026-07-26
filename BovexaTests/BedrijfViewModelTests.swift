@@ -264,4 +264,28 @@ struct BedrijfViewModelTests {
         #expect(vm.members.first { $0.userId == "u2" }?.role == .admin)
         #expect(vm.memberActionErrorMessage == nil)
     }
+
+    // MARK: - Plekken-tekst
+
+    @Test func seatsTextShowsCountOfMax() async {
+        let vm = await loadedViewModel()
+        #expect(vm.seatsText == "2 van 3 plekken")
+    }
+
+    /// seats_max 0 betekent onbeperkt (zie TeambeheerViewModel.full) — dan geen
+    /// "2 van 0 plekken" op de bedrijfskaart.
+    @Test func seatsTextHiddenWhenUnlimited() async {
+        URLProtocolStub.requestHandler = { _ in
+            (200, Self.membersJSON.replacingOccurrences(of: "\"seats_max\": 3", with: "\"seats_max\": 0").data(using: .utf8)!)
+        }
+        let vm = makeViewModel()
+        await vm.load(userId: "u1", token: "tok")
+        #expect(vm.seatsMax == 0)
+        #expect(vm.seatsText == nil)
+    }
+
+    @Test func seatsTextNilBeforeLoad() {
+        let vm = makeViewModel()
+        #expect(vm.seatsText == nil)
+    }
 }

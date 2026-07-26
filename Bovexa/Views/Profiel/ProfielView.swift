@@ -87,6 +87,7 @@ struct ProfielView: View {
                                         .foregroundStyle(BovexaTheme.Colors.accent)
                                 }
                             }
+                            .contentShape(Rectangle())
                         }
                         .buttonStyle(.plain)
 
@@ -342,6 +343,7 @@ struct ProfielView: View {
                         .foregroundStyle(BovexaTheme.Colors.muted)
                 }
             }
+            .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
     }

@@ -115,8 +115,8 @@ private struct BedrijfCardView: View {
                         Text(viewModel.org?.name ?? "Jouw bedrijf")
                             .font(BovexaTheme.TypeStyle.title2)
                             .foregroundStyle(BovexaTheme.Colors.ink)
-                        if let seatsMax = viewModel.seatsMax {
-                            Text("\(viewModel.members.count) van \(seatsMax) plekken")
+                        if let seatsText = viewModel.seatsText {
+                            Text(seatsText)
                                 .font(BovexaTheme.TypeStyle.footnote)
                                 .foregroundStyle(BovexaTheme.Colors.inkSoft)
                         }

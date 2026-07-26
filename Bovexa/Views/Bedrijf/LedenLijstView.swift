@@ -182,6 +182,7 @@ struct LedenLijstView: View {
                                 .foregroundStyle(BovexaTheme.Colors.inkSoft)
                             Spacer()
                         }
+                        .contentShape(Rectangle())
                     }
                     .buttonStyle(.plain)
                 }

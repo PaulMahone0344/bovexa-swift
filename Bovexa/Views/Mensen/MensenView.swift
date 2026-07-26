@@ -163,6 +163,7 @@ struct MensenView: View {
                     Rectangle().fill(BovexaTheme.Colors.edgeSoft).frame(height: 1)
                 }
             }
+            .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
     }

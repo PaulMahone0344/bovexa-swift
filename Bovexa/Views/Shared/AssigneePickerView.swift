@@ -140,6 +140,7 @@ struct AssigneePickerView: View {
                         .lineLimit(1)
                     Spacer()
                 }
+                .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
             .disabled(disabled)
