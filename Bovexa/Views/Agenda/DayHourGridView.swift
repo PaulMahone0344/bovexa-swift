@@ -15,7 +15,9 @@ struct DayHourGridView: View {
     private let gutterWidth: CGFloat = 40
     private let hours = Array(0..<24)
 
-    private var allDayEvents: [AgendaEvent] { events.filter(\.allDay) }
+    /// Afwezigheid krijgt een baan over het raster (m7 plak 4), geen chip meer —
+    /// het chipje bovenaan blijft voor overige hele-dag-zaken.
+    private var allDayEvents: [AgendaEvent] { events.filter { $0.allDay && $0.category != .afwezig } }
     private var timedEvents: [AgendaEvent] { events.filter { !$0.allDay } }
 
     var body: some View {
@@ -27,6 +29,7 @@ struct DayHourGridView: View {
                     GeometryReader { geo in
                         ZStack(alignment: .topLeading) {
                             hourLines
+                            absenceBands(availableWidth: geo.size.width - gutterWidth)
                             eventBlocks(availableWidth: geo.size.width - gutterWidth)
                         }
                     }
@@ -87,6 +90,31 @@ struct DayHourGridView: View {
         }
     }
 
+    /// Banen over het raster voor afwezigheid (m7 plak 4): één afwezige beslaat de
+    /// volle beschikbare breedte, meerdere staan naast elkaar aan de linkerkant
+    /// (AbsenceLayout — niet gestapeld, niet over elkaar heen), elk in de
+    /// persoonskleur zodra er meer dan één is, anders in de afwezig-kleur.
+    private func absenceBands(availableWidth: CGFloat) -> some View {
+        let dayStart = Calendar.current.startOfDay(for: day)
+        let bands = AbsenceLayout.bands(events, dayStart: dayStart)
+        let safeWidth = max(availableWidth, 40)
+
+        return ForEach(bands, id: \.event.id) { band in
+            let columnWidth = safeWidth / CGFloat(band.columnCount)
+            let color = band.columnCount > 1 ? memberColors.color(for: band.event.owner) : BovexaTheme.categoryColor(for: .afwezig)
+
+            Button {
+                Haptics.selection()
+                onSelectEvent(band.event)
+            } label: {
+                AbsenceBandView(name: memberColors.firstName(for: band.event.owner) ?? band.event.title, color: color)
+            }
+            .buttonStyle(.plain)
+            .frame(width: max(columnWidth - 2, 8), height: max(hourHeight * band.durationMinutes / 60 - 2, 16))
+            .offset(x: gutterWidth + CGFloat(band.column) * columnWidth + 1, y: hourHeight * band.startMinutes / 60)
+        }
+    }
+
     private func eventBlocks(availableWidth: CGFloat) -> some View {
         let positioned = DayViewLayout.layout(timedEvents)
         let dayStart = Calendar.current.startOfDay(for: day)
@@ -110,6 +138,32 @@ struct DayHourGridView: View {
                 y: hourHeight * startOffsetMinutes / 60
             )
         }
+    }
+}
+
+/// Doorschijnende baan voor een afwezigheid — de uurlijnen blijven zichtbaar
+/// (opacity), en gewone afspraken staan er als eventBlocks bovenop, dus zijn
+/// altijd leesbaar (m7 plak 4).
+private struct AbsenceBandView: View {
+    let name: String
+    let color: Color
+
+    var body: some View {
+        RoundedRectangle(cornerRadius: 6, style: .continuous)
+            .fill(color.opacity(0.24))
+            .overlay(
+                RoundedRectangle(cornerRadius: 6, style: .continuous)
+                    .strokeBorder(color.opacity(0.4), lineWidth: 1)
+            )
+            .overlay(alignment: .top) {
+                Text(name)
+                    .font(.system(size: 10, weight: .bold, design: .rounded))
+                    .foregroundStyle(color)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.6)
+                    .padding(.horizontal, 3)
+                    .padding(.top, 4)
+            }
     }
 }
 
