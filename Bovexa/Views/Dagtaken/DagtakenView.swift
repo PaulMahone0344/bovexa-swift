@@ -163,6 +163,7 @@ struct DagtakenView: View {
                             isEditing: note.id == viewModel.editingId,
                             isExpanded: !collapsedIds.contains(note.id),
                             onToggleExpand: { toggleExpand(note.id) },
+                            onToggleDone: { viewModel.toggleNote(note.id) },
                             onEdit: { viewModel.startEdit(note) },
                             onArchive: { viewModel.archive(note.id) }
                         )
@@ -208,6 +209,7 @@ struct DagtakenView: View {
                                 isEditing: note.id == viewModel.editingId,
                                 isExpanded: !collapsedIds.contains(note.id),
                                 onToggleExpand: { toggleExpand(note.id) },
+                                onToggleDone: { viewModel.toggleNote(note.id) },
                                 onEdit: { viewModel.startEdit(note) },
                                 onRestore: { viewModel.restore(note.id) },
                                 onDelete: { viewModel.requestDeleteLocalNote(note.id) },

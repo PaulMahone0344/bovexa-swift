@@ -318,6 +318,41 @@ struct DagtakenViewModelTests {
         #expect(vm.teamTasks.first?.status == .klaar)
     }
 
+    @Test func toggleTeamTaskSetsCompletedAtAndUntogglingClearsIt() async {
+        let vm = makeViewModel()
+        URLProtocolStub.requestHandler = { _ in
+            let json = """
+            {"items":[{"id":"t1","owner":"u1","org":"org1","title":"Taak","notes":"","status":"open",
+             "visibility":"company","viewers":[],"created":"2026-07-24 09:00:00.000Z","updated":"2026-07-24 09:00:00.000Z"}],
+             "page":1,"perPage":200,"totalItems":1,"totalPages":1}
+            """.data(using: .utf8)!
+            return (200, json)
+        }
+        await vm.loadTeamTasks(org: "org1", token: "tok")
+        let task = vm.teamTasks.first!
+
+        URLProtocolStub.requestHandler = { request in
+            let body = try! JSONSerialization.jsonObject(with: self.bodyData(from: request)) as! [String: Any]
+            let json = """
+            {"id":"t1","owner":"u1","org":"org1","title":"Taak","notes":"","status":"klaar","completed_at":"\(body["completed_at"] as? String ?? "")",
+             "visibility":"company","viewers":[],"created":"2026-07-24 09:00:00.000Z","updated":"2026-07-24 09:00:00.000Z"}
+            """.data(using: .utf8)!
+            return (200, json)
+        }
+        await vm.toggleTeamTask(task, userId: "u1", token: "tok")
+        #expect(vm.teamTasks.first?.completedAt != nil)
+
+        URLProtocolStub.requestHandler = { _ in
+            let json = """
+            {"id":"t1","owner":"u1","org":"org1","title":"Taak","notes":"","status":"open",
+             "visibility":"company","viewers":[],"created":"2026-07-24 09:00:00.000Z","updated":"2026-07-24 09:00:00.000Z"}
+            """.data(using: .utf8)!
+            return (200, json)
+        }
+        await vm.toggleTeamTask(vm.teamTasks.first!, userId: "u1", token: "tok")
+        #expect(vm.teamTasks.first?.completedAt == nil)
+    }
+
     @Test func toggleTeamTaskRollsBackOnServerFailure() async {
         let vm = makeViewModel()
         URLProtocolStub.requestHandler = { _ in

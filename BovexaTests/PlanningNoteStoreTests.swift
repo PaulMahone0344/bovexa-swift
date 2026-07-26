@@ -50,6 +50,28 @@ struct PlanningNoteStoreTests {
         #expect(store.notes.first(where: { $0.id == note.id })?.done == false)
     }
 
+    @Test func toggleDoneSetsCompletedAtAndUndoingClearsIt() {
+        let store = PlanningNoteStore(defaults: makeDefaults())
+        let note = store.add(text: "Taak")!
+        store.toggle(id: note.id)
+        #expect(store.notes.first(where: { $0.id == note.id })?.completedAt != nil)
+        store.toggle(id: note.id)
+        #expect(store.notes.first(where: { $0.id == note.id })?.completedAt == nil)
+    }
+
+    @Test func noteWithoutCompletedAtDecodesAsNilWithoutCrashing() throws {
+        // Oude opgeslagen data van vóór dit veld bestond (valkuil).
+        let defaults = makeDefaults()
+        let legacyJSON = """
+        [{"id":"legacy1","title":"Oude taak","body":"","done":true,
+          "createdAt":"2026-01-01T09:00:00Z","updatedAt":"2026-01-01T09:00:00Z","archived":false}]
+        """.data(using: .utf8)!
+        defaults.set(legacyJSON, forKey: "bovexaflow_planning_notes")
+        let store = PlanningNoteStore(defaults: defaults)
+        #expect(store.notes.first?.done == true)
+        #expect(store.notes.first?.completedAt == nil)
+    }
+
     @Test func archiveAndRestore() {
         let store = PlanningNoteStore(defaults: makeDefaults())
         let note = store.add(text: "Taak")!

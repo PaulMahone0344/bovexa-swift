@@ -52,6 +52,12 @@ struct TeamTaskRowView: View {
                     Text(ownerLabel)
                         .font(BovexaTheme.TypeStyle.caption.weight(.bold))
                         .foregroundStyle(BovexaTheme.Colors.muted)
+
+                    if let completedAt = task.completedAt {
+                        Text(TaskCompletionFormatting.label(completedAt: completedAt))
+                            .font(BovexaTheme.TypeStyle.caption.weight(.semibold))
+                            .foregroundStyle(BovexaTheme.Colors.muted)
+                    }
                 }
 
                 Spacer(minLength: BovexaTheme.Space.sm)

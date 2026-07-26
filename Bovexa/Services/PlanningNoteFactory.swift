@@ -12,7 +12,7 @@ enum PlanningNoteFactory {
 
     static func update(_ note: PlanningNote, text: String, updatedAt: Date = Date()) -> PlanningNote? {
         guard let draft = parse(text) else { return nil }
-        return PlanningNote(id: note.id, title: draft.title, body: draft.body, done: note.done, createdAt: note.createdAt, updatedAt: updatedAt, archived: note.archived)
+        return PlanningNote(id: note.id, title: draft.title, body: draft.body, done: note.done, createdAt: note.createdAt, updatedAt: updatedAt, archived: note.archived, completedAt: note.completedAt)
     }
 
     /// Tekst voor de composer bij "Bewerken" — titel + tekst weer op losse regels.

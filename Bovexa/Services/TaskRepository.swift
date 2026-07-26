@@ -36,9 +36,12 @@ final class TaskRepository {
         return try await client.createRecord(AgendaTask.self, collection: Self.collection, body: body, token: token)
     }
 
+    /// completedAt: het tijdstip van afvinken (m8) — nil wist het veld weer bij uitvinken.
     @discardableResult
-    func setStatus(id: String, status: TaskStatus, token: String) async throws -> AgendaTask {
-        try await client.updateRecord(AgendaTask.self, collection: Self.collection, id: id, body: ["status": status.rawValue], token: token)
+    func setStatus(id: String, status: TaskStatus, completedAt: Date? = nil, token: String) async throws -> AgendaTask {
+        var body: [String: Any] = ["status": status.rawValue]
+        body["completed_at"] = completedAt.map(PBDate.format) ?? NSNull()
+        return try await client.updateRecord(AgendaTask.self, collection: Self.collection, id: id, body: body, token: token)
     }
 
     func deleteTask(id: String, token: String) async throws {

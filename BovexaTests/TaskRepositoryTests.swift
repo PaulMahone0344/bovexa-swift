@@ -179,6 +179,36 @@ struct TaskRepositoryTests {
         #expect(updated.status == .klaar)
     }
 
+    @Test func setStatusWithCompletedAtSendsFormattedDate() async throws {
+        let completedAt = Date(timeIntervalSince1970: 1_753_000_000)
+        URLProtocolStub.requestHandler = { request in
+            let body = try! JSONSerialization.jsonObject(with: self.bodyData(from: request)) as! [String: Any]
+            #expect(body["completed_at"] as? String == PBDate.format(completedAt))
+            let json = """
+            {"id":"t1","owner":"u1","org":"","title":"Taak","notes":"","status":"klaar","completed_at":"\(PBDate.format(completedAt))",
+             "visibility":"private","viewers":[],"created":"2026-07-24 09:00:00.000Z","updated":"2026-07-24 09:00:00.000Z"}
+            """.data(using: .utf8)!
+            return (200, json)
+        }
+        let repo = makeRepository()
+        let updated = try await repo.setStatus(id: "t1", status: .klaar, completedAt: completedAt, token: "tok")
+        #expect(updated.completedAt != nil)
+    }
+
+    @Test func setStatusWithoutCompletedAtSendsNullToClearIt() async throws {
+        URLProtocolStub.requestHandler = { request in
+            let body = try! JSONSerialization.jsonObject(with: self.bodyData(from: request)) as! [String: Any]
+            #expect(body["completed_at"] is NSNull)
+            let json = """
+            {"id":"t1","owner":"u1","org":"","title":"Taak","notes":"","status":"open",
+             "visibility":"private","viewers":[],"created":"2026-07-24 09:00:00.000Z","updated":"2026-07-24 09:00:00.000Z"}
+            """.data(using: .utf8)!
+            return (200, json)
+        }
+        let repo = makeRepository()
+        _ = try await repo.setStatus(id: "t1", status: .open, token: "tok")
+    }
+
     // MARK: - deleteTask
 
     @Test func deleteTaskSendsDeleteToRecordId() async throws {

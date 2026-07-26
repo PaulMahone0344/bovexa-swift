@@ -83,6 +83,10 @@ final class DagtakenViewModel: ObservableObject {
         draft = ""
     }
 
+    func toggleNote(_ id: String) {
+        planningStore.toggle(id: id)
+    }
+
     func archive(_ id: String) {
         planningStore.setArchived(id: id, archived: true)
     }
@@ -114,14 +118,16 @@ final class DagtakenViewModel: ObservableObject {
     func toggleTeamTask(_ task: AgendaTask, userId: String, token: String) async {
         guard task.owner == userId else { return }
         let previousStatus = task.status
+        let previousCompletedAt = task.completedAt
         let nextStatus: TaskStatus = task.status == .klaar ? .open : .klaar
-        applyTeamTaskStatus(id: task.id, status: nextStatus)
+        let nextCompletedAt: Date? = nextStatus == .klaar ? Date() : nil
+        applyTeamTaskStatus(id: task.id, status: nextStatus, completedAt: nextCompletedAt)
 
         do {
-            let updated = try await taskRepository.setStatus(id: task.id, status: nextStatus, token: token)
-            applyTeamTaskStatus(id: task.id, status: updated.status)
+            let updated = try await taskRepository.setStatus(id: task.id, status: nextStatus, completedAt: nextCompletedAt, token: token)
+            applyTeamTaskStatus(id: task.id, status: updated.status, completedAt: updated.completedAt)
         } catch {
-            applyTeamTaskStatus(id: task.id, status: previousStatus)
+            applyTeamTaskStatus(id: task.id, status: previousStatus, completedAt: previousCompletedAt)
         }
     }
 
@@ -136,8 +142,8 @@ final class DagtakenViewModel: ObservableObject {
         }
     }
 
-    private func applyTeamTaskStatus(id: String, status: TaskStatus) {
-        teamTasks = teamTasks.map { $0.id == id ? $0.withStatus(status) : $0 }
+    private func applyTeamTaskStatus(id: String, status: TaskStatus, completedAt: Date?) {
+        teamTasks = teamTasks.map { $0.id == id ? $0.withStatus(status, completedAt: completedAt) : $0 }
     }
 
     func submit(userId: String, org: String?, token: String) async {

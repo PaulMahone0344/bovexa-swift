@@ -29,6 +29,9 @@ struct AgendaTask: Decodable, Identifiable, Equatable {
     let created: Date
     let updated: Date
     let expand: Expand?
+    /// Tijdstip van afvinken (m8, klantverzoek 26 juli). Nil zolang open, of bij
+    /// taken die al klaar waren voordat dit veld bestond.
+    let completedAt: Date?
 
     struct Expand: Decodable, Equatable {
         let owner: AgendaUser?
@@ -36,12 +39,13 @@ struct AgendaTask: Decodable, Identifiable, Equatable {
 
     enum CodingKeys: String, CodingKey {
         case id, owner, org, title, notes, status, visibility, viewers, created, updated, expand
+        case completedAt = "completed_at"
     }
 
     init(
         id: String, owner: String, org: String?, title: String, notes: String?,
         status: TaskStatus, visibility: TaskVisibility?, viewers: [String],
-        created: Date, updated: Date, expand: Expand? = nil
+        created: Date, updated: Date, expand: Expand? = nil, completedAt: Date? = nil
     ) {
         self.id = id
         self.owner = owner
@@ -54,6 +58,7 @@ struct AgendaTask: Decodable, Identifiable, Equatable {
         self.created = created
         self.updated = updated
         self.expand = expand
+        self.completedAt = completedAt
     }
 
     /// Defensief decoderen, zelfde stijl als AgendaEvent: onverwachte of ontbrekende
@@ -71,16 +76,19 @@ struct AgendaTask: Decodable, Identifiable, Equatable {
         created = Self.decodeOptional(c, .created, as: String.self).flatMap(PBDate.parse) ?? Date(timeIntervalSince1970: 0)
         updated = Self.decodeOptional(c, .updated, as: String.self).flatMap(PBDate.parse) ?? Date(timeIntervalSince1970: 0)
         expand = Self.decodeOptional(c, .expand)
+        completedAt = Self.decodeOptional(c, .completedAt, as: String.self).flatMap(PBDate.parse)
     }
 
     private static func decodeOptional<T: Decodable>(_ c: KeyedDecodingContainer<CodingKeys>, _ key: CodingKeys, as type: T.Type = T.self) -> T? {
         (try? c.decodeIfPresent(T.self, forKey: key)) ?? nil
     }
 
-    func withStatus(_ status: TaskStatus) -> AgendaTask {
+    /// Afvinken zet completedAt; uitvinken wist het weer.
+    func withStatus(_ status: TaskStatus, completedAt: Date? = nil) -> AgendaTask {
         AgendaTask(
             id: id, owner: owner, org: org, title: title, notes: notes, status: status,
-            visibility: visibility, viewers: viewers, created: created, updated: updated, expand: expand
+            visibility: visibility, viewers: viewers, created: created, updated: updated, expand: expand,
+            completedAt: status == .klaar ? (completedAt ?? self.completedAt) : nil
         )
     }
 }
