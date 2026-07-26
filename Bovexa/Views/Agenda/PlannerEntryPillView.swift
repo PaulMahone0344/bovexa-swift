@@ -53,7 +53,7 @@ struct PlannerEntryPillView: View {
             .font(.system(size: icon, weight: .semibold))
             .foregroundStyle(BovexaTheme.Colors.white)
             .frame(width: size, height: size)
-            .background(LinearGradient(colors: BovexaTheme.Gradients.teal, startPoint: .topLeading, endPoint: .bottomTrailing))
+            .background(LinearGradient(colors: BovexaTheme.Gradients.blue, startPoint: .topLeading, endPoint: .bottomTrailing))
             .clipShape(Circle())
             .shadow(color: BovexaTheme.Shadow.tealGlowColor.opacity(0.28), radius: 10, x: 0, y: 5)
     }

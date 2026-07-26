@@ -122,10 +122,10 @@ struct AssigneePickerView: View {
                 HStack(spacing: BovexaTheme.Space.sm) {
                     ZStack {
                         RoundedRectangle(cornerRadius: 6, style: .continuous)
-                            .fill(checked ? BovexaTheme.Colors.tealDark : BovexaTheme.Colors.glass)
+                            .fill(checked ? BovexaTheme.Colors.blueDeep : BovexaTheme.Colors.glass)
                             .overlay(
                                 RoundedRectangle(cornerRadius: 6, style: .continuous)
-                                    .strokeBorder(checked ? BovexaTheme.Colors.tealDark : BovexaTheme.Colors.edge, lineWidth: 1.5)
+                                    .strokeBorder(checked ? BovexaTheme.Colors.blueDeep : BovexaTheme.Colors.edge, lineWidth: 1.5)
                             )
                             .frame(width: 22, height: 22)
                         if checked {

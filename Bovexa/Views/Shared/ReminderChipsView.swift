@@ -26,10 +26,10 @@ struct ReminderChipsView: View {
                 .foregroundStyle(active ? BovexaTheme.Colors.white : BovexaTheme.Colors.muted)
                 .padding(.horizontal, BovexaTheme.Space.md)
                 .frame(minHeight: 36)
-                .background(active ? BovexaTheme.Colors.tealDark : BovexaTheme.Colors.glass)
+                .background(active ? BovexaTheme.Colors.blueDeep : BovexaTheme.Colors.glass)
                 .clipShape(Capsule())
                 .overlay(
-                    Capsule().strokeBorder(active ? BovexaTheme.Colors.tealDark : BovexaTheme.Colors.edge, lineWidth: 1)
+                    Capsule().strokeBorder(active ? BovexaTheme.Colors.blueDeep : BovexaTheme.Colors.edge, lineWidth: 1)
                 )
         }
         .disabled(disabled)

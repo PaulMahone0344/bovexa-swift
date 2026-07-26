@@ -24,7 +24,7 @@ struct AppBackground: View {
 
             GeometryReader { geo in
                 orb(
-                    color: BovexaTheme.Colors.teal,
+                    color: BovexaTheme.Colors.orbCool,
                     opacity: BovexaTheme.Orb.coolOpacity,
                     center: BovexaTheme.Orb.coolCenter,
                     diameter: BovexaTheme.Orb.coolDiameter,
@@ -33,7 +33,7 @@ struct AppBackground: View {
                 )
 
                 orb(
-                    color: BovexaTheme.Colors.tealLight,
+                    color: BovexaTheme.Colors.orbMid,
                     opacity: BovexaTheme.Orb.midOpacity,
                     center: BovexaTheme.Orb.midCenter,
                     diameter: BovexaTheme.Orb.midDiameter,
@@ -42,7 +42,7 @@ struct AppBackground: View {
                 )
 
                 orb(
-                    color: BovexaTheme.Colors.warm,
+                    color: BovexaTheme.Colors.orbMint,
                     opacity: BovexaTheme.Orb.warmOpacity,
                     center: BovexaTheme.Orb.warmCenter,
                     diameter: BovexaTheme.Orb.warmDiameter,

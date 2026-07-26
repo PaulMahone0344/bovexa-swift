@@ -12,7 +12,7 @@ struct RootRouterView: View {
                 ZStack {
                     AppBackground()
                     ProgressView()
-                        .tint(BovexaTheme.Colors.teal)
+                        .tint(BovexaTheme.Colors.blue)
                 }
             case .loggedOut:
                 LoginView()

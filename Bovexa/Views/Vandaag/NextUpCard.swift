@@ -44,7 +44,7 @@ struct NextUpCard: View {
                             .padding(.horizontal, BovexaTheme.Space.sm)
                             .padding(.vertical, 3)
                             .background(
-                                Capsule().fill(BovexaTheme.Colors.teal.opacity(0.18))
+                                Capsule().fill(BovexaTheme.Colors.blue.opacity(0.18))
                             )
                     }
                 }

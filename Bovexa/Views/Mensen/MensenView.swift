@@ -140,7 +140,7 @@ struct MensenView: View {
             editingContact = contact
         } label: {
             HStack(spacing: BovexaTheme.Space.sm) {
-                initialBadge(contact.naam, color: BovexaTheme.Colors.teal)
+                initialBadge(contact.naam, color: BovexaTheme.Colors.blue)
                 VStack(alignment: .leading, spacing: 2) {
                     Text(contact.naam)
                         .font(BovexaTheme.TypeStyle.subheadline.weight(.bold))

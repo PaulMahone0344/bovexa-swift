@@ -140,7 +140,7 @@ struct PlannerView: View {
                 HStack(spacing: BovexaTheme.Space.md) {
                     ZStack {
                         Circle()
-                            .fill(LinearGradient(colors: BovexaTheme.Gradients.teal, startPoint: .topLeading, endPoint: .bottomTrailing))
+                            .fill(LinearGradient(colors: BovexaTheme.Gradients.blue, startPoint: .topLeading, endPoint: .bottomTrailing))
                             .frame(width: 34, height: 34)
                         Image(systemName: "sparkles")
                             .font(.system(size: 15, weight: .semibold))
@@ -165,7 +165,7 @@ struct PlannerView: View {
                 }
                 .padding(.horizontal, BovexaTheme.Space.md)
                 .padding(.vertical, BovexaTheme.Space.sm + 2)
-                .background(BovexaTheme.Colors.teal.opacity(0.12))
+                .background(BovexaTheme.Colors.blue.opacity(0.12))
                 .clipShape(RoundedRectangle(cornerRadius: BovexaTheme.Radius.md, style: .continuous))
 
                 FlowLayout(spacing: BovexaTheme.Space.sm) {
@@ -329,7 +329,7 @@ struct PlannerView: View {
                     .font(.system(size: 17, weight: .semibold))
                     .foregroundStyle(BovexaTheme.Colors.white)
                     .frame(width: 38, height: 38)
-                    .background(LinearGradient(colors: BovexaTheme.Gradients.teal, startPoint: .topLeading, endPoint: .bottomTrailing))
+                    .background(LinearGradient(colors: BovexaTheme.Gradients.blue, startPoint: .topLeading, endPoint: .bottomTrailing))
                     .clipShape(Circle())
             }
             .disabled(!canSend)

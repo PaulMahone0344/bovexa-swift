@@ -16,7 +16,7 @@ struct MonthDayCellView: View {
                     .font(BovexaTheme.TypeStyle.footnote.weight(cell.isToday ? .bold : .regular))
                     .foregroundStyle(textColor)
                     .frame(width: 22, height: 22)
-                    .background(cell.isToday ? BovexaTheme.Colors.teal : Color.clear)
+                    .background(cell.isToday ? BovexaTheme.Colors.blue : Color.clear)
                     .clipShape(Circle())
 
                 densityContent

@@ -167,8 +167,8 @@ struct LedenLijstView: View {
                     } label: {
                         HStack(spacing: BovexaTheme.Space.sm) {
                             RoundedRectangle(cornerRadius: 6, style: .continuous)
-                                .fill(on ? BovexaTheme.Colors.tealDark : BovexaTheme.Colors.glass)
-                                .overlay(RoundedRectangle(cornerRadius: 6, style: .continuous).strokeBorder(on ? BovexaTheme.Colors.tealDark : BovexaTheme.Colors.edge, lineWidth: 1.5))
+                                .fill(on ? BovexaTheme.Colors.blueDeep : BovexaTheme.Colors.glass)
+                                .overlay(RoundedRectangle(cornerRadius: 6, style: .continuous).strokeBorder(on ? BovexaTheme.Colors.blueDeep : BovexaTheme.Colors.edge, lineWidth: 1.5))
                                 .frame(width: 20, height: 20)
                                 .overlay {
                                     if on {

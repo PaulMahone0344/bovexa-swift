@@ -24,7 +24,7 @@ struct GlassCard<Content: View>: View {
 
     private var glass: Glass {
         switch emphasis {
-        case .hero: return .regular.tint(BovexaTheme.Colors.teal.opacity(0.22))
+        case .hero: return .regular.tint(BovexaTheme.Colors.blue.opacity(0.22))
         case .standard, .quiet: return .regular
         }
     }
@@ -36,7 +36,7 @@ struct GlassCard<Content: View>: View {
         let colors: [Color]
         switch emphasis {
         case .hero:
-            colors = [BovexaTheme.Colors.tealLight.opacity(0.85), BovexaTheme.Colors.teal.opacity(0.15)]
+            colors = [BovexaTheme.Colors.blueLight.opacity(0.85), BovexaTheme.Colors.blue.opacity(0.15)]
         case .standard:
             colors = [Color.white.opacity(0.75), Color.white.opacity(0.10)]
         case .quiet:

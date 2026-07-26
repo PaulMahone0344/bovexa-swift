@@ -174,7 +174,7 @@ struct EventDetailView: View {
                             .foregroundStyle(BovexaTheme.Colors.white)
                             .padding(.horizontal, BovexaTheme.Space.sm)
                             .padding(.vertical, 4)
-                            .background(BovexaTheme.Colors.tealDark)
+                            .background(BovexaTheme.Colors.blueDeep)
                             .clipShape(Capsule())
                     }
                 }

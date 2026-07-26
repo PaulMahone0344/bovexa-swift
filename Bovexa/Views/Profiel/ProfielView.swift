@@ -205,7 +205,7 @@ struct ProfielView: View {
                         set: { viewModel.setDeviceSync($0) }
                     ))
                     .labelsHidden()
-                    .tint(BovexaTheme.Colors.teal)
+                    .tint(BovexaTheme.Colors.blue)
                 }
 
                 Divider().overlay(BovexaTheme.Colors.edgeSoft)
@@ -282,7 +282,7 @@ struct ProfielView: View {
                             set: { _ in viewModel.toggleExternalCalendar(calendar.id) }
                         ))
                         .labelsHidden()
-                        .tint(BovexaTheme.Colors.teal)
+                        .tint(BovexaTheme.Colors.blue)
                     }
                 }
             }
@@ -317,7 +317,7 @@ struct ProfielView: View {
                         .foregroundStyle(BovexaTheme.Colors.ink)
                     Spacer()
                     if dot {
-                        Circle().fill(BovexaTheme.Colors.tealDark).frame(width: 8, height: 8)
+                        Circle().fill(BovexaTheme.Colors.blueDeep).frame(width: 8, height: 8)
                     }
                     Image(systemName: "chevron.right")
                         .font(.system(size: 13, weight: .semibold))

@@ -128,7 +128,7 @@ private struct MiniMonthView: View {
                     .foregroundStyle(isCurrentMonth ? BovexaTheme.Colors.white : BovexaTheme.Colors.accent)
                     .padding(.horizontal, 6)
                     .frame(minWidth: 20, minHeight: 20)
-                    .background(isCurrentMonth ? BovexaTheme.Colors.tealDark : BovexaTheme.Colors.teal.opacity(0.16))
+                    .background(isCurrentMonth ? BovexaTheme.Colors.blueDeep : BovexaTheme.Colors.blue.opacity(0.16))
                     .clipShape(Capsule())
             }
         }
@@ -158,7 +158,7 @@ private struct MiniMonthView: View {
                     .font(.system(size: 12, weight: (isToday || has) ? .bold : .medium))
                     .foregroundStyle(isToday ? BovexaTheme.Colors.white : (has ? BovexaTheme.Colors.accent : BovexaTheme.Colors.inkSoft))
                     .frame(width: 24, height: 24)
-                    .background(isToday ? AnyShapeStyle(BovexaTheme.Colors.tealDark) : (has ? AnyShapeStyle(BovexaTheme.Colors.teal.opacity(0.18)) : AnyShapeStyle(Color.clear)))
+                    .background(isToday ? AnyShapeStyle(BovexaTheme.Colors.blueDeep) : (has ? AnyShapeStyle(BovexaTheme.Colors.blue.opacity(0.18)) : AnyShapeStyle(Color.clear)))
                     .clipShape(Circle())
             }
         } else {

@@ -33,7 +33,7 @@ struct BedrijfView: View {
                         }
                     }
                 } else {
-                    ProgressView().tint(BovexaTheme.Colors.teal)
+                    ProgressView().tint(BovexaTheme.Colors.blue)
                 }
             }
             .navigationTitle("Bedrijf")
@@ -65,7 +65,7 @@ struct BedrijfView: View {
     @ViewBuilder
     private func companyContent(for user: AgendaUser) -> some View {
         if viewModel.loading {
-            ProgressView().tint(BovexaTheme.Colors.teal)
+            ProgressView().tint(BovexaTheme.Colors.blue)
         } else {
             ScrollView {
                 VStack(alignment: .leading, spacing: BovexaTheme.Space.lg) {

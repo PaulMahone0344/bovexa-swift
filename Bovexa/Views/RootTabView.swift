@@ -69,7 +69,7 @@ struct RootTabView: View {
                 ProfielView()
             }
         }
-        .tint(BovexaTheme.Colors.teal)
+        .tint(BovexaTheme.Colors.blue)
         .tabBarMinimizeBehavior(.onScrollDown)
         .onChange(of: joinCoordinator.outcome) { _, outcome in
             guard outcome == .joined else { return }

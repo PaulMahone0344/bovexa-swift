@@ -25,7 +25,7 @@ enum EventHelpers {
         if let category = event.category {
             return BovexaTheme.categoryColor(for: category)
         }
-        return event.calendar == "private" ? BovexaTheme.Colors.categoryBlue : BovexaTheme.Colors.teal
+        return event.calendar == "private" ? BovexaTheme.Colors.categoryBlue : BovexaTheme.Colors.blue
     }
 
     static func fmtTime(_ date: Date?) -> String {

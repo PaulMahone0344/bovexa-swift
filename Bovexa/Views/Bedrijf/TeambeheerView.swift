@@ -16,7 +16,7 @@ struct TeambeheerView: View {
             AppBackground()
 
             if viewModel.loading {
-                ProgressView().tint(BovexaTheme.Colors.teal)
+                ProgressView().tint(BovexaTheme.Colors.blue)
             } else if viewModel.org == nil {
                 errorState
             } else {

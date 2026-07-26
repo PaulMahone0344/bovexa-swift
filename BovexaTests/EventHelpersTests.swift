@@ -74,7 +74,7 @@ struct EventHelpersTests {
         let privateEvent = makeEvent(calendar: "private", start: date(2026, 7, 24))
         let workEvent = makeEvent(calendar: "work", start: date(2026, 7, 24))
         #expect(EventHelpers.eventColor(privateEvent) == BovexaTheme.Colors.categoryBlue)
-        #expect(EventHelpers.eventColor(workEvent) == BovexaTheme.Colors.teal)
+        #expect(EventHelpers.eventColor(workEvent) == BovexaTheme.Colors.blue)
     }
 
     // MARK: - eventColor met label (m7, valkuil C)

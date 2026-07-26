@@ -12,7 +12,7 @@ enum BovexaTheme {
     static func categoryColor(for category: Category) -> Color {
         switch category {
         case .focus: return Colors.categoryBlue
-        case .work: return Colors.teal
+        case .work: return Colors.blue
         case .social: return Colors.categoryGreen
         case .body: return Colors.categoryLilac
         case .afwezig: return Colors.categoryAmber
@@ -20,35 +20,49 @@ enum BovexaTheme {
     }
 
     enum Colors {
-        // Achtergrond — "daglicht": koele teal-mist bovenin die naar warm zand
-        // onderin zakt. Het glas heeft kleurverschil nodig om iets te breken;
-        // een egale bijna-witte ondergrond maakt glas optisch onzichtbaar.
-        static let bgTop = Color(hex: "#C4DFE2")
-        static let bgMid = Color(hex: "#E1EDEA")
-        static let bgBottom = Color(hex: "#F8F3EA")
-        static let page = Color(hex: "#DFE8E8")
+        // Achtergrond — v5 "daglicht in blauw": lichtblauwe mist bovenin die naar
+        // parelwit met een mintzweem onderin zakt. Het glas heeft kleurverschil
+        // nodig om iets te breken; een egale bijna-witte ondergrond maakt glas
+        // optisch onzichtbaar. Het temperatuurverschil dat v3/v4 uit teal-vs-zand
+        // haalden, komt nu uit koningsblauw-vs-mint: mint trekt naar geel-groen en
+        // staat daarmee ver genoeg van het diepe blauw af.
+        static let bgTop = Color(hex: "#C9DCF2")
+        static let bgMid = Color(hex: "#E4EDF6")
+        static let bgBottom = Color(hex: "#EDF4EE")
+        static let page = Color(hex: "#DDE7F1")
 
-        // inkt (donker op licht oppervlak, met teal-zweem)
-        static let ink = Color(hex: "#0E1A1C")
-        static let inkSoft = Color(hex: "#24393B")
-        /// v4: donkerder dan de oorspronkelijke #62787A. Die haalde op glas maar
-        /// 4.1:1 — net onder AA, en op vol zonlicht onleesbaar. Nu 5.5:1, en nog
-        /// steeds duidelijk ondergeschikt aan `ink` en `inkSoft`.
-        static let muted = Color(hex: "#4E6467")
+        // inkt (donker op licht oppervlak, met blauwzweem)
+        static let ink = Color(hex: "#0B1526")
+        static let inkSoft = Color(hex: "#22344A")
+        /// v4-regel blijft: minstens 5.5:1 op glas, en duidelijk ondergeschikt aan
+        /// `ink` en `inkSoft`. Nooit gebruiken voor tekst die direct op de
+        /// ondergrond staat — daar is de ondergrond te verzadigd voor.
+        static let muted = Color(hex: "#4C6076")
 
-        // merk / teal accent
-        static let teal = Color(hex: "#2AA1AD")
-        static let tealDark = Color(hex: "#0B5C63")
-        /// Tekst-accent: dieper dan `teal` zodat het leesbaar blijft op glas.
-        static let accent = Color(hex: "#0B5C63")
-        static let tealLight = Color(hex: "#8FD4DB")
-        /// Warm tegenwicht voor de koele teal — gebruikt in de ondergrond en
-        /// voor "rustig"-signalen (lege dag, afgeronde staat).
+        // merk / blauw accent (v5: was teal, nu het koningsblauw van het logo)
+        static let blue = Color(hex: "#2B5BC4")
+        static let blueDeep = Color(hex: "#143A82")
+        /// Tekst-accent: dieper dan `blue` zodat het leesbaar blijft op glas.
+        static let accent = Color(hex: "#143A82")
+        static let blueLight = Color(hex: "#A8C6F0")
+        /// Koel tegenwicht onderin de ondergrond — de mint uit de wallpaper.
+        static let mint = Color(hex: "#8FD8BE")
+        /// Warm signaal (lege dag, afgeronde staat). Zit sinds v5 NIET meer in de
+        /// ondergrond; amber op blauw is complementair en blijft goed leesbaar.
         static let warm = Color(hex: "#D9A45B")
 
-        // categorie-accenten (focus/social/body/afwezig — work gebruikt teal)
-        static let categoryBlue = Color(hex: "#7EB3DC")
-        static let categoryGreen = Color(hex: "#A9D6B0")
+        // Kleurvelden in de ondergrond. Eigen tokens, niet de merkkleur hergebruikt:
+        // een orb moet lichter zijn dan het merkvlak, anders wordt de bovenhoek een
+        // donkere plaat in plaats van licht dat het glas laat breken.
+        static let orbCool = Color(hex: "#4A80D8")
+        static let orbMid = Color(hex: "#A8C6F0")
+        static let orbMint = Color(hex: "#8FD8BE")
+
+        // categorie-accenten (focus/social/body/afwezig — work gebruikt `blue`).
+        // v5: categoryBlue lag te dicht bij het nieuwe merkblauw en is naar cyaan
+        // geschoven, zodat "werk" en "focus" uit elkaar te houden blijven.
+        static let categoryBlue = Color(hex: "#5FBBD4")
+        static let categoryGreen = Color(hex: "#8FD8BE")
         static let categoryLilac = Color(hex: "#C8B7E8")
         static let categoryAmber = Color(hex: "#E9B84F")
 
@@ -70,12 +84,12 @@ enum BovexaTheme {
     }
 
     enum Gradients {
-        static let teal = [Color(hex: "#69C4CC"), Color(hex: "#3B95A1")]
-        static let tealSoft = [Color(hex: "#65BDC5"), Color(hex: "#3D98A4")]
-        static let social = [Color(hex: "#BFE2BA"), Color(hex: "#78BD86")]
+        static let blue = [Color(hex: "#5B8FE0"), Color(hex: "#2B5BC4")]
+        static let blueSoft = [Color(hex: "#6D9BE4"), Color(hex: "#3763C8")]
+        static let social = [Color(hex: "#B7E5CE"), Color(hex: "#6BC29B")]
         static let body = [Color(hex: "#C7B7EB"), Color(hex: "#8F7ACA")]
-        static let work = [Color(hex: "#65BDC5"), Color(hex: "#3B97A3")]
-        static let barFill = [Color(hex: "#65BDC5"), Color(hex: "#88CF9E")]
+        static let work = [Color(hex: "#5B8FE0"), Color(hex: "#2B5BC4")]
+        static let barFill = [Color(hex: "#5B8FE0"), Color(hex: "#8FD8BE")]
 
         static let background = [BovexaTheme.Colors.bgTop, BovexaTheme.Colors.bgBottom]
 
@@ -235,7 +249,7 @@ enum BovexaTheme {
         static let cardRadius: CGFloat = BovexaTheme.Radius.lg
 
         /// Teal-tint voor prominente/interactieve glaselementen (primaire knop,
-        /// geselecteerde staat). Zelfde merkkleur als `Colors.teal`.
-        static let tint: Color = BovexaTheme.Colors.teal
+        /// geselecteerde staat). Zelfde merkkleur als `Colors.blue`.
+        static let tint: Color = BovexaTheme.Colors.blue
     }
 }

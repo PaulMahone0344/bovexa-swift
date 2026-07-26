@@ -48,10 +48,10 @@ struct VisibilityPickerView: View {
             }
             .foregroundStyle(active ? BovexaTheme.Colors.white : BovexaTheme.Colors.muted)
             .frame(maxWidth: .infinity, minHeight: 42)
-            .background(active ? BovexaTheme.Colors.tealDark : BovexaTheme.Colors.glass)
+            .background(active ? BovexaTheme.Colors.blueDeep : BovexaTheme.Colors.glass)
             .overlay(
                 RoundedRectangle(cornerRadius: BovexaTheme.Radius.md, style: .continuous)
-                    .strokeBorder(active ? BovexaTheme.Colors.tealDark : BovexaTheme.Colors.edge, lineWidth: 1)
+                    .strokeBorder(active ? BovexaTheme.Colors.blueDeep : BovexaTheme.Colors.edge, lineWidth: 1)
             )
             .clipShape(RoundedRectangle(cornerRadius: BovexaTheme.Radius.md, style: .continuous))
         }

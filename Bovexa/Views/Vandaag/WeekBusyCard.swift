@@ -59,7 +59,7 @@ struct WeekBusyCard: View {
         if count == 0 {
             return BovexaTheme.Colors.muted.opacity(isToday ? 0.35 : 0.18)
         }
-        return isToday ? BovexaTheme.Colors.accent : BovexaTheme.Colors.teal.opacity(0.75)
+        return isToday ? BovexaTheme.Colors.accent : BovexaTheme.Colors.blue.opacity(0.75)
     }
 }
 

@@ -72,7 +72,7 @@ struct KlantenView: View {
                 VStack(alignment: .leading, spacing: BovexaTheme.Space.sm) {
                     HStack(spacing: BovexaTheme.Space.md) {
                         Circle()
-                            .fill(BovexaTheme.Colors.teal)
+                            .fill(BovexaTheme.Colors.blue)
                             .frame(width: 40, height: 40)
                             .overlay(
                                 Text(group.naam.prefix(1).uppercased())

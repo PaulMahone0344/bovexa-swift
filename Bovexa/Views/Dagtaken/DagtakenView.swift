@@ -21,7 +21,7 @@ struct DagtakenView: View {
                 if let user = currentUser {
                     content(for: user)
                 } else {
-                    ProgressView().tint(BovexaTheme.Colors.teal)
+                    ProgressView().tint(BovexaTheme.Colors.blue)
                 }
             }
             .navigationTitle("Dagtaken")

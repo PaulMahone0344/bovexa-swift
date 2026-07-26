@@ -41,7 +41,7 @@ struct ChatBubbleView: View {
     private var background: some View {
         switch role {
         case .user:
-            LinearGradient(colors: BovexaTheme.Gradients.teal, startPoint: .topLeading, endPoint: .bottomTrailing)
+            LinearGradient(colors: BovexaTheme.Gradients.blue, startPoint: .topLeading, endPoint: .bottomTrailing)
         case .ai:
             tone == .error ? BovexaTheme.Colors.danger.opacity(0.10) : BovexaTheme.Colors.glassStrong
         }

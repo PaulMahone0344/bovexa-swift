@@ -21,7 +21,7 @@ struct QuickReplyChipsView: View {
                             .padding(.vertical, BovexaTheme.Space.sm)
                             .background(BovexaTheme.Colors.glassStrong)
                             .clipShape(Capsule())
-                            .overlay(Capsule().strokeBorder(BovexaTheme.Colors.teal, lineWidth: 1))
+                            .overlay(Capsule().strokeBorder(BovexaTheme.Colors.blue, lineWidth: 1))
                     }
                     .disabled(disabled)
                     .opacity(disabled ? 0.5 : 1)

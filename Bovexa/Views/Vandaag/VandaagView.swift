@@ -123,7 +123,7 @@ struct VandaagView: View {
             GlassCard {
                 if !viewModel.hasLoadedOnce {
                     ProgressView()
-                        .tint(BovexaTheme.Colors.teal)
+                        .tint(BovexaTheme.Colors.blue)
                         .frame(maxWidth: .infinity, alignment: .center)
                 } else if viewModel.todayEvents.isEmpty {
                     EmptyStateView(systemImage: "calendar", text: "Nog niks gepland vandaag…")

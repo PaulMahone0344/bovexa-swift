@@ -14,7 +14,7 @@ struct AgendaListView: View {
             VStack(alignment: .leading, spacing: BovexaTheme.Space.lg) {
                 if !viewModel.hasLoadedOnce {
                     ProgressView()
-                        .tint(BovexaTheme.Colors.teal)
+                        .tint(BovexaTheme.Colors.blue)
                         .frame(maxWidth: .infinity, alignment: .center)
                         .padding(.top, BovexaTheme.Space.xxl)
                 } else if groups.isEmpty {

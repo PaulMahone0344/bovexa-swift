@@ -31,7 +31,7 @@ struct PlanningRowView: View {
                         ZStack {
                             Circle()
                                 .strokeBorder(BovexaTheme.Colors.accent, lineWidth: 1.5)
-                                .background(Circle().fill(note.done ? BovexaTheme.Colors.tealDark : Color.clear))
+                                .background(Circle().fill(note.done ? BovexaTheme.Colors.blueDeep : Color.clear))
                                 .frame(width: 22, height: 22)
 
                             if note.done {
