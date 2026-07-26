@@ -101,7 +101,7 @@ struct MensenView: View {
             if viewModel.loading && viewModel.contacts.isEmpty {
                 ProgressView().tint(BovexaTheme.Colors.accent)
             } else if viewModel.visibleContacts.isEmpty {
-                EmptyStateView(systemImage: "person.crop.circle.badge.plus", text: "Nog geen privécontacten. Tik op \"Persoon toevoegen\".")
+                EmptyStateView(systemImage: "person.crop.circle.badge.plus", text: "Nog geen privécontacten. Tik op \"Persoon toevoegen\".", surface: .background)
             } else {
                 GlassCard(padding: BovexaTheme.Space.xs) {
                     VStack(alignment: .leading, spacing: 0) {
@@ -121,7 +121,7 @@ struct MensenView: View {
                 .foregroundStyle(BovexaTheme.Colors.accent)
 
             if viewModel.visibleMembers.isEmpty {
-                EmptyStateView(systemImage: "person.2", text: "Geen collega gevonden.")
+                EmptyStateView(systemImage: "person.2", text: "Geen collega gevonden.", surface: .background)
             } else {
                 GlassCard(padding: BovexaTheme.Space.xs, emphasis: .quiet) {
                     VStack(alignment: .leading, spacing: 0) {
@@ -170,7 +170,7 @@ struct MensenView: View {
     /// Collega's zijn hier alleen-lezen (valkuil B) — geen tik-actie, geen chevron.
     private func memberRow(_ member: CompanyMember, first: Bool) -> some View {
         HStack(spacing: BovexaTheme.Space.sm) {
-            initialBadge(member.displayName, color: BovexaTheme.Colors.accent)
+            initialBadge(member.displayName, color: viewModel.memberColors.color(for: member.userId))
             VStack(alignment: .leading, spacing: 2) {
                 Text(member.displayName)
                     .font(BovexaTheme.TypeStyle.subheadline.weight(.bold))

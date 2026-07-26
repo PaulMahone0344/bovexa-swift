@@ -12,6 +12,11 @@ final class MensenViewModel: ObservableObject {
     @Published private(set) var loading = false
     @Published var errorMessage: String?
 
+    /// Dezelfde persoonskleuren als bij Bedrijf. Zonder dit kreeg iedere collega
+    /// hier één en dezelfde blauwe badge, terwijl dezelfde persoon in de ledenlijst
+    /// zijn eigen kleur had — twee schermen die elkaar tegenspraken.
+    let memberColors = MemberColors()
+
     private let contactRepository: ContactRepository
     private let companyRepository: CompanyRepository
 
@@ -35,6 +40,10 @@ final class MensenViewModel: ObservableObject {
         if let response = try? await membersResult {
             members = response.items
             orgName = response.org?.name ?? ""
+            memberColors.prime(
+                members: response.items.map { Member(id: $0.id, userId: $0.userId, naam: $0.naam, email: $0.email, avatar: $0.avatar) },
+                org: response.org.map { CompanyOrgInfo(id: $0.id, name: $0.name, logo: $0.logo) }
+            )
         }
     }
 

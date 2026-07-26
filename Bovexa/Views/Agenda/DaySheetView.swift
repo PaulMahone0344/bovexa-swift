@@ -29,7 +29,7 @@ struct DaySheetView: View {
                     }
 
                     if events.isEmpty {
-                        EmptyStateView(systemImage: "calendar", text: "Geen afspraken.")
+                        EmptyStateView(systemImage: "calendar", text: "Geen afspraken.", surface: .background)
                         Button {
                             Haptics.selection()
                             onPlanAppointment()

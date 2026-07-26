@@ -75,10 +75,10 @@ struct SearchView: View {
     private var resultsList: some View {
         let trimmed = viewModel.query.trimmingCharacters(in: .whitespacesAndNewlines)
         if trimmed.isEmpty {
-            EmptyStateView(systemImage: "magnifyingglass", text: "Typ om te zoeken in al je afspraken.")
+            EmptyStateView(systemImage: "magnifyingglass", text: "Typ om te zoeken in al je afspraken.", surface: .background)
                 .padding(.top, BovexaTheme.Space.xl)
         } else if viewModel.results.isEmpty {
-            EmptyStateView(systemImage: "magnifyingglass", text: "Niks gevonden voor \u{201C}\(trimmed)\u{201D}.")
+            EmptyStateView(systemImage: "magnifyingglass", text: "Niks gevonden voor \u{201C}\(trimmed)\u{201D}.", surface: .background)
                 .padding(.top, BovexaTheme.Space.xl)
         } else {
             ScrollView {

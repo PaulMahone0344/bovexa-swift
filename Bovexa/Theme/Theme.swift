@@ -198,21 +198,26 @@ enum BovexaTheme {
         static let statLabel: Font = .system(.footnote, design: .rounded, weight: .medium)
     }
 
+    /// v5-naregel: deze kleuren waren nog uit de teal-tijd (#375255 / #3C5C60 /
+    /// #2A8994). Een groenige schaduw onder een kaart die op koningsblauw ligt
+    /// geeft de kaartrand een vuile zweem — het blauw en het groen doven elkaar
+    /// uit tot grijs. De schaduw hoort kouder te zijn dan de ondergrond waarop
+    /// hij valt, niet warmer en niet uit een andere kleurfamilie.
     enum Shadow {
-        static let cardColor = Color(hex: "#375255")
+        static let cardColor = Color(hex: "#2A3E5C")
         static let cardOpacity: Double = 0.18
         static let cardRadius: CGFloat = 24
         static let cardOffsetY: CGFloat = 16
 
-        static let softColor = Color(hex: "#3C5C60")
+        static let softColor = Color(hex: "#32496B")
         static let softOpacity: Double = 0.13
         static let softRadius: CGFloat = 16
         static let softOffsetY: CGFloat = 10
 
-        static let tealGlowColor = Color(hex: "#2A8994")
-        static let tealGlowOpacity: Double = 0.26
-        static let tealGlowRadius: CGFloat = 18
-        static let tealGlowOffsetY: CGFloat = 14
+        static let blueGlowColor = Color(hex: "#1F4A9E")
+        static let blueGlowOpacity: Double = 0.26
+        static let blueGlowRadius: CGFloat = 18
+        static let blueGlowOffsetY: CGFloat = 14
     }
 
     /// Vaste kleurenset voor labels (m7, valkuil F): geen vrije kleurkiezer, want

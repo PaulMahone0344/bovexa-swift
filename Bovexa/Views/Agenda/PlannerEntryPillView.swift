@@ -55,7 +55,7 @@ struct PlannerEntryPillView: View {
             .frame(width: size, height: size)
             .background(LinearGradient(colors: BovexaTheme.Gradients.blue, startPoint: .topLeading, endPoint: .bottomTrailing))
             .clipShape(Circle())
-            .shadow(color: BovexaTheme.Shadow.tealGlowColor.opacity(0.28), radius: 10, x: 0, y: 5)
+            .shadow(color: BovexaTheme.Shadow.blueGlowColor.opacity(0.28), radius: 10, x: 0, y: 5)
     }
 
     private var fullPill: some View {

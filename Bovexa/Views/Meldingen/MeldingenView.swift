@@ -27,7 +27,7 @@ struct MeldingenView: View {
                         }
 
                         if viewModel.isEmpty {
-                            EmptyStateView(systemImage: "bell", text: "Hier verschijnen mededelingen van je team en toewijzingen die op je akkoord wachten.")
+                            EmptyStateView(systemImage: "bell", text: "Hier verschijnen mededelingen van je team en toewijzingen die op je akkoord wachten.", surface: .background)
                         }
 
                         if !viewModel.notices.isEmpty {

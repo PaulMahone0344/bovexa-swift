@@ -22,9 +22,14 @@ struct GlassCard<Content: View>: View {
         RoundedRectangle(cornerRadius: radius, style: .continuous)
     }
 
+    /// v5-naregel: de tint stond op 0.22, afgeregeld op het oude teal. Koningsblauw
+    /// is veel dieper en verzadigder, dus dezelfde 0.22 maakte van elke hero-kaart
+    /// een massieve blauwe plaat (Dagtaken-composer, bedrijfskaart) die naast de
+    /// witte kaarten eronder als een ander scherm las. Nadruk moet uit een zweem
+    /// komen, niet uit een vlak.
     private var glass: Glass {
         switch emphasis {
-        case .hero: return .regular.tint(BovexaTheme.Colors.blue.opacity(0.22))
+        case .hero: return .regular.tint(BovexaTheme.Colors.blue.opacity(0.10))
         case .standard, .quiet: return .regular
         }
     }
@@ -62,7 +67,7 @@ struct GlassCard<Content: View>: View {
     // en onscherp maakte. Minder blur zet de kaartrand strakker neer.
     private var shadowColor: Color {
         switch emphasis {
-        case .hero: return BovexaTheme.Shadow.tealGlowColor.opacity(0.18)
+        case .hero: return BovexaTheme.Shadow.blueGlowColor.opacity(0.18)
         case .standard: return BovexaTheme.Shadow.softColor.opacity(0.10)
         case .quiet: return BovexaTheme.Shadow.softColor.opacity(0.05)
         }

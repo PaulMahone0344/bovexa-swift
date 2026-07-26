@@ -18,7 +18,7 @@ struct AgendaListView: View {
                         .frame(maxWidth: .infinity, alignment: .center)
                         .padding(.top, BovexaTheme.Space.xxl)
                 } else if groups.isEmpty {
-                    EmptyStateView(systemImage: "calendar", text: "Geen komende afspraken.")
+                    EmptyStateView(systemImage: "calendar", text: "Geen komende afspraken.", surface: .background)
                 } else {
                     ForEach(groups) { group in
                         VStack(alignment: .leading, spacing: BovexaTheme.Space.sm) {

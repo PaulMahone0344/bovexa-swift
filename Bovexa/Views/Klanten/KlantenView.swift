@@ -32,7 +32,7 @@ struct KlantenView: View {
                 if viewModel.loading {
                     ProgressView().tint(BovexaTheme.Colors.accent)
                 } else if viewModel.groups.isEmpty {
-                    EmptyStateView(systemImage: "person.2", text: "Klanten verschijnen hier zodra afspraken een klantnaam hebben.")
+                    EmptyStateView(systemImage: "person.2", text: "Klanten verschijnen hier zodra afspraken een klantnaam hebben.", surface: .background)
                         .padding(.horizontal, BovexaTheme.Space.xl)
                 } else {
                     ScrollView {
