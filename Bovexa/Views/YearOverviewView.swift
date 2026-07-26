@@ -4,6 +4,7 @@ import SwiftUI
 /// afspraken), dag tikken → springt naar die dag in de Agenda (dagweergave).
 struct YearOverviewView: View {
     @StateObject private var viewModel: YearOverviewViewModel
+    @Environment(\.dismiss) private var dismiss
 
     private let userId: String
     private let orgId: String?
@@ -49,6 +50,12 @@ struct YearOverviewView: View {
             }
             .navigationTitle("Jaaroverzicht")
             .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .topBarLeading) {
+                    Button { dismiss() } label: { Image(systemName: "chevron.left") }
+                        .accessibilityLabel("Sluiten")
+                }
+            }
         }
         .task(id: viewModel.year) {
             await viewModel.load(userId: userId, orgId: orgId, token: token)
@@ -61,6 +68,7 @@ struct YearOverviewView: View {
                 Image(systemName: "chevron.left")
                     .font(.system(size: 22, weight: .semibold))
             }
+            .accessibilityLabel("Vorig jaar")
             VStack(spacing: 2) {
                 Text(String(viewModel.year))
                     .font(BovexaTheme.TypeStyle.title2)
@@ -73,6 +81,7 @@ struct YearOverviewView: View {
                 Image(systemName: "chevron.right")
                     .font(.system(size: 22, weight: .semibold))
             }
+            .accessibilityLabel("Volgend jaar")
         }
         .foregroundStyle(BovexaTheme.Colors.ink)
         .padding(.top, BovexaTheme.Space.sm)

@@ -80,6 +80,7 @@ struct PlannerView: View {
                     } label: {
                         Image(systemName: "chevron.left")
                     }
+                    .accessibilityLabel("Sluiten")
                 }
                 if !viewModel.thread.isEmpty {
                     ToolbarItem(placement: .topBarTrailing) {

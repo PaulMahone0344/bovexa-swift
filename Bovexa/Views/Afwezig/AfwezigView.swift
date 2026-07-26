@@ -58,6 +58,7 @@ struct AfwezigView: View {
                     } label: {
                         Image(systemName: "chevron.left")
                     }
+                    .accessibilityLabel("Sluiten")
                 }
             }
             .alert("Gelukt", isPresented: Binding(get: { viewModel.savedAlertMessage != nil }, set: { if !$0 { viewModel.savedAlertMessage = nil } })) {
@@ -150,6 +151,7 @@ struct AfwezigView: View {
                 Image(systemName: "chevron.left")
             }
             .buttonStyle(.glassSecondaryBrand)
+            .accessibilityLabel("Vorige maand")
 
             Spacer()
 
@@ -165,6 +167,7 @@ struct AfwezigView: View {
                 Image(systemName: "chevron.right")
             }
             .buttonStyle(.glassSecondaryBrand)
+            .accessibilityLabel("Volgende maand")
         }
     }
 

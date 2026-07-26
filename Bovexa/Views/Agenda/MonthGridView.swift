@@ -59,6 +59,7 @@ struct MonthGridView: View {
             } label: {
                 Image(systemName: "chevron.left")
             }
+            .accessibilityLabel("Vorige maand")
 
             Spacer()
 
@@ -78,6 +79,7 @@ struct MonthGridView: View {
             } label: {
                 Image(systemName: "chevron.right")
             }
+            .accessibilityLabel("Volgende maand")
         }
         .foregroundStyle(BovexaTheme.Colors.ink)
     }

@@ -41,6 +41,7 @@ struct MensenView: View {
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
                     Button { dismiss() } label: { Image(systemName: "chevron.left") }
+                        .accessibilityLabel("Sluiten")
                 }
                 ToolbarItem(placement: .topBarTrailing) {
                     Button("Persoon toevoegen") {

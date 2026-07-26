@@ -55,13 +55,13 @@ struct EventEditorView: View {
                     }
 
                     fieldLabel("Datum")
-                    StepperRow(value: EventHelpers.longDay(viewModel.start), onMinus: { viewModel.shiftDay(-1) }, onPlus: { viewModel.shiftDay(1) })
+                    StepperRow(value: EventHelpers.longDay(viewModel.start), minusLabel: "Dag eerder", plusLabel: "Dag later", onMinus: { viewModel.shiftDay(-1) }, onPlus: { viewModel.shiftDay(1) })
 
                     fieldLabel("Starttijd")
-                    StepperRow(value: EventHelpers.fmtTime(viewModel.start), onMinus: { viewModel.shiftStart(minutes: -15) }, onPlus: { viewModel.shiftStart(minutes: 15) })
+                    StepperRow(value: EventHelpers.fmtTime(viewModel.start), minusLabel: "Kwartier eerder", plusLabel: "Kwartier later", onMinus: { viewModel.shiftStart(minutes: -15) }, onPlus: { viewModel.shiftStart(minutes: 15) })
 
                     fieldLabel("Duur")
-                    StepperRow(value: "\(viewModel.durationMin) min", onMinus: { viewModel.changeDuration(by: -15) }, onPlus: { viewModel.changeDuration(by: 15) })
+                    StepperRow(value: "\(viewModel.durationMin) min", minusLabel: "Kwartier korter", plusLabel: "Kwartier langer", onMinus: { viewModel.changeDuration(by: -15) }, onPlus: { viewModel.changeDuration(by: 15) })
 
                     fieldLabel("Contact (optioneel)")
                     ContactPickerView(
@@ -200,6 +200,10 @@ private struct EditorFieldStyle: TextFieldStyle {
 
 private struct StepperRow: View {
     let value: String
+    /// Drie steppers op één scherm; zonder eigen labels leest VoiceOver hier
+    /// drie identieke "Back/Forward"-paren voor.
+    let minusLabel: String
+    let plusLabel: String
     let onMinus: () -> Void
     let onPlus: () -> Void
 
@@ -211,6 +215,7 @@ private struct StepperRow: View {
                     .foregroundStyle(BovexaTheme.Colors.accent)
                     .frame(width: 42, height: 42)
             }
+            .accessibilityLabel(minusLabel)
             Spacer()
             Text(value)
                 .font(BovexaTheme.TypeStyle.headline)
@@ -222,6 +227,7 @@ private struct StepperRow: View {
                     .foregroundStyle(BovexaTheme.Colors.accent)
                     .frame(width: 42, height: 42)
             }
+            .accessibilityLabel(plusLabel)
         }
         .padding(.horizontal, BovexaTheme.Space.xs)
         .frame(minHeight: 46)
