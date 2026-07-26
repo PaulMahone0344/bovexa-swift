@@ -11,6 +11,7 @@ struct AgendaView: View {
     @State private var plannerSeed: String?
     @State private var showPlanner = false
     @State private var speechAlertMessage: String?
+    @State private var showAfwezig = false
 
     private var currentUser: AgendaUser? {
         if case .loggedIn(let user) = authStore.phase { return user }
@@ -94,41 +95,47 @@ struct AgendaView: View {
         showPlanner = true
     }
 
-    private func categoryLabel(_ category: BovexaTheme.Category) -> String {
-        switch category {
-        case .work: return "Werk"
-        case .focus: return "Focus"
-        case .social: return "Sociaal"
-        case .body: return "Lichaam"
-        case .afwezig: return "Afwezig"
-        }
-    }
-
     @ViewBuilder
     private var monthOrListContent: some View {
         NavigationStack {
             ZStack {
                 AppBackground()
 
-                if viewModel.viewKind == .lijst, let userId = currentUser?.id {
-                    AgendaListView(viewModel: viewModel, currentUserId: userId, now: Date.init, selectedEvent: $selectedEvent)
-                } else {
-                    ScrollView {
-                        MonthGridView(viewModel: viewModel, onYearTap: { showYearOverview = true })
+                VStack(spacing: 0) {
+                    if let userId = currentUser?.id, let org = currentUser?.defaultOrg {
+                        LegendeView(userId: userId, org: org, token: authStore.token ?? "", labelStore: viewModel.labelStore)
                             .padding(.horizontal, BovexaTheme.Space.xl)
-                            // Boven de maandregel stond 24pt bovenop de ruimte
-                            // die de grote titel al meebrengt; dat was een gat.
                             .padding(.top, BovexaTheme.Space.xs)
-                            // De laatste week liep tegen de plan-knop en de
-                            // tabbalk aan, waardoor de kalender eronder leek
-                            // door te lopen.
-                            .padding(.bottom, BovexaTheme.Space.tabBarClearance)
+                    }
+
+                    if viewModel.viewKind == .lijst, let userId = currentUser?.id {
+                        AgendaListView(viewModel: viewModel, currentUserId: userId, now: Date.init, selectedEvent: $selectedEvent)
+                    } else {
+                        ScrollView {
+                            MonthGridView(viewModel: viewModel, onYearTap: { showYearOverview = true })
+                                .padding(.horizontal, BovexaTheme.Space.xl)
+                                // Boven de maandregel stond 24pt bovenop de ruimte
+                                // die de grote titel al meebrengt; dat was een gat.
+                                .padding(.top, BovexaTheme.Space.xs)
+                                // De laatste week liep tegen de plan-knop en de
+                                // tabbalk aan, waardoor de kalender eronder leek
+                                // door te lopen.
+                                .padding(.bottom, BovexaTheme.Space.tabBarClearance)
+                        }
                     }
                 }
             }
             .navigationTitle("Agenda")
             .navigationBarTitleDisplayMode(.large)
             .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button {
+                        showAfwezig = true
+                    } label: {
+                        Image(systemName: "person.crop.circle.badge.clock")
+                    }
+                    .accessibilityLabel("Beschikbaarheid doorgeven")
+                }
                 ToolbarItem(placement: .topBarTrailing) {
                     Button {
                         showSearch = true
@@ -150,16 +157,6 @@ struct AgendaView: View {
                             }
                         }
 
-                        // De kleuren zijn nergens uitgelegd; een nieuwe gebruiker
-                        // ziet turquoise/geel/paars zonder te weten wat ze
-                        // betekenen. Het lagen-menu is de plek waar je toch al
-                        // kijkt als je de weergave wilt begrijpen.
-                        Section("Kleuren") {
-                            ForEach(BovexaTheme.Category.allCases, id: \.self) { category in
-                                Label(categoryLabel(category), systemImage: "circle.fill")
-                                    .foregroundStyle(BovexaTheme.categoryColor(for: category))
-                            }
-                        }
                     } label: {
                         Image(systemName: "square.3.layers.3d")
                     }
@@ -188,6 +185,11 @@ struct AgendaView: View {
                         showYearOverview = false
                         viewModel.openDayView(date)
                     }
+                }
+            }
+            .sheet(isPresented: $showAfwezig) {
+                if let userId = currentUser?.id {
+                    AfwezigView(userId: userId, org: currentUser?.defaultOrg, token: authStore.token ?? "")
                 }
             }
         }

@@ -20,6 +20,21 @@ final class LabelStore: ObservableObject {
         orderedLabels = (orderedLabels + [label]).sorted { $0.volgorde < $1.volgorde }
     }
 
+    /// Vervangt een bestaand label — voor hernoemen/kleur-wijzigen vanuit de
+    /// legenda (m7 plak 6), wijzigt meteen overal waar dat label gebruikt wordt.
+    func update(_ label: AgendaLabel) {
+        labelMap[label.id] = label
+        orderedLabels = orderedLabels.map { $0.id == label.id ? label : $0 }
+    }
+
+    /// Verwijderen slaat afspraken met dat label niet stuk (valkuil H) — die
+    /// vallen terug op categoriekleur via EventHelpers.eventColor omdat het label
+    /// hier niet meer te vinden is.
+    func remove(id: String) {
+        labelMap[id] = nil
+        orderedLabels = orderedLabels.filter { $0.id != id }
+    }
+
     func label(for id: String?) -> AgendaLabel? {
         guard let id else { return nil }
         return labelMap[id]

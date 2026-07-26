@@ -42,6 +42,26 @@ struct LabelStoreTests {
         #expect(store.label(for: "l2")?.naam == "Tweede")
     }
 
+    @Test func updateReplacesExistingLabelInPlace() {
+        let store = LabelStore()
+        store.prime(labels: [label("l1", naam: "Oud", kleur: "#D6524B", volgorde: 0)])
+        store.update(label("l1", naam: "Nieuw", kleur: "#4F9E5C", volgorde: 0))
+        #expect(store.label(for: "l1")?.naam == "Nieuw")
+        #expect(store.label(for: "l1")?.kleur == "#4F9E5C")
+        #expect(store.orderedLabels.count == 1)
+    }
+
+    @Test func removeDropsLabelFromStoreAndOrderedList() {
+        let store = LabelStore()
+        store.prime(labels: [
+            label("l1", naam: "Eerste", kleur: "#D6524B", volgorde: 0),
+            label("l2", naam: "Tweede", kleur: "#4F9E5C", volgorde: 1),
+        ])
+        store.remove(id: "l1")
+        #expect(store.label(for: "l1") == nil)
+        #expect(store.orderedLabels.map(\.id) == ["l2"])
+    }
+
     @Test func orderedLabelsPreservesVolgorde() {
         let store = LabelStore()
         store.prime(labels: [
