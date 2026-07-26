@@ -23,13 +23,16 @@ enum BovexaTab: String, CaseIterable, Identifiable {
     /// massieve rechthoeken en de checklist een vinkje plus een rondje plus twee
     /// streepjes — samen te veel detail op tabbalk-formaat. Koffer en vinkje in
     /// een cirkel hebben één duidelijke vorm.
+    /// 26 juli: de drie gevulde iconen naar hun open variant, uit de icoonlijst
+    /// van de opdrachtgever. Gevuld waren ze drie zware blokken naast de open
+    /// kalender; de zon blijft gevuld, want die is anders een dun streepjesbeeld.
     var icon: String {
         switch self {
         case .vandaag: return "sun.horizon.fill"
         case .agenda: return "calendar"
-        case .dagtaken: return "checkmark.circle.fill"
-        case .bedrijf: return "briefcase.fill"
-        case .profiel: return "person.fill"
+        case .dagtaken: return "checkmark.circle"
+        case .bedrijf: return "briefcase"
+        case .profiel: return "person"
         }
     }
 }
@@ -44,6 +47,15 @@ struct RootTabView: View {
     @EnvironmentObject private var authStore: AuthStore
     @EnvironmentObject private var joinCoordinator: JoinCoordinator
 
+    private func outlineLabel(_ tab: BovexaTab) -> some View {
+        Label {
+            Text(tab.label)
+        } icon: {
+            Image(systemName: tab.icon)
+                .environment(\.symbolVariants, .none)
+        }
+    }
+
     var body: some View {
         // Elk schermtype (VandaagView/AgendaView/DagtakenView/BedrijfView/ProfielView)
         // bevat al zijn eigen `AppBackground()` — dus geen extra achtergrond hier
@@ -57,16 +69,25 @@ struct RootTabView: View {
                 AgendaView()
             }
 
-            Tab(BovexaTab.dagtaken.label, systemImage: BovexaTab.dagtaken.icon, value: .dagtaken) {
+            // Deze drie via een eigen label: een tabbalk tekent elk symbool
+            // standaard in zijn gevulde variant, dus "briefcase" kwam er alsnog
+            // uit als "briefcase.fill". `symbolVariants(.none)` zet dat terug.
+            Tab(value: .dagtaken) {
                 DagtakenView()
+            } label: {
+                outlineLabel(BovexaTab.dagtaken)
             }
 
-            Tab(BovexaTab.bedrijf.label, systemImage: BovexaTab.bedrijf.icon, value: .bedrijf) {
+            Tab(value: .bedrijf) {
                 BedrijfView()
+            } label: {
+                outlineLabel(BovexaTab.bedrijf)
             }
 
-            Tab(BovexaTab.profiel.label, systemImage: BovexaTab.profiel.icon, value: .profiel) {
+            Tab(value: .profiel) {
                 ProfielView()
+            } label: {
+                outlineLabel(BovexaTab.profiel)
             }
         }
         .tint(BovexaTheme.Colors.blue)
