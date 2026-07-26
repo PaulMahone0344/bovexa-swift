@@ -190,11 +190,22 @@ private struct EventBlockView: View {
         RoundedRectangle(cornerRadius: 8, style: .continuous)
     }
 
+    /// Eigen afspraak is een gevuld vlak in de categorie- of labelkleur, die van
+    /// een collega alleen een rand in diens persoonskleur. Zo is in één oogopslag
+    /// te zien wat van jou is zonder de naam te lezen. v3 had ook een omranding en
+    /// draaide die terug omdat een dik kader als foutmelding las; het verschil is
+    /// dat het vlak nu neutraal blijft, dus de rand hoeft niet hard te zijn.
+    private var glass: Glass {
+        isColleague ? .regular : .regular.tint(EventHelpers.eventColor(event, labelStore: labelStore).opacity(0.28))
+    }
+
     var body: some View {
         HStack(spacing: 0) {
-            Rectangle()
-                .fill(accent)
-                .frame(width: isColleague ? 4 : 3)
+            if !isColleague {
+                Rectangle()
+                    .fill(accent)
+                    .frame(width: 3)
+            }
 
             VStack(alignment: .leading, spacing: 1) {
                 Text(EventHelpers.fmtTime(event.start))
@@ -214,11 +225,13 @@ private struct EventBlockView: View {
             .padding(.vertical, 3)
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         }
-        .glassEffect(
-            .regular.tint(EventHelpers.eventColor(event, labelStore: labelStore).opacity(0.28)),
-            in: shape
-        )
+        .glassEffect(glass, in: shape)
         .clipShape(shape)
+        .overlay {
+            if isColleague {
+                shape.strokeBorder(accent, lineWidth: 2)
+            }
+        }
         // Zonder dit is alleen de tekst raakbaar: glas telt niet mee voor
         // hit-testing. Bij een afwezigheidsbaan eronder (die wél een gevulde
         // shape is) opende een tik in het blok de afwezigheid van de collega.
