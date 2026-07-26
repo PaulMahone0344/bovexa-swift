@@ -65,6 +65,9 @@ enum BovexaTheme {
         /// Warm signaal (lege dag, afgeronde staat). Zit sinds v5 NIET meer in de
         /// ondergrond; amber op blauw is complementair en blijft goed leesbaar.
         static let warm = Color(hex: "#D9A45B")
+        /// Alleen voor de zon in de koptekening op Vandaag. Bewust geen `warm`:
+        /// dat is signaalkleur en hoort niet in een decoratieve tekening te zitten.
+        static let sunYellow = Color(hex: "#EFB13D")
 
         // Kleurvelden in de ondergrond. Eigen tokens, niet de merkkleur hergebruikt:
         // een orb moet lichter zijn dan het merkvlak, anders wordt de bovenhoek een

@@ -26,36 +26,7 @@ struct VandaagView: View {
 
                 ScrollView {
                     VStack(alignment: .leading, spacing: BovexaTheme.Space.lg) {
-                        HStack(alignment: .top) {
-                            // `muted` staat hier direct op de ondergrond, niet op
-                            // glas: sinds de v4-orbs is die ondergrond op deze plek
-                            // verzadigd teal en haalde muted nog maar 2.4:1.
-                            // `inkSoft` houdt het rustig én leesbaar.
-                            Text(todayLine)
-                                .font(BovexaTheme.TypeStyle.subheadline)
-                                .foregroundStyle(BovexaTheme.Colors.inkSoft)
-
-                            Spacer()
-
-                            VStack(alignment: .trailing, spacing: BovexaTheme.Space.sm) {
-                                // Het bedrijfslogo is een upload van het bedrijf zelf.
-                                // Groter of met een eigen vlak eromheen gaat het als
-                                // advertentie lezen; hier blijft het een klein
-                                // merkteken naast de datum, zonder kader.
-                                if let logoURL = viewModel.orgLogoURL {
-                                    AsyncImage(url: logoURL) { image in
-                                        image.resizable().scaledToFit()
-                                    } placeholder: {
-                                        Color.clear
-                                    }
-                                    .frame(maxWidth: 84, maxHeight: 16)
-                                    .opacity(0.75)
-                                }
-
-                                VandaagHeaderArt()
-                            }
-                        }
-                        .padding(.horizontal, 2)
+                        header
 
                         if let userId = currentUser?.id {
                             NextUpCard(
@@ -89,8 +60,9 @@ struct VandaagView: View {
                     )
                 }
             }
-            .navigationTitle("Vandaag")
-            .navigationBarTitleDisplayMode(.large)
+            // Geen systeemtitel: die staat vast links bovenin en laat het logo
+            // niet boven zich toe. De kop is nu een eigen blok, zoals de mockup.
+            .toolbar(.hidden, for: .navigationBar)
         }
         .task {
             await refresh()
@@ -98,6 +70,52 @@ struct VandaagView: View {
         .onAppear {
             Task { await refresh() }
         }
+    }
+
+    /// Kop zoals de mockup: logo rechtsboven, daaronder de grote titel met de
+    /// datum er strak onder, en rechts de zon achter de berg. Vervangt de grote
+    /// iOS-titel — die stond altijd links bovenin en duwde het logo weg.
+    private var header: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            HStack {
+                Spacer()
+                // Het bedrijfslogo is een upload van het bedrijf zelf. Een kader
+                // eromheen laat het als advertentie lezen; het blijft dus een vrij
+                // staand merkteken, alleen groter dan voorheen.
+                if let logoURL = viewModel.orgLogoURL {
+                    AsyncImage(url: logoURL) { image in
+                        image.resizable().scaledToFit()
+                    } placeholder: {
+                        Color.clear
+                    }
+                    .frame(maxWidth: 118, maxHeight: 24)
+                }
+            }
+
+            ZStack(alignment: .topTrailing) {
+                VandaagHeaderArt()
+                    .frame(maxWidth: .infinity, alignment: .trailing)
+                    .offset(y: 8)
+
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Vandaag")
+                        .font(.system(size: 44, weight: .bold, design: .rounded))
+                        .foregroundStyle(BovexaTheme.Colors.ink)
+
+                    // `muted` staat hier direct op de ondergrond, niet op glas:
+                    // daar is die ondergrond te verzadigd voor. `inkSoft` houdt
+                    // het rustig én leesbaar.
+                    Text(todayLine)
+                        .font(BovexaTheme.TypeStyle.subheadline)
+                        .foregroundStyle(BovexaTheme.Colors.inkSoft)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.top, 6)
+            }
+        }
+        .padding(.horizontal, 2)
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("Vandaag, \(todayLine)")
     }
 
     /// Twee cijfers naast elkaar als rustige pillen: informatie die je wel wilt
