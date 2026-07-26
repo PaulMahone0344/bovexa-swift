@@ -7,6 +7,7 @@ struct AgendaView: View {
     @State private var selectedEvent: AgendaEvent?
     @State private var showSearch = false
     @State private var showLegende = false
+    @State private var showPersoonKiezer = false
     @State private var showYearOverview = false
     @State private var pillText = ""
     @State private var plannerSeed: String?
@@ -124,6 +125,10 @@ struct AgendaView: View {
                         }
                     }
                 }
+                // Via safeAreaInset en niet als eerste kind van de VStack: daar
+                // liet de grote titel "Agenda" zich niet meer tekenen zodra de chip
+                // verscheen. Zo blijft de titel staan en zakt de inhoud eronder.
+                .safeAreaInset(edge: .top, spacing: 0) { persoonFilterChip }
             }
             .navigationTitle("Agenda")
             .navigationBarTitleDisplayMode(.large)
@@ -143,6 +148,14 @@ struct AgendaView: View {
                         Image(systemName: "magnifyingglass")
                     }
                     .accessibilityLabel("Zoeken")
+                }
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button {
+                        showPersoonKiezer = true
+                    } label: {
+                        Image(systemName: "person.2")
+                    }
+                    .accessibilityLabel("Agenda van een collega")
                 }
                 ToolbarItem(placement: .topBarTrailing) {
                     Button {
@@ -188,6 +201,14 @@ struct AgendaView: View {
                     )
                 }
             }
+            .sheet(isPresented: $showPersoonKiezer) {
+                if let userId = currentUser?.id {
+                    AgendaPersoonKiezerView(
+                        memberColors: viewModel.memberColors, currentUserId: userId,
+                        selected: viewModel.personFilter, onPick: { viewModel.setPersonFilter($0) }
+                    )
+                }
+            }
             .sheet(isPresented: $showLegende) {
                 if let userId = currentUser?.id, let org = currentUser?.defaultOrg {
                     LegendeView(userId: userId, org: org, token: authStore.token ?? "", labelStore: viewModel.labelStore)
@@ -206,6 +227,42 @@ struct AgendaView: View {
                     AfwezigView(userId: userId, org: currentUser?.defaultOrg, token: authStore.token ?? "")
                 }
             }
+        }
+    }
+
+    /// Zonder dit teken lijkt een gefilterde agenda simpelweg leeg. Dat is de
+    /// grootste valkuil van het personenfilter: je ziet drie afspraken in plaats
+    /// van twintig en denkt dat er iets stuk is.
+    @ViewBuilder
+    private var persoonFilterChip: some View {
+        if let filter = viewModel.personFilter {
+            HStack(spacing: BovexaTheme.Space.xs) {
+                Circle()
+                    .fill(viewModel.memberColors.color(for: filter))
+                    .frame(width: 10, height: 10)
+                Text("Agenda van \(viewModel.memberColors.firstName(for: filter) ?? "collega")")
+                    .font(BovexaTheme.TypeStyle.footnote.weight(.semibold))
+                    .foregroundStyle(BovexaTheme.Colors.ink)
+                Button {
+                    Haptics.selection()
+                    viewModel.setPersonFilter(nil)
+                } label: {
+                    Image(systemName: "xmark.circle.fill")
+                        .font(.system(size: 15))
+                        .foregroundStyle(BovexaTheme.Colors.muted)
+                }
+                .accessibilityLabel("Weer iedereen tonen")
+            }
+            .padding(.horizontal, BovexaTheme.Space.md)
+            .padding(.vertical, BovexaTheme.Space.xs)
+            .background(BovexaTheme.Colors.floatingSurface)
+            .clipShape(Capsule())
+            .overlay(Capsule().strokeBorder(BovexaTheme.Colors.edge, lineWidth: 1))
+            .padding(.horizontal, BovexaTheme.Space.xl)
+            .padding(.bottom, BovexaTheme.Space.xs)
+            // Links uitlijnen zoals de rest van het scherm; zonder dit gaat de chip
+            // in het midden hangen omdat hij naar zijn inhoud krimpt.
+            .frame(maxWidth: .infinity, alignment: .leading)
         }
     }
 

@@ -9,7 +9,7 @@ struct AgendaListView: View {
 
     var body: some View {
         ScrollView {
-            let groups = ListViewGrouping.upcomingGroupedByDay(viewModel.events, from: now())
+            let groups = ListViewGrouping.upcomingGroupedByDay(viewModel.visibleEvents, from: now())
 
             VStack(alignment: .leading, spacing: BovexaTheme.Space.lg) {
                 if !viewModel.hasLoadedOnce {

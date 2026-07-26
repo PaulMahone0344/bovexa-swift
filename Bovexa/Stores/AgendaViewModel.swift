@@ -17,6 +17,8 @@ final class AgendaViewModel: ObservableObject {
     @Published private(set) var isLoading = false
     @Published private(set) var hasLoadedOnce = false
     @Published var displayedMonth: Date
+    /// Nil is "iedereen"; anders de userId van de persoon wiens agenda je bekijkt.
+    @Published private(set) var personFilter: String?
     @Published var daySheetTarget: DaySheetTarget?
     @Published var dayViewFocusDate: Date
 
@@ -125,7 +127,18 @@ final class AgendaViewModel: ObservableObject {
         displayedMonth = calendar.date(byAdding: .month, value: 1, to: displayedMonth) ?? displayedMonth
     }
 
+    /// Alles wat het huidige personenfilter doorlaat (m10). `events` blijft de
+    /// volledige set, zodat het filter alleen de weergave raakt en niet opnieuw
+    /// geladen hoeft te worden als je van persoon wisselt.
+    var visibleEvents: [AgendaEvent] {
+        AgendaPersonFilter.apply(events, userId: personFilter)
+    }
+
     func eventsOnDay(_ day: Date, calendar: Calendar = .current) -> [AgendaEvent] {
-        EventHelpers.eventsOnDay(events, day: day, calendar: calendar)
+        EventHelpers.eventsOnDay(visibleEvents, day: day, calendar: calendar)
+    }
+
+    func setPersonFilter(_ userId: String?) {
+        personFilter = userId
     }
 }
