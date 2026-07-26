@@ -73,10 +73,10 @@ struct DayHourGridView: View {
                 HStack(alignment: .top, spacing: BovexaTheme.Space.xs) {
                     Text(String(format: "%02d:00", hour))
                         .font(.system(size: BovexaTheme.TypeScale.tiny))
-                        .foregroundStyle(BovexaTheme.Colors.muted)
+                        .foregroundStyle(BovexaTheme.Colors.gridHour)
                         .frame(width: gutterWidth - BovexaTheme.Space.xs, alignment: .leading)
                     Rectangle()
-                        .fill(BovexaTheme.Colors.edgeSoft)
+                        .fill(BovexaTheme.Colors.gridLine)
                         .frame(height: 1)
                 }
                 .frame(height: hourHeight, alignment: .top)

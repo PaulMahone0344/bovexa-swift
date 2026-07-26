@@ -75,6 +75,18 @@ enum BovexaTheme {
         static let edge = Color.white.opacity(0.72)
         static let edgeSoft = Color.white.opacity(0.58)
 
+        // Uurraster in de dagweergave. Dit is de enige plek waar lijnen én tekst
+        // direct op de kale ondergrond staan, over de volle hoogte van het
+        // verloop. `edgeSoft` (wit) werkte daarom alleen bovenin: op het parelwit
+        // onderin doofde de lijn volledig uit en scheurde het raster halverwege de
+        // dag. Deze twee trekken de ondergrond juist omlaag, dus 07:00 en 18:00
+        // krijgen dezelfde sterkte.
+        /// Uurlijn: blauwgrijs met vaste dekking, nooit wit.
+        static let gridLine = Color(hex: "#22344A").opacity(0.14)
+        /// Uurlabel. Niet `muted` — dat is een glastoken en mag per v4-regel niet
+        /// direct op de ondergrond; wel duidelijk ondergeschikt aan `inkSoft`.
+        static let gridHour = Color(hex: "#3E5470")
+
         // navbar-chrome
         static let navSurface = Color.white.opacity(0.88)
         static let navBorder = Color.white.opacity(0.68)
