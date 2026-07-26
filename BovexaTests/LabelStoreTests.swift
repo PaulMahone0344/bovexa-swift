@@ -34,6 +34,14 @@ struct LabelStoreTests {
         #expect(store.color(for: "onbekend") == nil)
     }
 
+    @Test func addAppendsNewLabelAndKeepsVolgordeOrder() {
+        let store = LabelStore()
+        store.prime(labels: [label("l1", naam: "Eerste", kleur: "#D6524B", volgorde: 0)])
+        store.add(label("l2", naam: "Tweede", kleur: "#4F9E5C", volgorde: 1))
+        #expect(store.orderedLabels.map(\.id) == ["l1", "l2"])
+        #expect(store.label(for: "l2")?.naam == "Tweede")
+    }
+
     @Test func orderedLabelsPreservesVolgorde() {
         let store = LabelStore()
         store.prime(labels: [

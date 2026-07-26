@@ -107,6 +107,22 @@ struct AppointmentPayloadBuilderTests {
         #expect(payload.klantTelefoon == "")
     }
 
+    @Test func withoutLabelOmitsFieldFromRequestBody() {
+        let payload = AppointmentPayloadBuilder.build(
+            appointment: appointment(), ownerId: "u1", rawInput: "raw", org: "org1",
+            visibility: "private", viewers: [], assignees: [], reminderMin: 0
+        )
+        #expect(payload.requestBody["label"] == nil)
+    }
+
+    @Test func withLabelIncludesFieldInRequestBody() {
+        let payload = AppointmentPayloadBuilder.build(
+            appointment: appointment(), ownerId: "u1", rawInput: "raw", org: "org1",
+            visibility: "private", viewers: [], assignees: [], reminderMin: 0, label: "l1"
+        )
+        #expect(payload.requestBody["label"] as? String == "l1")
+    }
+
     @Test func startAndEndAreFormattedAsPocketBaseUtc() {
         let payload = AppointmentPayloadBuilder.build(
             appointment: appointment(), ownerId: "u1", rawInput: "raw", org: "org1",

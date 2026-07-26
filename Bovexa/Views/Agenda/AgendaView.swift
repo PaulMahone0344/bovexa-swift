@@ -76,7 +76,7 @@ struct AgendaView: View {
             if let userId = currentUser?.id {
                 PlannerView(
                     userId: userId, token: authStore.token ?? "", org: currentUser?.defaultOrg,
-                    memberColors: viewModel.memberColors, seed: plannerSeed,
+                    memberColors: viewModel.memberColors, labelStore: viewModel.labelStore, seed: plannerSeed,
                     onConfirmed: { date in viewModel.openDayView(date) }
                 )
             }

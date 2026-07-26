@@ -36,6 +36,7 @@ struct EventDetailView: View {
                 if isEditing {
                     EventEditorView(
                         event: event, currentUserId: viewModel.currentUserId, token: token, members: memberColors.members,
+                        labelStore: labelStore,
                         onCancel: { isEditing = false },
                         onSaved: { updated in
                             viewModel.applyEditorSave(updated)

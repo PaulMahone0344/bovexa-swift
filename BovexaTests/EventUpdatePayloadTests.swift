@@ -31,6 +31,24 @@ struct EventUpdatePayloadTests {
         #expect(body["assignee_status"] as? [String: String] == ["u2": "pending"])
     }
 
+    @Test func requestBodyOmitsLabelWhenNotChosen() {
+        let payload = EventUpdatePayload(
+            title: "T", category: .focus, start: date(9), end: date(10),
+            notes: "", klantNaam: "", klantTelefoon: "", reminderMin: 0,
+            assignee: [], viewers: [], assigneeStatus: [:]
+        )
+        #expect(payload.requestBody["label"] == nil)
+    }
+
+    @Test func requestBodyIncludesLabelWhenChosen() {
+        let payload = EventUpdatePayload(
+            title: "T", category: .focus, start: date(9), end: date(10),
+            notes: "", klantNaam: "", klantTelefoon: "", reminderMin: 0,
+            assignee: [], viewers: [], assigneeStatus: [:], label: "l1"
+        )
+        #expect(payload.requestBody["label"] as? String == "l1")
+    }
+
     @Test func datesAreFormattedInPocketBaseUtcFormat() {
         let payload = EventUpdatePayload(
             title: "T", category: .focus, start: date(9), end: date(10),

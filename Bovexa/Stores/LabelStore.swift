@@ -13,6 +13,13 @@ final class LabelStore: ObservableObject {
         labelMap = Dictionary(uniqueKeysWithValues: labels.map { ($0.id, $0) })
     }
 
+    /// Voegt een nieuw label toe zonder opnieuw te laden — voor "Nieuw label"
+    /// in de labelkiezer (m7 plak 3), meteen bruikbaar zonder scherm-refresh.
+    func add(_ label: AgendaLabel) {
+        labelMap[label.id] = label
+        orderedLabels = (orderedLabels + [label]).sorted { $0.volgorde < $1.volgorde }
+    }
+
     func label(for id: String?) -> AgendaLabel? {
         guard let id else { return nil }
         return labelMap[id]

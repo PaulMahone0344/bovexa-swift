@@ -5,6 +5,7 @@ import SwiftUI
 /// inhoud van het afspraak-detail — geen apart navigatiescherm.
 struct EventEditorView: View {
     @StateObject private var viewModel: EventEditorViewModel
+    @ObservedObject var labelStore: LabelStore
     let members: [Member]
     let onCancel: () -> Void
     let onSaved: (AgendaEvent) -> Void
@@ -13,15 +14,23 @@ struct EventEditorView: View {
         (.work, "Werk"), (.focus, "Focus"), (.social, "Sociaal"), (.body, "Lichaam"),
     ]
 
-    init(event: AgendaEvent, currentUserId: String, token: String, members: [Member], onCancel: @escaping () -> Void, onSaved: @escaping (AgendaEvent) -> Void) {
+    init(
+        event: AgendaEvent, currentUserId: String, token: String, members: [Member], labelStore: LabelStore,
+        onCancel: @escaping () -> Void, onSaved: @escaping (AgendaEvent) -> Void
+    ) {
         _viewModel = StateObject(wrappedValue: EventEditorViewModel(event: event, token: token))
+        self.labelStore = labelStore
         self.members = members
         self.onCancel = onCancel
         self.onSaved = onSaved
         self.currentUserId = currentUserId
+        self.token = token
+        self.org = event.org ?? ""
     }
 
     private let currentUserId: String
+    private let token: String
+    private let org: String
 
     private var overlapPresented: Binding<Bool> {
         Binding(get: { viewModel.overlapEvent != nil }, set: { if !$0 { viewModel.overlapEvent = nil } })
@@ -38,6 +47,11 @@ struct EventEditorView: View {
                     fieldLabel("Categorie")
                     chipRow(Self.categories, isActive: { $0 == viewModel.category }) { value in
                         withAnimation(.snappy) { viewModel.category = value }
+                    }
+
+                    if !org.isEmpty {
+                        fieldLabel("Label")
+                        LabelPickerView(labelStore: labelStore, selectedLabelId: $viewModel.label, org: org, token: token)
                     }
 
                     fieldLabel("Datum")

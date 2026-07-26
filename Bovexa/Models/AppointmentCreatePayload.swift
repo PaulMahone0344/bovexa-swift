@@ -20,9 +20,38 @@ struct AppointmentCreatePayload {
     let rawInput: String
     let reminderMin: Int
     let assigneeStatus: [String: String]
+    /// Gekozen label-id (m7). Ontbreekt de keuze: veld weglaten (valkuil H —
+    /// bestaand gedrag mag niet veranderen zonder label).
+    let label: String?
+
+    init(
+        owner: String, org: String, title: String, category: BovexaTheme.Category, calendar: String,
+        location: String, recurrence: String, klantNaam: String, klantTelefoon: String, start: Date, end: Date,
+        visibility: String, viewers: [String], assignee: [String], rawInput: String, reminderMin: Int,
+        assigneeStatus: [String: String], label: String? = nil
+    ) {
+        self.owner = owner
+        self.org = org
+        self.title = title
+        self.category = category
+        self.calendar = calendar
+        self.location = location
+        self.recurrence = recurrence
+        self.klantNaam = klantNaam
+        self.klantTelefoon = klantTelefoon
+        self.start = start
+        self.end = end
+        self.visibility = visibility
+        self.viewers = viewers
+        self.assignee = assignee
+        self.rawInput = rawInput
+        self.reminderMin = reminderMin
+        self.assigneeStatus = assigneeStatus
+        self.label = label
+    }
 
     var requestBody: [String: Any] {
-        [
+        var body: [String: Any] = [
             "owner": owner,
             "org": org,
             "title": title,
@@ -42,5 +71,7 @@ struct AppointmentCreatePayload {
             "reminder_min": reminderMin,
             "assignee_status": assigneeStatus,
         ]
+        if let label { body["label"] = label }
+        return body
     }
 }

@@ -8,11 +8,14 @@ struct PlannerView: View {
     @StateObject private var viewModel: PlannerViewModel
     @StateObject private var speech = SpeechToTextService()
     @ObservedObject var memberColors: MemberColors
+    @ObservedObject var labelStore: LabelStore
     @Environment(\.dismiss) private var dismiss
     @State private var input = ""
     @State private var speechAlertMessage: String?
 
     private let hasOrg: Bool
+    private let org: String
+    private let token: String
     private let seed: String?
     private let onConfirmed: (Date) -> Void
 
@@ -23,12 +26,15 @@ struct PlannerView: View {
     ]
 
     init(
-        userId: String, token: String, org: String?, memberColors: MemberColors,
+        userId: String, token: String, org: String?, memberColors: MemberColors, labelStore: LabelStore = LabelStore(),
         seed: String? = nil, onConfirmed: @escaping (Date) -> Void = { _ in }
     ) {
         _viewModel = StateObject(wrappedValue: PlannerViewModel(userId: userId, token: token, org: org))
         self.memberColors = memberColors
+        self.labelStore = labelStore
         self.hasOrg = org != nil
+        self.org = org ?? ""
+        self.token = token
         self.seed = seed
         self.onConfirmed = onConfirmed
     }
@@ -258,6 +264,16 @@ struct PlannerView: View {
                                 .font(BovexaTheme.TypeStyle.caption)
                                 .foregroundStyle(BovexaTheme.Colors.muted)
                         }
+                    }
+                }
+
+                GlassCard {
+                    VStack(alignment: .leading, spacing: BovexaTheme.Space.sm) {
+                        Text("LABEL")
+                            .font(BovexaTheme.TypeStyle.caption.weight(.bold))
+                            .foregroundStyle(BovexaTheme.Colors.accent)
+                            .tracking(0.3)
+                        LabelPickerView(labelStore: labelStore, selectedLabelId: $viewModel.label, org: org, token: token)
                     }
                 }
             }

@@ -91,6 +91,50 @@ struct PlannerViewModelConfirmTests {
         #expect(vm.confirmedDate != nil)
     }
 
+    @Test func confirmIncludesChosenLabelInCreatePayload() async {
+        stubReadyPlan()
+        let vm = makeReadyViewModel(org: "org1")
+        await vm.sendText("Tandarts morgen 9 uur")
+        vm.label = "l1"
+
+        var postBody: [String: Any] = [:]
+        URLProtocolStub.requestHandler = { request in
+            if request.httpMethod == "GET" {
+                return (200, Data("""
+                {"items":[],"page":1,"perPage":200,"totalItems":0,"totalPages":0}
+                """.utf8))
+            }
+            postBody = (try? JSONSerialization.jsonObject(with: self.bodyData(from: request))) as? [String: Any] ?? [:]
+            return (200, Data("""
+            {"id":"ev1","owner":"u1","title":"Tandarts","start":"2026-08-03 09:00:00.000Z","all_day":false}
+            """.utf8))
+        }
+        await vm.confirm()
+        #expect(postBody["label"] as? String == "l1")
+    }
+
+    @Test func confirmWithoutOrgOmitsLabelEvenIfSet() async {
+        stubReadyPlan()
+        let vm = makeReadyViewModel(org: nil)
+        await vm.sendText("Tandarts morgen 9 uur")
+        vm.label = "l1"
+
+        var postBody: [String: Any] = [:]
+        URLProtocolStub.requestHandler = { request in
+            if request.httpMethod == "GET" {
+                return (200, Data("""
+                {"items":[],"page":1,"perPage":200,"totalItems":0,"totalPages":0}
+                """.utf8))
+            }
+            postBody = (try? JSONSerialization.jsonObject(with: self.bodyData(from: request))) as? [String: Any] ?? [:]
+            return (200, Data("""
+            {"id":"ev1","owner":"u1","title":"Tandarts","start":"2026-08-03 09:00:00.000Z","all_day":false}
+            """.utf8))
+        }
+        await vm.confirm()
+        #expect(postBody["label"] == nil)
+    }
+
     @Test func confirmSchedulesReminderOnlyWhenNonZero() async {
         stubReadyPlan()
         let scheduler = FakeNotificationScheduler()

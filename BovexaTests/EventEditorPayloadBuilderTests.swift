@@ -51,6 +51,22 @@ struct EventEditorPayloadBuilderTests {
         #expect(payload.assigneeStatus == ["owner": "accepted", "u2": "declined", "u3": "pending"])
     }
 
+    @Test func withoutLabelOmitsFieldFromRequestBody() {
+        let payload = EventEditorPayloadBuilder.build(
+            title: "T", category: .work, start: date(9), end: date(10), notes: "", klantNaam: "", klantTelefoon: "",
+            reminderMin: 0, assignee: [], originalEvent: originalEvent()
+        )
+        #expect(payload.requestBody["label"] == nil)
+    }
+
+    @Test func chosenLabelIsIncludedInRequestBody() {
+        let payload = EventEditorPayloadBuilder.build(
+            title: "T", category: .work, start: date(9), end: date(10), notes: "", klantNaam: "", klantTelefoon: "",
+            reminderMin: 0, assignee: [], originalEvent: originalEvent(), label: "l1"
+        )
+        #expect(payload.requestBody["label"] as? String == "l1")
+    }
+
     @Test func removedAssigneeDropsOutOfStatusMap() {
         let payload = EventEditorPayloadBuilder.build(
             title: "T", category: .work, start: date(9), end: date(10), notes: "", klantNaam: "", klantTelefoon: "",

@@ -19,7 +19,8 @@ enum AppointmentPayloadBuilder {
         visibility: String,
         viewers: [String],
         assignees: [String],
-        reminderMin: Int
+        reminderMin: Int,
+        label: String? = nil
     ) -> AppointmentCreatePayload {
         let range = AppointmentRange.range(for: appointment)
         let isWork = appointment.category == .work || appointment.category == .focus
@@ -47,7 +48,8 @@ enum AppointmentPayloadBuilder {
             assignee: effectiveAssignees,
             rawInput: rawInput,
             reminderMin: reminderMin,
-            assigneeStatus: AssignmentHelpers.nextStatusMap(assignees: effectiveAssignees, ownerId: ownerId)
+            assigneeStatus: AssignmentHelpers.nextStatusMap(assignees: effectiveAssignees, ownerId: ownerId),
+            label: label
         )
     }
 }
