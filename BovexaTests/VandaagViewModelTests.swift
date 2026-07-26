@@ -162,7 +162,9 @@ struct VandaagViewModelTests {
         await viewModel.load(userId: "me", orgId: nil, token: "tok")
 
         #expect(viewModel.todayEvents.map(\.isExternal) == [false, true])
-        #expect(viewModel.appointmentCount == 1)
+        // Besluit 26 juli: externe afspraken tellen mee in de cijfers — één eigen
+        // afspraak plus één uit de gekoppelde agenda is samen twee.
+        #expect(viewModel.appointmentCount == 2)
     }
 
     @Test func noExternalCalendarSelectedLeavesTodayEventsUnchanged() async {

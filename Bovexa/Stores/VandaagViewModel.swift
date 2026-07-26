@@ -71,10 +71,16 @@ final class VandaagViewModel: ObservableObject {
         let today = EventHelpers.eventsOnDay(combined, day: now()).sorted { $0.start < $1.start }
         todayEvents = today
         nextEvent = EventHelpers.nextUpcoming(today, now: now())
-        appointmentCount = VandaagStats.timedCount(ownToday)
+        // Besluit 26 juli: externe afspraken tellen wél mee in aantal, uren en de
+        // weekstaafjes. Die cijfers gaan over hoe vol je dag is, en een vergadering
+        // uit een andere agenda vult die net zo goed — anders zie je drie dingen
+        // staan terwijl de teller er twee meldt.
+        appointmentCount = VandaagStats.timedCount(today)
+        plannedHoursText = VandaagStats.formatHours(VandaagStats.plannedHours(today))
+        weekBusyCounts = VandaagStats.weekBusyCounts(combined, referenceDate: now())
+        // Afwezigheid blijft over eigen werk gaan: een externe agenda kent geen
+        // categorie `afwezig` en kan hier dus niets aan toevoegen.
         awayNote = VandaagStats.awayNote(ownToday)
-        plannedHoursText = VandaagStats.formatHours(VandaagStats.plannedHours(ownToday))
-        weekBusyCounts = VandaagStats.weekBusyCounts(events, referenceDate: now())
     }
 
     private static func logoURL(for org: CompanyOrgInfo?) -> URL? {
