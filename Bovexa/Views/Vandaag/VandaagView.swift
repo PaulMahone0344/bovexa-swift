@@ -26,7 +26,7 @@ struct VandaagView: View {
 
                 ScrollView {
                     VStack(alignment: .leading, spacing: BovexaTheme.Space.lg) {
-                        HStack(alignment: .center) {
+                        HStack(alignment: .top) {
                             // `muted` staat hier direct op de ondergrond, niet op
                             // glas: sinds de v4-orbs is die ondergrond op deze plek
                             // verzadigd teal en haalde muted nog maar 2.4:1.
@@ -37,18 +37,22 @@ struct VandaagView: View {
 
                             Spacer()
 
-                            // Het bedrijfslogo is een upload van het bedrijf zelf.
-                            // Groter of met een eigen vlak eromheen gaat het als
-                            // advertentie lezen; hier blijft het een klein
-                            // merkteken naast de datum, zonder kader.
-                            if let logoURL = viewModel.orgLogoURL {
-                                AsyncImage(url: logoURL) { image in
-                                    image.resizable().scaledToFit()
-                                } placeholder: {
-                                    Color.clear
+                            VStack(alignment: .trailing, spacing: BovexaTheme.Space.sm) {
+                                // Het bedrijfslogo is een upload van het bedrijf zelf.
+                                // Groter of met een eigen vlak eromheen gaat het als
+                                // advertentie lezen; hier blijft het een klein
+                                // merkteken naast de datum, zonder kader.
+                                if let logoURL = viewModel.orgLogoURL {
+                                    AsyncImage(url: logoURL) { image in
+                                        image.resizable().scaledToFit()
+                                    } placeholder: {
+                                        Color.clear
+                                    }
+                                    .frame(maxWidth: 84, maxHeight: 16)
+                                    .opacity(0.75)
                                 }
-                                .frame(maxWidth: 84, maxHeight: 16)
-                                .opacity(0.75)
+
+                                VandaagHeaderArt()
                             }
                         }
                         .padding(.horizontal, 2)
@@ -104,21 +108,22 @@ struct VandaagView: View {
                 StatTile(
                     value: "\(viewModel.appointmentCount)",
                     label: "afspraken",
-                    note: viewModel.awayNote
+                    note: viewModel.awayNote,
+                    systemImage: "calendar"
                 )
             }
             GlassCard(padding: BovexaTheme.Space.md, emphasis: .quiet) {
-                StatTile(value: viewModel.plannedHoursText, label: "geplande uren")
+                StatTile(
+                    value: viewModel.plannedHoursText, label: "geplande uren",
+                    systemImage: "clock", tint: BovexaTheme.Colors.categoryGreen
+                )
             }
         }
     }
 
     private var timeline: some View {
         VStack(alignment: .leading, spacing: BovexaTheme.Space.sm) {
-            Text("Tijdlijn")
-                .font(BovexaTheme.TypeStyle.headline)
-                .foregroundStyle(BovexaTheme.Colors.ink)
-                .frame(maxWidth: .infinity, alignment: .leading)
+            SectionHeading(title: "Tijdlijn", systemImage: "clock.fill")
 
             GlassCard {
                 if !viewModel.hasLoadedOnce {
@@ -130,17 +135,23 @@ struct VandaagView: View {
                 } else if let userId = currentUser?.id {
                     VStack(spacing: 0) {
                         ForEach(viewModel.todayEvents) { event in
+                            let isLast = event.id == viewModel.todayEvents.last?.id
+
                             Button {
                                 Haptics.selection()
                                 selectedEvent = event
                             } label: {
-                                AppointmentRow(event: event, currentUserId: userId, memberColors: viewModel.memberColors, labelStore: viewModel.labelStore)
+                                AppointmentRow(
+                                    event: event, currentUserId: userId,
+                                    memberColors: viewModel.memberColors, labelStore: viewModel.labelStore,
+                                    style: .timeline, isLast: isLast
+                                )
                             }
                             .buttonStyle(.plain)
 
-                            if event.id != viewModel.todayEvents.last?.id {
-                                Divider().overlay(BovexaTheme.Colors.edgeSoft)
-                            }
+                            // Geen scheidingslijn tussen tijdlijnrijen: de lijn
+                            // tussen de stippen doet dat werk al, en een streep
+                            // dwars door die lijn knipt de dag in stukken.
                         }
                     }
                 }

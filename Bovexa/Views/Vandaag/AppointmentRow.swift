@@ -11,8 +11,22 @@ struct AppointmentRow: View {
     let currentUserId: String
     @ObservedObject var memberColors: MemberColors
     @ObservedObject var labelStore: LabelStore
+    /// Tijdlijn-stijl: stip met doorlopende lijn en een icoonrondje per soort
+    /// afspraak, zoals de mockup van 26 juli. Alleen op Vandaag — in de dagsheet
+    /// en de agendalijst blijft het de compacte rij, daar staan er veel meer onder
+    /// elkaar en is de tijd het enige anker dat telt.
+    var style: Style = .compact
+    /// Laatste rij tekent geen doorlopende lijn; die zou onder de kaart uit lopen.
+    var isLast = false
+
+    enum Style {
+        case compact
+        case timeline
+    }
 
     private var isColleague: Bool { event.owner != currentUserId }
+
+    private var accent: Color { EventHelpers.eventColor(event, labelStore: labelStore) }
 
     var body: some View {
         HStack(spacing: BovexaTheme.Space.md) {
@@ -28,15 +42,26 @@ struct AppointmentRow: View {
                 .minimumScaleFactor(0.8)
                 .frame(width: 54, alignment: .leading)
 
-            Capsule()
-                .fill(EventHelpers.eventColor(event, labelStore: labelStore))
-                .frame(width: 6)
-                .frame(maxHeight: .infinity)
+            if style == .timeline {
+                timelineMarker
+                categoryIcon
+                // Alleen bij een collega een tweede rondje: bij je eigen afspraak
+                // stonden het categorie-icoon en je eigen initiaal naast elkaar en
+                // werd de rij een rij bolletjes.
+                if isColleague {
+                    ownerBadge
+                }
+            } else {
+                Capsule()
+                    .fill(accent)
+                    .frame(width: 6)
+                    .frame(maxHeight: .infinity)
 
-            // De kleurstreep alleen zegt niets zonder de naam eronder te lezen.
-            // Een rondje met de initiaal in de persoonskleur is meteen leesbaar.
-            // Ook bij je eigen afspraak, anders verspringt de tekstkolom per rij.
-            ownerBadge
+                // De kleurstreep alleen zegt niets zonder de naam eronder te lezen.
+                // Een rondje met de initiaal in de persoonskleur is meteen leesbaar.
+                // Ook bij je eigen afspraak, anders verspringt de tekstkolom per rij.
+                ownerBadge
+            }
 
             VStack(alignment: .leading, spacing: 3) {
                 Text(event.title)
@@ -66,8 +91,49 @@ struct AppointmentRow: View {
                 .foregroundStyle(BovexaTheme.Colors.muted)
         }
         .padding(.vertical, BovexaTheme.Space.sm)
-        .frame(minHeight: 44)
+        // Tijdlijnrijen zijn hoger: de stip, het icoonrondje en de doorlopende lijn
+        // hebben lucht nodig, anders raken de rondjes elkaar.
+        .frame(minHeight: style == .timeline ? 68 : 44)
         .contentShape(Rectangle())
+    }
+
+    /// Stip op de lijn, zoals in de mockup: de lijn loopt door naar de volgende
+    /// afspraak, zodat de rijen als één dag lezen in plaats van als losse blokjes.
+    private var timelineMarker: some View {
+        ZStack(alignment: .top) {
+            if !isLast {
+                // Loopt bewust dóór de onderrand van de rij heen (negatieve marge),
+                // zodat de lijn de volgende stip raakt in plaats van halverwege te
+                // stoppen — anders leest het als losse blokjes met een streepje.
+                Capsule()
+                    .fill(accent.opacity(0.20))
+                    .frame(width: 3)
+                    .frame(maxHeight: .infinity)
+                    .padding(.top, 10)
+                    .padding(.bottom, -BovexaTheme.Space.sm * 2)
+            }
+
+            Circle()
+                .fill(accent)
+                .frame(width: 11, height: 11)
+                .overlay(Circle().stroke(BovexaTheme.Colors.white, lineWidth: 2.5))
+                .padding(.top, 2)
+        }
+        .frame(width: 11)
+        .frame(maxHeight: .infinity, alignment: .top)
+    }
+
+    /// Icoon naar soort afspraak; werk, sport en afwezigheid zijn zo zonder lezen
+    /// uit elkaar te houden.
+    private var categoryIcon: some View {
+        Circle()
+            .fill(accent.opacity(0.13))
+            .frame(width: 36, height: 36)
+            .overlay {
+                Image(systemName: BovexaTheme.categorySymbol(for: event.category ?? .work))
+                    .font(.system(size: 15, weight: .medium))
+                    .foregroundStyle(accent)
+            }
     }
 
     private var ownerColor: Color { memberColors.color(for: event.owner) }

@@ -78,9 +78,16 @@ struct NextUpCard: View {
     private var dayDone: some View {
         GlassCard(padding: BovexaTheme.Space.xl) {
             HStack(spacing: BovexaTheme.Space.md) {
-                Image(systemName: "moon.stars.fill")
-                    .font(.title2)
-                    .foregroundStyle(BovexaTheme.Colors.warm)
+                // Rondje eromheen, zoals de mockup: het losse maantje zweefde in de
+                // kaart zonder gewicht naast de titel ernaast.
+                Circle()
+                    .fill(BovexaTheme.Colors.warm.opacity(0.16))
+                    .frame(width: 52, height: 52)
+                    .overlay {
+                        Image(systemName: "moon.stars.fill")
+                            .font(.system(size: 24))
+                            .foregroundStyle(BovexaTheme.Colors.warm)
+                    }
 
                 VStack(alignment: .leading, spacing: 2) {
                     Text("Dag is rond")

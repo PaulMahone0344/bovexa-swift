@@ -19,6 +19,19 @@ enum BovexaTheme {
         }
     }
 
+    /// Symbool per categorie, voor het icoonrondje in de tijdlijn op Vandaag.
+    /// Een kleurstreep alleen zegt pas iets als je de legenda kent; een icoon
+    /// vertelt zonder lezen wat voor soort afspraak het is.
+    static func categorySymbol(for category: Category) -> String {
+        switch category {
+        case .focus: return "target"
+        case .work: return "briefcase.fill"
+        case .social: return "person.2.fill"
+        case .body: return "heart.fill"
+        case .afwezig: return "beach.umbrella.fill"
+        }
+    }
+
     enum Colors {
         // Achtergrond — v5 "daglicht in blauw": lichtblauwe mist bovenin die naar
         // parelwit met een mintzweem onderin zakt. Het glas heeft kleurverschil

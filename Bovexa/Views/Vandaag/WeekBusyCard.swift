@@ -23,9 +23,7 @@ struct WeekBusyCard: View {
     var body: some View {
         GlassCard(emphasis: .quiet) {
             VStack(alignment: .leading, spacing: BovexaTheme.Space.md) {
-                Text("Deze week")
-                    .font(BovexaTheme.TypeStyle.headline)
-                    .foregroundStyle(BovexaTheme.Colors.ink)
+                SectionHeading(title: "Deze week", systemImage: "chart.line.uptrend.xyaxis")
 
                 HStack(alignment: .bottom, spacing: BovexaTheme.Space.sm) {
                     ForEach(Array(labels.enumerated()), id: \.offset) { index, label in
