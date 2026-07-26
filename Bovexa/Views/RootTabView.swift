@@ -56,6 +56,22 @@ struct RootTabView: View {
         }
     }
 
+    /// De tabbalk kreeg standaard systeemglas: op de lichte ondergrond werd dat
+    /// een bijna doorzichtige plaat waar de kaarten dwars doorheen liepen. Deze
+    /// opmaak geeft hem hetzelfde vlak als een GlassCard — parelwit met een
+    /// zweem doorschijnendheid, een lichte rand erboven en dezelfde
+    /// blauwgrijze schaduw — zodat hij als één kaart onder de inhoud ligt.
+    private static func applyTabBarAppearance() {
+        let appearance = UITabBarAppearance()
+        appearance.configureWithTransparentBackground()
+        appearance.backgroundEffect = UIBlurEffect(style: .systemThinMaterialLight)
+        appearance.backgroundColor = UIColor(BovexaTheme.Colors.floatingSurface.opacity(0.82))
+        appearance.shadowColor = UIColor(BovexaTheme.Colors.edge)
+
+        UITabBar.appearance().standardAppearance = appearance
+        UITabBar.appearance().scrollEdgeAppearance = appearance
+    }
+
     var body: some View {
         // Elk schermtype (VandaagView/AgendaView/DagtakenView/BedrijfView/ProfielView)
         // bevat al zijn eigen `AppBackground()` — dus geen extra achtergrond hier
@@ -92,6 +108,7 @@ struct RootTabView: View {
         }
         .tint(BovexaTheme.Colors.blue)
         .tabBarMinimizeBehavior(.onScrollDown)
+        .onAppear { Self.applyTabBarAppearance() }
         .onChange(of: joinCoordinator.outcome) { _, outcome in
             guard outcome == .joined else { return }
             Haptics.success()
