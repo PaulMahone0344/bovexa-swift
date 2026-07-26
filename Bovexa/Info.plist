@@ -31,6 +31,8 @@
 	</array>
 	<key>CFBundleVersion</key>
 	<string>1</string>
+	<key>NSCalendarsFullAccessUsageDescription</key>
+	<string>Bovexa Flow kan agenda's van je toestel uitlezen om afspraken uit een andere agenda te tonen.</string>
 	<key>NSCalendarsWriteOnlyAccessUsageDescription</key>
 	<string>Bovexa Flow kan nieuwe afspraken ook in je iPhone Agenda zetten.</string>
 	<key>NSMicrophoneUsageDescription</key>

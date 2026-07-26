@@ -17,6 +17,7 @@ targets:
         UILaunchScreen: {}
         UISupportedInterfaceOrientations: [UIInterfaceOrientationPortrait]
         NSCalendarsWriteOnlyAccessUsageDescription: Bovexa Flow kan nieuwe afspraken ook in je iPhone Agenda zetten.
+        NSCalendarsFullAccessUsageDescription: Bovexa Flow kan agenda's van je toestel uitlezen om afspraken uit een andere agenda te tonen.
         NSSpeechRecognitionUsageDescription: Bovexa Flow gebruikt spraakherkenning om je planning te dicteren.
         NSMicrophoneUsageDescription: Bovexa Flow gebruikt de microfoon om je planning te dicteren.
         CFBundleURLTypes:
