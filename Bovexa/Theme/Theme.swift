@@ -87,6 +87,12 @@ enum BovexaTheme {
         /// direct op de ondergrond; wel duidelijk ondergeschikt aan `inkSoft`.
         static let gridHour = Color(hex: "#3E5470")
 
+        /// Vlak voor besturing die boven scrollende inhoud zweeft, zoals de
+        /// plan-pill onder de Agenda. Moet dekkend zijn: op `glass` (wit 52%) las
+        /// de kalender dwars door de pill heen en was niet te zien waar je moest
+        /// tikken. Geen transparantie, dus geen doorschijnende datums.
+        static let floatingSurface = Color(hex: "#F7FAFD")
+
         // navbar-chrome
         static let navSurface = Color.white.opacity(0.88)
         static let navBorder = Color.white.opacity(0.68)

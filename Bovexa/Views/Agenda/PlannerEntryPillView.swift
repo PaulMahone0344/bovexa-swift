@@ -93,10 +93,12 @@ struct PlannerEntryPillView: View {
         }
         .padding(.horizontal, BovexaTheme.Space.md)
         .padding(.vertical, BovexaTheme.Space.sm)
-        .background(BovexaTheme.Colors.glass)
+        .background(BovexaTheme.Colors.floatingSurface)
         .clipShape(Capsule())
         .overlay(Capsule().strokeBorder(BovexaTheme.Colors.edge, lineWidth: 1))
-        .shadow(color: BovexaTheme.Shadow.softColor.opacity(0.16), radius: 16, x: 0, y: 9)
+        // Zwaardere schaduw dan een gewone kaart: de pill zweeft boven de
+        // kalender en moet daar los van staan nu hij dekkend is.
+        .shadow(color: BovexaTheme.Shadow.softColor.opacity(0.28), radius: 18, x: 0, y: 10)
         .padding(.horizontal, BovexaTheme.Space.lg)
         .padding(.bottom, BovexaTheme.Space.sm)
     }
