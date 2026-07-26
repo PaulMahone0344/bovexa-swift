@@ -42,6 +42,11 @@ struct AgendaView: View {
         .onAppear {
             Task { await refresh() }
         }
+        // Het venster van de externe agenda loopt één maand vóór en ná de getoonde
+        // maand; blader je verder, dan moet dat venster mee.
+        .onChange(of: viewModel.displayedMonth) { _, _ in
+            Task { await viewModel.refreshExternalForDisplayedMonth() }
+        }
         .onChange(of: speech.transcript) { _, transcript in
             if !transcript.isEmpty { pillText = transcript }
         }

@@ -120,4 +120,51 @@ struct AgendaViewModelTests {
         #expect(viewModel.events.contains { $0.id == "a" && $0.isExternal == false })
         #expect(viewModel.events.contains { $0.isExternal == true })
     }
+
+    /// Het venster van de externe agenda loopt één maand vóór en ná de getoonde
+    /// maand. Bladert de gebruiker verder, dan moet dat venster meelopen — anders
+    /// verdwijnen de externe afspraken zonder uitleg terwijl de eigen blijven staan.
+    @Test func browsingToAnotherMonthRefetchesExternalEventsAndKeepsOwn() async {
+        URLProtocolStub.requestHandler = { request in
+            let path = request.url!.path
+            if path.contains("agenda_labels") {
+                return (200, """
+                {"items":[],"page":1,"perPage":200,"totalItems":0,"totalPages":0}
+                """.data(using: .utf8)!)
+            }
+            if path.contains("agenda_events") {
+                return (200, """
+                {"items":[{"id":"a","owner":"me","title":"Eigen","start":"2026-07-24 09:00:00.000Z","all_day":false}],
+                 "page":1,"perPage":200,"totalItems":1,"totalPages":1}
+                """.data(using: .utf8)!)
+            }
+            return (200, """
+            {"items":[],"org":null}
+            """.data(using: .utf8)!)
+        }
+        let reader = FakeDeviceCalendarReader()
+        reader.calendars = [DeviceCalendarInfo(id: "cal1", title: "Werk")]
+        reader.eventsToReturn = [
+            DeviceCalendarEvent(id: "ev1", calendarId: "cal1", calendarTitle: "Werk", title: "Overleg", startDate: Date(), endDate: Date(), isAllDay: false, location: nil, notes: nil)
+        ]
+        let defaults = makeDefaults()
+        ExternalCalendarSelectionPreference.setSelectedIds(["cal1"], defaults: defaults)
+        let viewModel = AgendaViewModel(
+            repository: EventRepository(client: PBClient(session: URLProtocolStub.makeSession())),
+            labelRepository: LabelRepository(client: PBClient(session: URLProtocolStub.makeSession())),
+            externalCalendarService: ExternalCalendarService(reader: reader),
+            defaults: defaults
+        )
+        await viewModel.load(userId: "me", orgId: "org1", token: "tok")
+
+        reader.eventsToReturn = [
+            DeviceCalendarEvent(id: "ev2", calendarId: "cal1", calendarTitle: "Werk", title: "Volgende maand", startDate: Date(), endDate: Date(), isAllDay: false, location: nil, notes: nil)
+        ]
+        viewModel.goToNextMonth()
+        await viewModel.refreshExternalForDisplayedMonth()
+
+        #expect(viewModel.events.contains { $0.id == "a" && $0.isExternal == false })
+        #expect(viewModel.events.contains { $0.title == "Volgende maand" })
+        #expect(!viewModel.events.contains { $0.title == "Overleg" })
+    }
 }

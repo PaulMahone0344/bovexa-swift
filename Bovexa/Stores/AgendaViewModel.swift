@@ -11,6 +11,9 @@ struct DaySheetTarget: Identifiable, Equatable {
 final class AgendaViewModel: ObservableObject {
     @Published private(set) var viewKind: AgendaViewKind
     @Published private(set) var events: [AgendaEvent] = []
+    /// Alleen de eigen afspraken, zonder de externe erbij — nodig om bij het
+    /// bladeren opnieuw te kunnen samenvoegen zonder de server te bevragen.
+    private var ownEvents: [AgendaEvent] = []
     @Published private(set) var isLoading = false
     @Published private(set) var hasLoadedOnce = false
     @Published var displayedMonth: Date
@@ -70,7 +73,7 @@ final class AgendaViewModel: ObservableObject {
             calendarIds: ExternalCalendarSelectionPreference.selectedIds(defaults: defaults)
         )
 
-        let ownEvents = await eventsResult ?? []
+        ownEvents = await eventsResult ?? []
         events = ExternalCalendarMerge.merge(ownEvents, external: await externalResult)
         if let members = await membersResult {
             memberColors.prime(members: members.items, org: members.org)
@@ -99,6 +102,19 @@ final class AgendaViewModel: ObservableObject {
     func backToMonth() {
         displayedMonth = dayViewFocusDate
         setViewKind(preference.load())
+    }
+
+    /// De externe agenda wordt maar één maand vóór en ná de getoonde maand opgehaald
+    /// (valkuil G). Blader je verder, dan moet dat venster mee — anders zie je je
+    /// eigen afspraken wél en die uit de externe agenda niet, zonder dat iets
+    /// uitlegt waarom. De eigen afspraken zijn al volledig geladen en worden hier
+    /// niet opnieuw opgehaald.
+    func refreshExternalForDisplayedMonth() async {
+        let external = await externalCalendarService.events(
+            in: ExternalCalendarMerge.fetchInterval(around: displayedMonth),
+            calendarIds: ExternalCalendarSelectionPreference.selectedIds(defaults: defaults)
+        )
+        events = ExternalCalendarMerge.merge(ownEvents, external: external)
     }
 
     func goToPreviousMonth(calendar: Calendar = .current) {
