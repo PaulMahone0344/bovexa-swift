@@ -12,12 +12,14 @@ struct EventHelpersTests {
 
     private func makeEvent(
         id: String = "ev1", owner: String = "u1", calendar: String? = nil,
-        category: BovexaTheme.Category? = nil, start: Date, end: Date? = nil, label: String? = nil
+        category: BovexaTheme.Category? = nil, start: Date, end: Date? = nil, label: String? = nil,
+        isExternal: Bool = false
     ) -> AgendaEvent {
         AgendaEvent(
             id: id, owner: owner, calendar: calendar, category: category, title: "Test",
             start: start, end: end, allDay: false, recurrence: nil, location: nil, notes: nil,
-            klantNaam: nil, assigneeStatus: [:], seriesId: nil, occurrenceDate: nil, label: label
+            klantNaam: nil, assigneeStatus: [:], seriesId: nil, occurrenceDate: nil, label: label,
+            isExternal: isExternal
         )
     }
 
@@ -94,6 +96,15 @@ struct EventHelpersTests {
         let store = LabelStore()
         let event = makeEvent(category: .social, start: date(2026, 7, 24), label: "verwijderd")
         #expect(EventHelpers.eventColor(event, labelStore: store) == BovexaTheme.categoryColor(for: .social))
+    }
+
+    // MARK: - eventColor voor externe events (m9 plak 4, valkuil D)
+
+    @Test func eventColorIsNeutralForExternalEventsEvenWithLabelOrCategory() {
+        let store = LabelStore()
+        store.prime(labels: [AgendaLabel(id: "l1", org: "org1", naam: "VSB", kleur: "#E08A3C", volgorde: 0)])
+        let event = makeEvent(category: .social, start: date(2026, 7, 24), label: "l1", isExternal: true)
+        #expect(EventHelpers.eventColor(event, labelStore: store) == BovexaTheme.Colors.muted)
     }
 
     @Test func eventColorWithNilLabelStoreIsUnchanged() {

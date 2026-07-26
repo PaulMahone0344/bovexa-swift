@@ -20,6 +20,25 @@ struct LegendeView: View {
         _viewModel = StateObject(wrappedValue: LegendeViewModel(userId: userId, org: org, token: token, labelStore: labelStore))
     }
 
+    /// Vaste regel "Externe agenda" onderaan (m9 plak 4, valkuil D) — niet aan te
+    /// tikken, niet te hernoemen, alleen zichtbaar als er ook echt een agenda
+    /// gekozen is op Profiel.
+    private var showsExternalCalendarRow: Bool {
+        !ExternalCalendarSelectionPreference.selectedIds().isEmpty
+    }
+
+    private var externalCalendarRow: some View {
+        HStack(spacing: 6) {
+            Circle()
+                .fill(BovexaTheme.Colors.muted)
+                .frame(width: 10, height: 10)
+            Text("Externe agenda")
+                .font(BovexaTheme.TypeStyle.footnote)
+                .foregroundStyle(BovexaTheme.Colors.inkSoft)
+                .lineLimit(1)
+        }
+    }
+
     var body: some View {
         GlassCard {
             VStack(alignment: .leading, spacing: BovexaTheme.Space.sm) {
@@ -34,9 +53,12 @@ struct LegendeView: View {
                     VStack(spacing: 0) {
                         ForEach(viewModel.labelStore.orderedLabels) { label in
                             labelRow(label)
-                            if label.id != viewModel.labelStore.orderedLabels.last?.id {
+                            if label.id != viewModel.labelStore.orderedLabels.last?.id || showsExternalCalendarRow {
                                 Divider().overlay(BovexaTheme.Colors.edgeSoft)
                             }
+                        }
+                        if showsExternalCalendarRow {
+                            externalCalendarRow.padding(.vertical, BovexaTheme.Space.xs)
                         }
                     }
                     newLabelButton
@@ -120,6 +142,9 @@ struct LegendeView: View {
                             .foregroundStyle(BovexaTheme.Colors.ink)
                             .lineLimit(1)
                     }
+                }
+                if showsExternalCalendarRow {
+                    externalCalendarRow
                 }
             }
             .padding(.vertical, 2)

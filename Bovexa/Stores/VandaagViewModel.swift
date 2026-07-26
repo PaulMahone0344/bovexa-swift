@@ -20,18 +20,23 @@ final class VandaagViewModel: ObservableObject {
 
     private let repository: EventRepository
     private let labelRepository: LabelRepository
+    private let externalCalendarService: ExternalCalendarService
+    private let defaults: UserDefaults
     private let now: () -> Date
 
     init(
         repository: EventRepository = EventRepository(), memberColors: MemberColors = MemberColors(),
         labelRepository: LabelRepository = LabelRepository(), labelStore: LabelStore = LabelStore(),
-        now: @escaping () -> Date = Date.init
+        externalCalendarService: ExternalCalendarService = ExternalCalendarService(),
+        now: @escaping () -> Date = Date.init, defaults: UserDefaults = .standard
     ) {
         self.repository = repository
         self.memberColors = memberColors
         self.labelRepository = labelRepository
         self.labelStore = labelStore
+        self.externalCalendarService = externalCalendarService
         self.now = now
+        self.defaults = defaults
     }
 
     func load(userId: String, orgId: String?, token: String) async {
@@ -43,6 +48,10 @@ final class VandaagViewModel: ObservableObject {
 
         async let eventsResult = try? repository.fetchAllEvents(userId: userId, orgId: orgId, token: token)
         async let membersResult = repository.listMembers(token: token)
+        async let externalResult = externalCalendarService.events(
+            in: ExternalCalendarMerge.fetchInterval(around: now()),
+            calendarIds: ExternalCalendarSelectionPreference.selectedIds(defaults: defaults)
+        )
 
         let events = await eventsResult ?? []
         if let members = await membersResult {
@@ -55,12 +64,16 @@ final class VandaagViewModel: ObservableObject {
             labelStore.prime(labels: labels)
         }
 
-        let today = EventHelpers.eventsOnDay(events, day: now()).sorted { $0.start < $1.start }
+        /// Valkuil E: externe events zijn zichtbaar in Vandaag (today/next), maar
+        /// tellen niet mee in de tellingen over eigen werk (aantal/uren/drukte-balk).
+        let ownToday = EventHelpers.eventsOnDay(events, day: now()).sorted { $0.start < $1.start }
+        let combined = ExternalCalendarMerge.merge(events, external: await externalResult)
+        let today = EventHelpers.eventsOnDay(combined, day: now()).sorted { $0.start < $1.start }
         todayEvents = today
         nextEvent = EventHelpers.nextUpcoming(today, now: now())
-        appointmentCount = VandaagStats.timedCount(today)
-        awayNote = VandaagStats.awayNote(today)
-        plannedHoursText = VandaagStats.formatHours(VandaagStats.plannedHours(today))
+        appointmentCount = VandaagStats.timedCount(ownToday)
+        awayNote = VandaagStats.awayNote(ownToday)
+        plannedHoursText = VandaagStats.formatHours(VandaagStats.plannedHours(ownToday))
         weekBusyCounts = VandaagStats.weekBusyCounts(events, referenceDate: now())
     }
 

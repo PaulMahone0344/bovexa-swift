@@ -23,6 +23,8 @@ final class AgendaViewModel: ObservableObject {
     private let repository: EventRepository
     private let labelRepository: LabelRepository
     private let preference: AgendaViewPreference
+    private let externalCalendarService: ExternalCalendarService
+    private let defaults: UserDefaults
     private let now: () -> Date
 
     init(
@@ -31,6 +33,8 @@ final class AgendaViewModel: ObservableObject {
         labelRepository: LabelRepository = LabelRepository(),
         labelStore: LabelStore = LabelStore(),
         preference: AgendaViewPreference = AgendaViewPreference(),
+        externalCalendarService: ExternalCalendarService = ExternalCalendarService(),
+        defaults: UserDefaults = .standard,
         now: @escaping () -> Date = Date.init
     ) {
         self.repository = repository
@@ -38,6 +42,8 @@ final class AgendaViewModel: ObservableObject {
         self.labelRepository = labelRepository
         self.labelStore = labelStore
         self.preference = preference
+        self.externalCalendarService = externalCalendarService
+        self.defaults = defaults
         self.now = now
         let today = now()
         viewKind = preference.load()
@@ -59,8 +65,13 @@ final class AgendaViewModel: ObservableObject {
 
         async let eventsResult = try? repository.fetchAllEvents(userId: userId, orgId: orgId, token: token)
         async let membersResult = repository.listMembers(token: token)
+        async let externalResult = externalCalendarService.events(
+            in: ExternalCalendarMerge.fetchInterval(around: displayedMonth),
+            calendarIds: ExternalCalendarSelectionPreference.selectedIds(defaults: defaults)
+        )
 
-        events = await eventsResult ?? []
+        let ownEvents = await eventsResult ?? []
+        events = ExternalCalendarMerge.merge(ownEvents, external: await externalResult)
         if let members = await membersResult {
             memberColors.prime(members: members.items, org: members.org)
         }

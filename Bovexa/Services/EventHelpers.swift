@@ -13,6 +13,12 @@ enum EventHelpers {
     /// anders (geen label, of een verwijderd label) exact het oude gedrag — dat
     /// mag voor bestaande data niet veranderen (valkuil H).
     static func eventColor(_ event: AgendaEvent, labelStore: LabelStore? = nil) -> Color {
+        // Valkuil D: één neutrale, gedempte behandeling voor externe events, overal
+        // hetzelfde — nooit een labelkleur (die betekent "soort werk", dit is een
+        // andere bron).
+        if event.isExternal {
+            return BovexaTheme.Colors.muted
+        }
         if let labelColor = labelStore?.color(for: event.label) {
             return labelColor
         }

@@ -121,4 +121,76 @@ struct VandaagViewModelTests {
         #expect(viewModel.todayEvents.isEmpty)
         #expect(viewModel.hasLoadedOnce == true)
     }
+
+    // MARK: - Externe agenda's (m9 plak 4, valkuil E)
+
+    private func makeDefaults() -> UserDefaults {
+        let suiteName = "bovexa-tests-\(UUID().uuidString)"
+        let defaults = UserDefaults(suiteName: suiteName)!
+        defaults.removePersistentDomain(forName: suiteName)
+        return defaults
+    }
+
+    @Test func externalEventsAppearInTodayEventsButNotInStats() async {
+        URLProtocolStub.requestHandler = { request in
+            if request.url!.path.contains("agenda_events") {
+                let json = """
+                {"items":[
+                  {"id":"a","owner":"me","title":"Ochtend","start":"2026-07-24 09:00:00.000Z","end":"2026-07-24 10:00:00.000Z","all_day":false}
+                ],"page":1,"perPage":200,"totalItems":1,"totalPages":1}
+                """.data(using: .utf8)!
+                return (200, json)
+            }
+            return (400, """
+            {"data":{},"message":"Geen bedrijf gekoppeld.","status":400}
+            """.data(using: .utf8)!)
+        }
+        let reader = FakeDeviceCalendarReader()
+        reader.calendars = [DeviceCalendarInfo(id: "cal1", title: "Werk")]
+        reader.eventsToReturn = [
+            DeviceCalendarEvent(id: "ev1", calendarId: "cal1", calendarTitle: "Werk", title: "Overleg", startDate: utcNow("2026-07-24 13:00:00.000Z"), endDate: utcNow("2026-07-24 14:00:00.000Z"), isAllDay: false, location: nil, notes: nil)
+        ]
+        let defaults = makeDefaults()
+        ExternalCalendarSelectionPreference.setSelectedIds(["cal1"], defaults: defaults)
+        let repository = EventRepository(client: PBClient(session: URLProtocolStub.makeSession()))
+        let viewModel = VandaagViewModel(
+            repository: repository, memberColors: MemberColors(),
+            externalCalendarService: ExternalCalendarService(reader: reader),
+            now: { self.utcNow("2026-07-24 11:30:00.000Z") }, defaults: defaults
+        )
+
+        await viewModel.load(userId: "me", orgId: nil, token: "tok")
+
+        #expect(viewModel.todayEvents.map(\.isExternal) == [false, true])
+        #expect(viewModel.appointmentCount == 1)
+    }
+
+    @Test func noExternalCalendarSelectedLeavesTodayEventsUnchanged() async {
+        URLProtocolStub.requestHandler = { request in
+            if request.url!.path.contains("agenda_events") {
+                let json = """
+                {"items":[{"id":"a","owner":"me","title":"Ochtend","start":"2026-07-24 09:00:00.000Z","all_day":false}],
+                 "page":1,"perPage":200,"totalItems":1,"totalPages":1}
+                """.data(using: .utf8)!
+                return (200, json)
+            }
+            return (400, """
+            {"data":{},"message":"Geen bedrijf gekoppeld.","status":400}
+            """.data(using: .utf8)!)
+        }
+        let reader = FakeDeviceCalendarReader()
+        reader.eventsToReturn = [
+            DeviceCalendarEvent(id: "ev1", calendarId: "cal1", calendarTitle: "Werk", title: "Overleg", startDate: utcNow("2026-07-24 13:00:00.000Z"), endDate: utcNow("2026-07-24 14:00:00.000Z"), isAllDay: false, location: nil, notes: nil)
+        ]
+        let repository = EventRepository(client: PBClient(session: URLProtocolStub.makeSession()))
+        let viewModel = VandaagViewModel(
+            repository: repository, memberColors: MemberColors(),
+            externalCalendarService: ExternalCalendarService(reader: reader),
+            now: { self.utcNow("2026-07-24 11:30:00.000Z") }, defaults: makeDefaults()
+        )
+
+        await viewModel.load(userId: "me", orgId: nil, token: "tok")
+
+        #expect(viewModel.todayEvents.map(\.id) == ["a"])
+    }
 }

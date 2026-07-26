@@ -55,4 +55,69 @@ struct AgendaViewModelTests {
 
         #expect(viewModel.labelStore.orderedLabels.isEmpty)
     }
+
+    // MARK: - Externe agenda's (m9 plak 4, valkuil D/E/G)
+
+    private func makeDefaults() -> UserDefaults {
+        let suiteName = "bovexa-tests-\(UUID().uuidString)"
+        let defaults = UserDefaults(suiteName: suiteName)!
+        defaults.removePersistentDomain(forName: suiteName)
+        return defaults
+    }
+
+    @Test func noExternalCalendarSelectedLeavesEventsUnchanged() async {
+        stubEmptyEventsAndMembers(labelsJSON: """
+        {"items":[],"page":1,"perPage":200,"totalItems":0,"totalPages":0}
+        """)
+        let reader = FakeDeviceCalendarReader()
+        reader.calendars = [DeviceCalendarInfo(id: "cal1", title: "Werk")]
+        reader.eventsToReturn = [
+            DeviceCalendarEvent(id: "ev1", calendarId: "cal1", calendarTitle: "Werk", title: "Overleg", startDate: Date(), endDate: Date(), isAllDay: false, location: nil, notes: nil)
+        ]
+        let viewModel = AgendaViewModel(
+            repository: EventRepository(client: PBClient(session: URLProtocolStub.makeSession())),
+            labelRepository: LabelRepository(client: PBClient(session: URLProtocolStub.makeSession())),
+            externalCalendarService: ExternalCalendarService(reader: reader),
+            defaults: makeDefaults()
+        )
+        await viewModel.load(userId: "me", orgId: "org1", token: "tok")
+        #expect(viewModel.events.isEmpty)
+    }
+
+    @Test func selectedExternalCalendarAddsEventsWithoutTouchingOwnEvents() async {
+        URLProtocolStub.requestHandler = { request in
+            let path = request.url!.path
+            if path.contains("agenda_labels") {
+                return (200, """
+                {"items":[],"page":1,"perPage":200,"totalItems":0,"totalPages":0}
+                """.data(using: .utf8)!)
+            }
+            if path.contains("agenda_events") {
+                return (200, """
+                {"items":[{"id":"a","owner":"me","title":"Eigen","start":"2026-07-24 09:00:00.000Z","all_day":false}],
+                 "page":1,"perPage":200,"totalItems":1,"totalPages":1}
+                """.data(using: .utf8)!)
+            }
+            return (200, """
+            {"items":[],"org":null}
+            """.data(using: .utf8)!)
+        }
+        let reader = FakeDeviceCalendarReader()
+        reader.calendars = [DeviceCalendarInfo(id: "cal1", title: "Werk")]
+        reader.eventsToReturn = [
+            DeviceCalendarEvent(id: "ev1", calendarId: "cal1", calendarTitle: "Werk", title: "Overleg", startDate: Date(), endDate: Date(), isAllDay: false, location: nil, notes: nil)
+        ]
+        let defaults = makeDefaults()
+        ExternalCalendarSelectionPreference.setSelectedIds(["cal1"], defaults: defaults)
+        let viewModel = AgendaViewModel(
+            repository: EventRepository(client: PBClient(session: URLProtocolStub.makeSession())),
+            labelRepository: LabelRepository(client: PBClient(session: URLProtocolStub.makeSession())),
+            externalCalendarService: ExternalCalendarService(reader: reader),
+            defaults: defaults
+        )
+        await viewModel.load(userId: "me", orgId: "org1", token: "tok")
+        #expect(viewModel.events.count == 2)
+        #expect(viewModel.events.contains { $0.id == "a" && $0.isExternal == false })
+        #expect(viewModel.events.contains { $0.isExternal == true })
+    }
 }
