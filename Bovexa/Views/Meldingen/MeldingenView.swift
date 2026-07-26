@@ -84,10 +84,14 @@ struct MeldingenView: View {
         }
     }
 
+    /// Alleen tekenen als het invoerblok open is. Stond de `GlassCard` erbuiten,
+    /// dan zag een admin een leeg glasvlakje zweven zolang hij de plus niet had
+    /// aangetikt.
+    @ViewBuilder
     private var composeSection: some View {
-        GlassCard(emphasis: .quiet) {
-            VStack(alignment: .leading, spacing: BovexaTheme.Space.sm) {
-                if viewModel.composeOpen {
+        if viewModel.composeOpen {
+            GlassCard(emphasis: .quiet) {
+                VStack(alignment: .leading, spacing: BovexaTheme.Space.sm) {
                     Text("Nieuwe mededeling")
                         .font(BovexaTheme.TypeStyle.headline)
                         .foregroundStyle(BovexaTheme.Colors.ink)
