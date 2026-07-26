@@ -1,4 +1,5 @@
 import SwiftUI
+import UIKit
 
 /// Profiel-tab: begroeting, gebruikerskaart en navigatierijen. Vervangt
 /// `ProfielPlaceholderView`. Alle rijen zijn echt: Meldingen, Mijn klanten,
@@ -14,6 +15,8 @@ struct ProfielView: View {
     @State private var showWachtwoord = false
     @State private var showDeleteConfirm = false
     @State private var deleteFailed = false
+    @State private var externalCalendarLink = ""
+    @State private var externalCalendarLinkInvalid = false
 
     private var currentUser: AgendaUser? {
         if case .loggedIn(let user) = authStore.phase { return user }
@@ -182,28 +185,85 @@ struct ProfielView: View {
 
     private var deviceSyncRow: some View {
         GlassCard(padding: BovexaTheme.Space.md, emphasis: .quiet) {
-            HStack(spacing: BovexaTheme.Space.md) {
-                Image(systemName: "calendar.badge.clock")
-                    .font(.system(size: 18, weight: .medium))
-                    .foregroundStyle(BovexaTheme.Colors.accent)
-                    .frame(width: 32)
-                VStack(alignment: .leading, spacing: 2) {
-                    Text("iPhone Agenda-sync")
-                        .font(BovexaTheme.TypeStyle.subheadline.weight(.semibold))
-                        .foregroundStyle(BovexaTheme.Colors.ink)
-                    Text("Nieuwe afspraken ook in je iPhone Agenda zetten")
-                        .font(BovexaTheme.TypeStyle.caption)
-                        .foregroundStyle(BovexaTheme.Colors.muted)
+            VStack(alignment: .leading, spacing: BovexaTheme.Space.md) {
+                HStack(spacing: BovexaTheme.Space.md) {
+                    Image(systemName: "calendar.badge.clock")
+                        .font(.system(size: 18, weight: .medium))
+                        .foregroundStyle(BovexaTheme.Colors.accent)
+                        .frame(width: 32)
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("iPhone Agenda-sync")
+                            .font(BovexaTheme.TypeStyle.subheadline.weight(.semibold))
+                            .foregroundStyle(BovexaTheme.Colors.ink)
+                        Text("Nieuwe afspraken ook in je iPhone Agenda zetten")
+                            .font(BovexaTheme.TypeStyle.caption)
+                            .foregroundStyle(BovexaTheme.Colors.muted)
+                    }
+                    Spacer()
+                    Toggle("", isOn: Binding(
+                        get: { viewModel.deviceSyncEnabled },
+                        set: { viewModel.setDeviceSync($0) }
+                    ))
+                    .labelsHidden()
+                    .tint(BovexaTheme.Colors.teal)
                 }
-                Spacer()
-                Toggle("", isOn: Binding(
-                    get: { viewModel.deviceSyncEnabled },
-                    set: { viewModel.setDeviceSync($0) }
-                ))
-                .labelsHidden()
-                .tint(BovexaTheme.Colors.teal)
+
+                Divider().overlay(BovexaTheme.Colors.edgeSoft)
+
+                externalCalendarLinkRow
             }
         }
+    }
+
+    /// Losse agenda-link plakken en doorgeven aan iOS via webcal (m8, klantverzoek
+    /// 26 juli, variant A) — de app leest de feed zelf niet uit.
+    private var externalCalendarLinkRow: some View {
+        VStack(alignment: .leading, spacing: BovexaTheme.Space.xs) {
+            Text("Andere agenda toevoegen")
+                .font(BovexaTheme.TypeStyle.subheadline.weight(.semibold))
+                .foregroundStyle(BovexaTheme.Colors.ink)
+            Text("Plak een ICS- of webcal-link om 'm in je iPhone Agenda te abonneren")
+                .font(BovexaTheme.TypeStyle.caption)
+                .foregroundStyle(BovexaTheme.Colors.muted)
+
+            HStack(spacing: BovexaTheme.Space.xs) {
+                TextField("https://...", text: $externalCalendarLink)
+                    .keyboardType(.URL)
+                    .autocorrectionDisabled()
+                    .textInputAutocapitalization(.never)
+                    .padding(.horizontal, BovexaTheme.Space.md)
+                    .frame(minHeight: 40)
+                    .background(BovexaTheme.Colors.glass)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: BovexaTheme.Radius.md, style: .continuous)
+                            .strokeBorder(BovexaTheme.Colors.edge, lineWidth: 1)
+                    )
+                    .clipShape(RoundedRectangle(cornerRadius: BovexaTheme.Radius.md, style: .continuous))
+
+                Button {
+                    openExternalCalendarLink()
+                } label: {
+                    Image(systemName: "link")
+                }
+                .buttonStyle(.glassSecondaryBrand)
+            }
+        }
+        .alert("Ongeldige link", isPresented: $externalCalendarLinkInvalid) {
+            Button("OK", role: .cancel) {}
+        } message: {
+            Text("Dit is geen geldige agenda-link. Controleer de link en probeer het opnieuw.")
+        }
+    }
+
+    private func openExternalCalendarLink() {
+        Haptics.selection()
+        guard let url = WebcalLinkConverter.convert(externalCalendarLink) else {
+            if !externalCalendarLink.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                externalCalendarLinkInvalid = true
+            }
+            return
+        }
+        UIApplication.shared.open(url)
     }
 
     @ViewBuilder
