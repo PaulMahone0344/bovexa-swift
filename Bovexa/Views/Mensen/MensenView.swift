@@ -178,7 +178,7 @@ struct MensenView: View {
                 Text(member.displayName)
                     .font(BovexaTheme.TypeStyle.subheadline.weight(.bold))
                     .foregroundStyle(BovexaTheme.Colors.inkSoft)
-                Text("Toegewezen aan afspraken")
+                Text(MemberSubtitle.text(for: member, currentUserId: userId))
                     .font(BovexaTheme.TypeStyle.caption)
                     .foregroundStyle(BovexaTheme.Colors.muted)
             }
