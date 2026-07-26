@@ -7,6 +7,7 @@ struct DaySheetView: View {
     let events: [AgendaEvent]
     let currentUserId: String
     @ObservedObject var memberColors: MemberColors
+    @ObservedObject var labelStore: LabelStore
     let onOpenDay: () -> Void
     let onSelectEvent: (AgendaEvent) -> Void
     var onPlanAppointment: () -> Void = {}
@@ -47,7 +48,7 @@ struct DaySheetView: View {
                                             Haptics.selection()
                                             onSelectEvent(event)
                                         } label: {
-                                            AppointmentRow(event: event, currentUserId: currentUserId, memberColors: memberColors)
+                                            AppointmentRow(event: event, currentUserId: currentUserId, memberColors: memberColors, labelStore: labelStore)
                                         }
                                         .buttonStyle(.plain)
 

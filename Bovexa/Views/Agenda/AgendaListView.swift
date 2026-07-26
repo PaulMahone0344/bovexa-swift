@@ -33,7 +33,7 @@ struct AgendaListView: View {
                                             Haptics.selection()
                                             selectedEvent = event
                                         } label: {
-                                            AppointmentRow(event: event, currentUserId: currentUserId, memberColors: viewModel.memberColors)
+                                            AppointmentRow(event: event, currentUserId: currentUserId, memberColors: viewModel.memberColors, labelStore: viewModel.labelStore)
                                         }
                                         .buttonStyle(.plain)
 

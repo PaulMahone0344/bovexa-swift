@@ -27,6 +27,9 @@ struct AgendaEvent: Decodable, Identifiable {
     let assignee: [String]
     let reminderMin: Int?
     let klantTelefoon: String?
+    /// Label-id (m7, agenda_labels). Ontbreekt of verwijst niet meer naar een
+    /// bestaand label: EventHelpers.eventColor valt dan netjes terug (valkuil H).
+    let label: String?
 
     init(
         id: String, owner: String, calendar: String?, category: BovexaTheme.Category?,
@@ -34,7 +37,8 @@ struct AgendaEvent: Decodable, Identifiable {
         location: String?, notes: String?, klantNaam: String?,
         assigneeStatus: [String: String], seriesId: String?, occurrenceDate: String?,
         org: String? = nil, visibilityRaw: String? = nil, viewers: [String] = [],
-        assignee: [String] = [], reminderMin: Int? = nil, klantTelefoon: String? = nil
+        assignee: [String] = [], reminderMin: Int? = nil, klantTelefoon: String? = nil,
+        label: String? = nil
     ) {
         self.id = id
         self.owner = owner
@@ -57,6 +61,7 @@ struct AgendaEvent: Decodable, Identifiable {
         self.assignee = assignee
         self.reminderMin = reminderMin
         self.klantTelefoon = klantTelefoon
+        self.label = label
     }
 
     /// Kopie met andere id/tijd/serie — gebruikt door RecurrenceExpander om een
@@ -68,7 +73,7 @@ struct AgendaEvent: Decodable, Identifiable {
             notes: notes, klantNaam: klantNaam, assigneeStatus: assigneeStatus,
             seriesId: seriesId, occurrenceDate: occurrenceDate,
             org: org, visibilityRaw: visibilityRaw, viewers: viewers,
-            assignee: assignee, reminderMin: reminderMin, klantTelefoon: klantTelefoon
+            assignee: assignee, reminderMin: reminderMin, klantTelefoon: klantTelefoon, label: label
         )
     }
 
@@ -81,7 +86,7 @@ struct AgendaEvent: Decodable, Identifiable {
             notes: notes, klantNaam: klantNaam, assigneeStatus: assigneeStatus,
             seriesId: seriesId, occurrenceDate: occurrenceDate,
             org: org, visibilityRaw: visibilityRaw, viewers: viewers,
-            assignee: assignee, reminderMin: reminderMin, klantTelefoon: klantTelefoon
+            assignee: assignee, reminderMin: reminderMin, klantTelefoon: klantTelefoon, label: label
         )
     }
 
@@ -94,7 +99,20 @@ struct AgendaEvent: Decodable, Identifiable {
             notes: notes, klantNaam: klantNaam, assigneeStatus: assigneeStatus,
             seriesId: seriesId, occurrenceDate: occurrenceDate,
             org: org, visibilityRaw: visibilityRaw, viewers: viewers,
-            assignee: assignee, reminderMin: reminderMin, klantTelefoon: klantTelefoon
+            assignee: assignee, reminderMin: reminderMin, klantTelefoon: klantTelefoon, label: label
+        )
+    }
+
+    /// Kopie met ander label — voor optimistische UI-updates bij het kiezen van
+    /// een label in EventEditor/planner-bevestiging (m7).
+    func withLabel(_ label: String?) -> AgendaEvent {
+        AgendaEvent(
+            id: id, owner: owner, calendar: calendar, category: category, title: title,
+            start: start, end: end, allDay: allDay, recurrence: recurrence, location: location,
+            notes: notes, klantNaam: klantNaam, assigneeStatus: assigneeStatus,
+            seriesId: seriesId, occurrenceDate: occurrenceDate,
+            org: org, visibilityRaw: visibilityRaw, viewers: viewers,
+            assignee: assignee, reminderMin: reminderMin, klantTelefoon: klantTelefoon, label: label
         )
     }
 
@@ -111,6 +129,7 @@ struct AgendaEvent: Decodable, Identifiable {
         case viewers, assignee
         case reminderMin = "reminder_min"
         case klantTelefoon = "klant_telefoon"
+        case label
     }
 
     init(from decoder: Decoder) throws {
@@ -139,6 +158,7 @@ struct AgendaEvent: Decodable, Identifiable {
         assignee = Self.decodeAssigneeIds(c)
         reminderMin = Self.decodeOptional(c, .reminderMin)
         klantTelefoon = Self.decodeOptional(c, .klantTelefoon)
+        label = Self.decodeOptional(c, .label)
     }
 
     /// Ontbrekende sleutel, null, of een onverwacht type → nil in plaats van crash.

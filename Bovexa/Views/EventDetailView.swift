@@ -7,6 +7,7 @@ import SwiftUI
 struct EventDetailView: View {
     @StateObject private var viewModel: EventDetailViewModel
     @ObservedObject var memberColors: MemberColors
+    @ObservedObject var labelStore: LabelStore
     @Environment(\.dismiss) private var dismiss
 
     @State private var showDeleteConfirm = false
@@ -15,11 +16,12 @@ struct EventDetailView: View {
 
     private let token: String
 
-    init(event: AgendaEvent, currentUserId: String, currentUserOrgId: String?, token: String, memberColors: MemberColors) {
+    init(event: AgendaEvent, currentUserId: String, currentUserOrgId: String?, token: String, memberColors: MemberColors, labelStore: LabelStore) {
         _viewModel = StateObject(wrappedValue: EventDetailViewModel(
             event: event, currentUserId: currentUserId, currentUserOrgId: currentUserOrgId, token: token
         ))
         self.memberColors = memberColors
+        self.labelStore = labelStore
         self.token = token
     }
 
@@ -119,7 +121,7 @@ struct EventDetailView: View {
             VStack(alignment: .leading, spacing: BovexaTheme.Space.md) {
                 HStack(spacing: BovexaTheme.Space.sm) {
                     Circle()
-                        .fill(EventHelpers.eventColor(event))
+                        .fill(EventHelpers.eventColor(event, labelStore: labelStore))
                         .frame(width: 12, height: 12)
                     Text(event.title)
                         .font(BovexaTheme.TypeStyle.title2)

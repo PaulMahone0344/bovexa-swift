@@ -30,6 +30,7 @@ struct MonthGridView: View {
                         cell: cell,
                         events: viewModel.eventsOnDay(cell.date),
                         density: viewModel.viewKind,
+                        labelStore: viewModel.labelStore,
                         onTap: {
                             Haptics.selection()
                             viewModel.openDaySheet(cell.date)

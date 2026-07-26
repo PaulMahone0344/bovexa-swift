@@ -16,13 +16,21 @@ final class VandaagViewModel: ObservableObject {
     @Published private(set) var orgLogoURL: URL?
 
     let memberColors: MemberColors
+    let labelStore: LabelStore
 
     private let repository: EventRepository
+    private let labelRepository: LabelRepository
     private let now: () -> Date
 
-    init(repository: EventRepository = EventRepository(), memberColors: MemberColors = MemberColors(), now: @escaping () -> Date = Date.init) {
+    init(
+        repository: EventRepository = EventRepository(), memberColors: MemberColors = MemberColors(),
+        labelRepository: LabelRepository = LabelRepository(), labelStore: LabelStore = LabelStore(),
+        now: @escaping () -> Date = Date.init
+    ) {
         self.repository = repository
         self.memberColors = memberColors
+        self.labelRepository = labelRepository
+        self.labelStore = labelStore
         self.now = now
     }
 
@@ -42,6 +50,9 @@ final class VandaagViewModel: ObservableObject {
             orgLogoURL = Self.logoURL(for: members.org)
         } else {
             orgLogoURL = nil
+        }
+        if let orgId, let labels = try? await labelRepository.fetchLabels(orgId: orgId, token: token) {
+            labelStore.prime(labels: labels)
         }
 
         let today = EventHelpers.eventsOnDay(events, day: now()).sorted { $0.start < $1.start }

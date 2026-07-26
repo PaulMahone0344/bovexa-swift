@@ -10,6 +10,7 @@ struct AppointmentRow: View {
     let event: AgendaEvent
     let currentUserId: String
     @ObservedObject var memberColors: MemberColors
+    @ObservedObject var labelStore: LabelStore
 
     private var isColleague: Bool { event.owner != currentUserId }
 
@@ -28,7 +29,7 @@ struct AppointmentRow: View {
                 .frame(width: 54, alignment: .leading)
 
             Capsule()
-                .fill(EventHelpers.eventColor(event))
+                .fill(EventHelpers.eventColor(event, labelStore: labelStore))
                 .frame(width: 6)
                 .frame(maxHeight: .infinity)
 

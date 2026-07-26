@@ -6,6 +6,7 @@ struct MonthDayCellView: View {
     let cell: MonthDayCell
     let events: [AgendaEvent]
     let density: AgendaViewKind
+    @ObservedObject var labelStore: LabelStore
     let onTap: () -> Void
 
     var body: some View {
@@ -49,7 +50,7 @@ struct MonthDayCellView: View {
         HStack(spacing: 2) {
             ForEach(Array(events.prefix(4).enumerated()), id: \.offset) { _, event in
                 Circle()
-                    .fill(EventHelpers.eventColor(event))
+                    .fill(EventHelpers.eventColor(event, labelStore: labelStore))
                     .frame(width: 5, height: 5)
             }
         }
@@ -60,7 +61,7 @@ struct MonthDayCellView: View {
         VStack(spacing: 2) {
             ForEach(Array(events.prefix(3).enumerated()), id: \.offset) { _, event in
                 RoundedRectangle(cornerRadius: 2)
-                    .fill(EventHelpers.eventColor(event))
+                    .fill(EventHelpers.eventColor(event, labelStore: labelStore))
                     .frame(height: 3)
             }
         }
@@ -85,7 +86,7 @@ struct MonthDayCellView: View {
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .padding(.horizontal, 3)
                     .padding(.vertical, 2)
-                    .background(EventHelpers.eventColor(event).opacity(chipOpacity(event)))
+                    .background(EventHelpers.eventColor(event, labelStore: labelStore).opacity(chipOpacity(event)))
                     .clipShape(RoundedRectangle(cornerRadius: 4, style: .continuous))
             }
             if result.overflow > 0 {

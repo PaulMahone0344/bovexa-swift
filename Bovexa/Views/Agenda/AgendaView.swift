@@ -59,6 +59,7 @@ struct AgendaView: View {
                     events: viewModel.eventsOnDay(target.day),
                     currentUserId: userId,
                     memberColors: viewModel.memberColors,
+                    labelStore: viewModel.labelStore,
                     onOpenDay: { viewModel.openDayView(target.day) },
                     onSelectEvent: { event in
                         viewModel.closeDaySheet()
@@ -168,7 +169,7 @@ struct AgendaView: View {
                 if let userId = currentUser?.id {
                     EventDetailView(
                         event: event, currentUserId: userId, currentUserOrgId: currentUser?.defaultOrg,
-                        token: authStore.token ?? "", memberColors: viewModel.memberColors
+                        token: authStore.token ?? "", memberColors: viewModel.memberColors, labelStore: viewModel.labelStore
                     )
                 }
             }
@@ -176,7 +177,8 @@ struct AgendaView: View {
                 if let userId = currentUser?.id {
                     SearchView(
                         userId: userId, orgId: currentUser?.defaultOrg, token: authStore.token ?? "",
-                        currentUserOrgId: currentUser?.defaultOrg, memberColors: viewModel.memberColors
+                        currentUserOrgId: currentUser?.defaultOrg, memberColors: viewModel.memberColors,
+                        labelStore: viewModel.labelStore
                     )
                 }
             }

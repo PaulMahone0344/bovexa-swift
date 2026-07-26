@@ -18,19 +18,25 @@ final class AgendaViewModel: ObservableObject {
     @Published var dayViewFocusDate: Date
 
     let memberColors: MemberColors
+    let labelStore: LabelStore
 
     private let repository: EventRepository
+    private let labelRepository: LabelRepository
     private let preference: AgendaViewPreference
     private let now: () -> Date
 
     init(
         repository: EventRepository = EventRepository(),
         memberColors: MemberColors = MemberColors(),
+        labelRepository: LabelRepository = LabelRepository(),
+        labelStore: LabelStore = LabelStore(),
         preference: AgendaViewPreference = AgendaViewPreference(),
         now: @escaping () -> Date = Date.init
     ) {
         self.repository = repository
         self.memberColors = memberColors
+        self.labelRepository = labelRepository
+        self.labelStore = labelStore
         self.preference = preference
         self.now = now
         let today = now()
@@ -57,6 +63,9 @@ final class AgendaViewModel: ObservableObject {
         events = await eventsResult ?? []
         if let members = await membersResult {
             memberColors.prime(members: members.items, org: members.org)
+        }
+        if let orgId, let labels = try? await labelRepository.fetchLabels(orgId: orgId, token: token) {
+            labelStore.prime(labels: labels)
         }
     }
 

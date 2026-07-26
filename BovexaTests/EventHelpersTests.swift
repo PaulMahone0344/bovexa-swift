@@ -1,5 +1,6 @@
 import Testing
 import Foundation
+import SwiftUI
 @testable import Bovexa
 
 struct EventHelpersTests {
@@ -11,12 +12,12 @@ struct EventHelpersTests {
 
     private func makeEvent(
         id: String = "ev1", owner: String = "u1", calendar: String? = nil,
-        category: BovexaTheme.Category? = nil, start: Date, end: Date? = nil
+        category: BovexaTheme.Category? = nil, start: Date, end: Date? = nil, label: String? = nil
     ) -> AgendaEvent {
         AgendaEvent(
             id: id, owner: owner, calendar: calendar, category: category, title: "Test",
             start: start, end: end, allDay: false, recurrence: nil, location: nil, notes: nil,
-            klantNaam: nil, assigneeStatus: [:], seriesId: nil, occurrenceDate: nil
+            klantNaam: nil, assigneeStatus: [:], seriesId: nil, occurrenceDate: nil, label: label
         )
     }
 
@@ -72,6 +73,32 @@ struct EventHelpersTests {
         let workEvent = makeEvent(calendar: "work", start: date(2026, 7, 24))
         #expect(EventHelpers.eventColor(privateEvent) == BovexaTheme.Colors.categoryBlue)
         #expect(EventHelpers.eventColor(workEvent) == BovexaTheme.Colors.teal)
+    }
+
+    // MARK: - eventColor met label (m7, valkuil C)
+
+    @Test func eventColorPrefersLabelColorOverCategory() {
+        let store = LabelStore()
+        store.prime(labels: [AgendaLabel(id: "l1", org: "org1", naam: "VSB", kleur: "#E08A3C", volgorde: 0)])
+        let event = makeEvent(category: .social, start: date(2026, 7, 24), label: "l1")
+        #expect(EventHelpers.eventColor(event, labelStore: store) == Color(hex: "#E08A3C"))
+    }
+
+    @Test func eventColorWithoutLabelIsUnchanged() {
+        let event = makeEvent(category: .social, start: date(2026, 7, 24))
+        let store = LabelStore()
+        #expect(EventHelpers.eventColor(event, labelStore: store) == BovexaTheme.categoryColor(for: .social))
+    }
+
+    @Test func eventColorWithUnknownLabelFallsBackToCategory() {
+        let store = LabelStore()
+        let event = makeEvent(category: .social, start: date(2026, 7, 24), label: "verwijderd")
+        #expect(EventHelpers.eventColor(event, labelStore: store) == BovexaTheme.categoryColor(for: .social))
+    }
+
+    @Test func eventColorWithNilLabelStoreIsUnchanged() {
+        let event = makeEvent(category: .social, start: date(2026, 7, 24), label: "l1")
+        #expect(EventHelpers.eventColor(event, labelStore: nil) == BovexaTheme.categoryColor(for: .social))
     }
 
     @Test func eventRecordIdUsesSeriesIdWhenPresentOtherwiseId() {

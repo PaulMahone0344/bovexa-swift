@@ -8,7 +8,14 @@ enum EventHelpers {
         "juli", "augustus", "september", "oktober", "november", "december",
     ]
 
-    static func eventColor(_ event: AgendaEvent) -> Color {
+    /// De ene plek waar de kleur van een afspraak bepaald wordt (m7, valkuil C).
+    /// Label wint als het event er één heeft én die nog bestaat in `labelStore`;
+    /// anders (geen label, of een verwijderd label) exact het oude gedrag — dat
+    /// mag voor bestaande data niet veranderen (valkuil H).
+    static func eventColor(_ event: AgendaEvent, labelStore: LabelStore? = nil) -> Color {
+        if let labelColor = labelStore?.color(for: event.label) {
+            return labelColor
+        }
         if let category = event.category {
             return BovexaTheme.categoryColor(for: category)
         }

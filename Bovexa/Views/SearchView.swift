@@ -4,6 +4,7 @@ import SwiftUI
 struct SearchView: View {
     @StateObject private var viewModel: SearchViewModel
     @ObservedObject var memberColors: MemberColors
+    @ObservedObject var labelStore: LabelStore
     @Environment(\.dismiss) private var dismiss
     @FocusState private var searchFocused: Bool
 
@@ -14,13 +15,14 @@ struct SearchView: View {
 
     @State private var selectedEvent: AgendaEvent?
 
-    init(userId: String, orgId: String?, token: String, currentUserOrgId: String?, memberColors: MemberColors) {
+    init(userId: String, orgId: String?, token: String, currentUserOrgId: String?, memberColors: MemberColors, labelStore: LabelStore) {
         _viewModel = StateObject(wrappedValue: SearchViewModel())
         self.userId = userId
         self.orgId = orgId
         self.token = token
         self.currentUserOrgId = currentUserOrgId
         self.memberColors = memberColors
+        self.labelStore = labelStore
     }
 
     var body: some View {
@@ -36,7 +38,7 @@ struct SearchView: View {
             .navigationTitle("Zoeken")
             .navigationBarTitleDisplayMode(.inline)
             .navigationDestination(item: $selectedEvent) { event in
-                EventDetailView(event: event, currentUserId: userId, currentUserOrgId: currentUserOrgId, token: token, memberColors: memberColors)
+                EventDetailView(event: event, currentUserId: userId, currentUserOrgId: currentUserOrgId, token: token, memberColors: memberColors, labelStore: labelStore)
             }
         }
         .task {
@@ -98,7 +100,7 @@ struct SearchView: View {
         GlassCard(radius: BovexaTheme.Radius.md, padding: BovexaTheme.Space.md) {
             HStack(spacing: BovexaTheme.Space.sm) {
                 Circle()
-                    .fill(EventHelpers.eventColor(event))
+                    .fill(EventHelpers.eventColor(event, labelStore: labelStore))
                     .frame(width: 9, height: 9)
                 VStack(alignment: .leading, spacing: 2) {
                     Text(event.title)

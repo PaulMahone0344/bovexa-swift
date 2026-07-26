@@ -81,7 +81,7 @@ struct VandaagView: View {
                 if let userId = currentUser?.id {
                     EventDetailView(
                         event: event, currentUserId: userId, currentUserOrgId: currentUser?.defaultOrg,
-                        token: authStore.token ?? "", memberColors: viewModel.memberColors
+                        token: authStore.token ?? "", memberColors: viewModel.memberColors, labelStore: viewModel.labelStore
                     )
                 }
             }
@@ -134,7 +134,7 @@ struct VandaagView: View {
                                 Haptics.selection()
                                 selectedEvent = event
                             } label: {
-                                AppointmentRow(event: event, currentUserId: userId, memberColors: viewModel.memberColors)
+                                AppointmentRow(event: event, currentUserId: userId, memberColors: viewModel.memberColors, labelStore: viewModel.labelStore)
                             }
                             .buttonStyle(.plain)
 

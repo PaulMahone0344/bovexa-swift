@@ -7,6 +7,7 @@ struct DayHourGridView: View {
     let events: [AgendaEvent]
     let currentUserId: String
     @ObservedObject var memberColors: MemberColors
+    @ObservedObject var labelStore: LabelStore
     let onSelectEvent: (AgendaEvent) -> Void
     var onLongPressEmptyHour: (Int) -> Void = { _ in }
 
@@ -53,7 +54,7 @@ struct DayHourGridView: View {
                             .foregroundStyle(BovexaTheme.Colors.ink)
                             .padding(.horizontal, BovexaTheme.Space.sm)
                             .padding(.vertical, 4)
-                            .glassEffect(.regular.tint(EventHelpers.eventColor(event).opacity(0.35)), in: .capsule)
+                            .glassEffect(.regular.tint(EventHelpers.eventColor(event, labelStore: labelStore).opacity(0.35)), in: .capsule)
                     }
                     .buttonStyle(.plain)
                 }
@@ -100,7 +101,7 @@ struct DayHourGridView: View {
                 Haptics.selection()
                 onSelectEvent(item.event)
             } label: {
-                EventBlockView(event: item.event, currentUserId: currentUserId, memberColors: memberColors)
+                EventBlockView(event: item.event, currentUserId: currentUserId, memberColors: memberColors, labelStore: labelStore)
             }
             .buttonStyle(.plain)
             .frame(width: max(columnWidth - 4, 24), height: max(hourHeight * durationMinutes / 60 - 2, 16), alignment: .topLeading)
@@ -122,11 +123,12 @@ private struct EventBlockView: View {
     let event: AgendaEvent
     let currentUserId: String
     @ObservedObject var memberColors: MemberColors
+    @ObservedObject var labelStore: LabelStore
 
     private var isColleague: Bool { event.owner != currentUserId }
 
     private var accent: Color {
-        isColleague ? memberColors.color(for: event.owner) : EventHelpers.eventColor(event)
+        isColleague ? memberColors.color(for: event.owner) : EventHelpers.eventColor(event, labelStore: labelStore)
     }
 
     private var shape: RoundedRectangle {
@@ -158,7 +160,7 @@ private struct EventBlockView: View {
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         }
         .glassEffect(
-            .regular.tint(EventHelpers.eventColor(event).opacity(0.28)),
+            .regular.tint(EventHelpers.eventColor(event, labelStore: labelStore).opacity(0.28)),
             in: shape
         )
         .clipShape(shape)

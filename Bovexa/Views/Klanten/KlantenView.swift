@@ -6,6 +6,7 @@ import SwiftUI
 struct KlantenView: View {
     @StateObject private var viewModel: KlantenViewModel
     @StateObject private var memberColors = MemberColors()
+    @StateObject private var labelStore = LabelStore()
     @Environment(\.dismiss) private var dismiss
     @State private var openKey: String?
     @State private var selectedEvent: AgendaEvent?
@@ -48,7 +49,7 @@ struct KlantenView: View {
             .navigationTitle("Klanten")
             .navigationBarTitleDisplayMode(.large)
             .navigationDestination(item: $selectedEvent) { event in
-                EventDetailView(event: event, currentUserId: userId, currentUserOrgId: currentUserOrgId, token: token, memberColors: memberColors)
+                EventDetailView(event: event, currentUserId: userId, currentUserOrgId: currentUserOrgId, token: token, memberColors: memberColors, labelStore: labelStore)
             }
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {

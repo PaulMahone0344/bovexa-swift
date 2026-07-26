@@ -32,6 +32,7 @@ struct DayView: View {
                                     events: viewModel.eventsOnDay(day),
                                     currentUserId: currentUserId,
                                     memberColors: viewModel.memberColors,
+                                    labelStore: viewModel.labelStore,
                                     onSelectEvent: { selectedEvent = $0 },
                                     onLongPressEmptyHour: { hour in onPlanAtHour(hour, day) }
                                 )
@@ -48,7 +49,7 @@ struct DayView: View {
             .navigationDestination(item: $selectedEvent) { event in
                 EventDetailView(
                     event: event, currentUserId: currentUserId, currentUserOrgId: currentUserOrgId,
-                    token: authStore.token ?? "", memberColors: viewModel.memberColors
+                    token: authStore.token ?? "", memberColors: viewModel.memberColors, labelStore: viewModel.labelStore
                 )
             }
         }
