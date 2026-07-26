@@ -32,16 +32,17 @@ enum VandaagStats {
         return Double(totalMinutes) / 60.0
     }
 
+    /// "9 uur 45" in plaats van "9,8 uur" (verzoek opdrachtgever 26 juli): een
+    /// decimaal uur moet je omrekenen voordat het iets zegt over je dag.
+    /// Losse minuten blijven "45 min"; "0 uur 45" leest als een fout.
     static func formatHours(_ hours: Double) -> String {
-        if hours == hours.rounded() {
-            return "\(Int(hours)) uur"
-        }
-        let formatter = NumberFormatter()
-        formatter.locale = Locale(identifier: "nl_NL")
-        formatter.minimumFractionDigits = 1
-        formatter.maximumFractionDigits = 1
-        formatter.roundingMode = .halfUp
-        return "\(formatter.string(from: NSNumber(value: hours)) ?? String(hours)) uur"
+        let totalMinutes = Int((hours * 60).rounded())
+        let wholeHours = totalMinutes / 60
+        let minutes = totalMinutes % 60
+
+        if wholeHours == 0 { return minutes == 0 ? "0 uur" : "\(minutes) min" }
+        if minutes == 0 { return "\(wholeHours) uur" }
+        return "\(wholeHours) uur \(minutes)"
     }
 
     /// Aantal afspraken per dag deze week, maandag eerst (index 0 = maandag ... 6 = zondag).

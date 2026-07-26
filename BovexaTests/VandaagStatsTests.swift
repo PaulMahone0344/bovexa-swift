@@ -88,8 +88,11 @@ struct VandaagStatsTests {
         #expect(VandaagStats.formatHours(2) == "2 uur")
     }
 
-    @Test func formatHoursShowsDutchCommaForFraction() {
-        #expect(VandaagStats.formatHours(1.5) == "1,5 uur")
+    /// 26 juli: uren en minuten in plaats van een decimaal uur — "9,8 uur" moest
+    /// je eerst omrekenen voordat het iets zei.
+    @Test func formatHoursShowsMinutesNotDecimals() {
+        #expect(VandaagStats.formatHours(1.5) == "1 uur 30")
+        #expect(VandaagStats.formatHours(9.75) == "9 uur 45")
     }
 
     @Test func weekBusyCountsGroupsMondayFirst() {

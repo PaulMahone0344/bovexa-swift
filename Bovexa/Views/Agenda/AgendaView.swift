@@ -14,9 +14,6 @@ struct AgendaView: View {
     @State private var showPlanner = false
     @State private var speechAlertMessage: String?
 
-    /// Anker om na een dag-tik naar het paneel onder de kalender te scrollen.
-    private static let dayPanelAnchor = "day-panel"
-
     private var currentUser: AgendaUser? {
         if case .loggedIn(let user) = authStore.phase { return user }
         return nil
@@ -62,6 +59,29 @@ struct AgendaView: View {
         } message: {
             Text(speechAlertMessage ?? "")
         }
+        // Terug naar een popup bij het kiezen van een dag (verzoek opdrachtgever
+        // 26 juli): het paneel onder de kalender vroeg om scrollen en duwde de
+        // maand omhoog. De inhoud is wél de nieuwe: met dagtotaal en plan-knop.
+        .sheet(item: $viewModel.daySheetTarget) { target in
+            if let userId = currentUser?.id {
+                DaySheetView(
+                    day: target.day,
+                    events: viewModel.eventsOnDay(target.day),
+                    currentUserId: userId,
+                    memberColors: viewModel.memberColors,
+                    labelStore: viewModel.labelStore,
+                    onOpenDay: { viewModel.openDayView(target.day) },
+                    onSelectEvent: { event in
+                        viewModel.closeDaySheet()
+                        selectedEvent = event
+                    },
+                    onPlanAppointment: {
+                        viewModel.closeDaySheet()
+                        openPlanner(seed: PlannerSlotSeed.forDay(target.day))
+                    }
+                )
+            }
+        }
         .sheet(isPresented: $showPlanner) {
             if let userId = currentUser?.id {
                 PlannerView(
@@ -96,33 +116,12 @@ struct AgendaView: View {
                             .padding(.horizontal, BovexaTheme.Space.xl)
                         AgendaListView(viewModel: viewModel, currentUserId: userId, now: Date.init, selectedEvent: $selectedEvent)
                     } else {
-                        ScrollViewReader { proxy in
                         ScrollView {
                             VStack(alignment: .leading, spacing: BovexaTheme.Space.lg) {
                                 agendaHeader
 
                                 MonthGridView(viewModel: viewModel, onYearTap: { showYearOverview = true })
 
-                                // Dagoverzicht onder de kalender in plaats van de
-                                // sheet die er tot 26 juli overheen schoof: de
-                                // blokjes in een maandcel zijn te klein om de dag
-                                // uit te lezen, en de ruimte hieronder stond leeg.
-                                if let target = viewModel.daySheetTarget, let userId = currentUser?.id {
-                                    DayPanelView(
-                                        day: target.day,
-                                        events: viewModel.eventsOnDay(target.day),
-                                        currentUserId: userId,
-                                        memberColors: viewModel.memberColors,
-                                        labelStore: viewModel.labelStore,
-                                        onOpenDay: { viewModel.openDayView(target.day) },
-                                        onSelectEvent: { event in selectedEvent = event },
-                                        onPlanAppointment: {
-                                            openPlanner(seed: PlannerSlotSeed.forDay(target.day))
-                                        }
-                                    )
-                                    .transition(.opacity.combined(with: .move(edge: .top)))
-                                    .id(Self.dayPanelAnchor)
-                                }
                             }
                             .padding(.horizontal, BovexaTheme.Space.xl)
                             .padding(.top, BovexaTheme.Space.xs)
@@ -131,16 +130,6 @@ struct AgendaView: View {
                             // door te lopen.
                             .padding(.bottom, BovexaTheme.Space.tabBarClearance)
                             .animation(.snappy(duration: 0.25), value: viewModel.daySheetTarget)
-                        }
-                        // Het paneel staat onder een volle maandkalender en viel
-                        // dus buiten beeld: je tikte een dag aan en zag niets
-                        // gebeuren.
-                        .onChange(of: viewModel.daySheetTarget) { _, target in
-                            guard target != nil else { return }
-                            withAnimation(.snappy(duration: 0.3)) {
-                                proxy.scrollTo(Self.dayPanelAnchor, anchor: .bottom)
-                            }
-                        }
                         }
                     }
                 }
