@@ -2,6 +2,7 @@ import SwiftUI
 
 /// Dagtaken-tab: composer, "Mijn dagtaken", archief en de team-sectie.
 struct DagtakenView: View {
+    @FocusState private var draftFocused: Bool
     @EnvironmentObject private var authStore: AuthStore
     @StateObject private var viewModel = DagtakenViewModel()
     @State private var collapsedIds: Set<String> = []
@@ -80,6 +81,9 @@ struct DagtakenView: View {
             .padding(BovexaTheme.Space.xl)
             .padding(.bottom, BovexaTheme.Space.tabBarClearance)
         }
+        // Naar beneden vegen sluit het toetsenbord; anders bleef het staan
+        // over de knoppen heen.
+        .scrollDismissesKeyboard(.interactively)
     }
 
     private func composer(for user: AgendaUser) -> some View {
@@ -105,6 +109,7 @@ struct DagtakenView: View {
                 }
 
                 TextField("Titel op de eerste regel\nExtra tekst eronder…", text: $viewModel.draft, axis: .vertical)
+                    .keyboardDone(focused: $draftFocused)
                     .font(BovexaTheme.TypeStyle.body)
                     .foregroundStyle(BovexaTheme.Colors.ink)
                     .lineLimit(4...8)

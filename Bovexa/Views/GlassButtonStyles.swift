@@ -5,11 +5,40 @@ import SwiftUI
 /// `PrimitiveButtonStyle` (niet `ButtonStyle`): alleen
 /// `PrimitiveButtonStyleConfiguration` heeft een `Button(_:)`-initializer waarmee
 /// de systeemstijl binnen `makeBody` opnieuw toegepast kan worden.
-struct GlassProminentButtonStyle: PrimitiveButtonStyle {
+/// Primaire knop: gevulde merkpil met witte tekst.
+///
+/// Was de systeem-glasknop met merktint. Die zag er ingeschakeld goed uit, maar
+/// uitgeschakeld maakte het systeem er grijs op grijs van — "Toevoegen" op
+/// Dagtaken was letterlijk niet te lezen zolang het tekstvak leeg was, terwijl
+/// juist die knop vertelt wat je nog moet doen. De uitgeschakelde staat is nu
+/// een lichtere merkkleur met witte tekst: duidelijk minder nadruk, maar wel
+/// leesbaar.
+struct GlassProminentButtonStyle: ButtonStyle {
+    @Environment(\.isEnabled) private var isEnabled
+
     func makeBody(configuration: Configuration) -> some View {
-        Button(configuration)
-            .buttonStyle(.glassProminent)
-            .tint(BovexaTheme.Glass.tint)
+        configuration.label
+            .font(BovexaTheme.TypeStyle.subheadline.weight(.semibold))
+            .foregroundStyle(BovexaTheme.Colors.white.opacity(isEnabled ? 1 : 0.85))
+            .padding(.horizontal, BovexaTheme.Space.lg)
+            .frame(minHeight: 42)
+            .background(
+                Capsule().fill(
+                    LinearGradient(
+                        colors: isEnabled ? BovexaTheme.Gradients.blue : BovexaTheme.Gradients.blueSoft,
+                        startPoint: .top, endPoint: .bottom
+                    )
+                )
+                .opacity(isEnabled ? 1 : 0.45)
+            )
+            .shadow(
+                color: BovexaTheme.Shadow.blueGlowColor.opacity(isEnabled ? 0.28 : 0),
+                radius: 8, y: 4
+            )
+            .scaleEffect(configuration.isPressed ? 0.97 : 1)
+            .opacity(configuration.isPressed ? 0.9 : 1)
+            .animation(.snappy(duration: 0.15), value: configuration.isPressed)
+            .contentShape(Capsule())
     }
 }
 
@@ -44,7 +73,7 @@ struct GlassSecondaryButtonStyle: ButtonStyle {
     }
 }
 
-extension PrimitiveButtonStyle where Self == GlassProminentButtonStyle {
+extension ButtonStyle where Self == GlassProminentButtonStyle {
     static var glassProminentBrand: GlassProminentButtonStyle { GlassProminentButtonStyle() }
 }
 

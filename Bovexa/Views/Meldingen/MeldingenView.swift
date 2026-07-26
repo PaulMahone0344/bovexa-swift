@@ -4,6 +4,7 @@ import SwiftUI
 /// (valkuil D). Geport uit meldingen.tsx. Plus-knop alleen admin/manager (valkuil E),
 /// lang indrukken op je eigen mededeling verwijdert 'm.
 struct MeldingenView: View {
+    @FocusState private var composeFocused: Bool
     @StateObject private var viewModel: MeldingenViewModel
     @Environment(\.dismiss) private var dismiss
     @State private var deleteTarget: Notice?
@@ -41,6 +42,9 @@ struct MeldingenView: View {
                     .padding(BovexaTheme.Space.xl)
                     .padding(.bottom, BovexaTheme.Space.tabBarClearance)
                 }
+                // Naar beneden vegen sluit het toetsenbord; anders bleef het staan
+                // over de knoppen heen.
+                .scrollDismissesKeyboard(.interactively)
             }
             .navigationTitle("Meldingen")
             .navigationBarTitleDisplayMode(.large)
@@ -106,6 +110,7 @@ struct MeldingenView: View {
                         .background(BovexaTheme.Colors.glassSoft)
                         .clipShape(RoundedRectangle(cornerRadius: BovexaTheme.Radius.sm, style: .continuous))
                     TextField("Bericht voor het hele team…", text: $viewModel.composeBody, axis: .vertical)
+                        .keyboardDone(focused: $composeFocused)
                         .lineLimit(3...6)
                         .textFieldStyle(.plain)
                         .padding(BovexaTheme.Space.sm)

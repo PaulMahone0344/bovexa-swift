@@ -52,6 +52,9 @@ struct AfwezigView: View {
                         .padding(.horizontal, BovexaTheme.Space.xl)
                         .padding(.bottom, BovexaTheme.Space.tabBarClearance)
                 }
+                // Naar beneden vegen sluit het toetsenbord; anders bleef het staan
+                // over de knoppen heen.
+                .scrollDismissesKeyboard(.interactively)
             }
             .navigationTitle("Beschikbaarheid")
             .navigationBarTitleDisplayMode(.inline)

@@ -4,6 +4,7 @@ import SwiftUI
 /// klant, notitie, herinnering, toewijzen (alleen bij org-afspraak). Vervangt de
 /// inhoud van het afspraak-detail — geen apart navigatiescherm.
 struct EventEditorView: View {
+    @FocusState private var notesFocused: Bool
     @StateObject private var viewModel: EventEditorViewModel
     @ObservedObject var labelStore: LabelStore
     let members: [Member]
@@ -73,6 +74,7 @@ struct EventEditorView: View {
 
                     fieldLabel("Notitie")
                     TextEditor(text: $viewModel.notes)
+                        .keyboardDone(focused: $notesFocused)
                         .frame(minHeight: 88)
                         .padding(BovexaTheme.Space.sm)
                         .background(BovexaTheme.Colors.glass)

@@ -69,6 +69,9 @@ struct PersoonFormView: View {
                     }
                     .padding(BovexaTheme.Space.xl)
                 }
+                // Naar beneden vegen sluit het toetsenbord; anders bleef het staan
+                // over de knoppen heen.
+                .scrollDismissesKeyboard(.interactively)
             }
             .navigationTitle(title)
             .navigationBarTitleDisplayMode(.inline)

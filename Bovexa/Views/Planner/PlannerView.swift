@@ -5,6 +5,7 @@ import SwiftUI
 /// reset, bevestig-blok (zichtbaarheid/toewijzen/herinnering/"Zet in agenda") en een
 /// mic-knop in de composer om te dicteren (valkuil J).
 struct PlannerView: View {
+    @FocusState private var inputFocused: Bool
     @StateObject private var viewModel: PlannerViewModel
     @StateObject private var speech = SpeechToTextService()
     @ObservedObject var memberColors: MemberColors
@@ -314,6 +315,7 @@ struct PlannerView: View {
     private var composer: some View {
         HStack(alignment: .bottom, spacing: BovexaTheme.Space.sm) {
             TextField("Typ je bericht…", text: $input, axis: .vertical)
+                .keyboardDone(focused: $inputFocused)
                 .lineLimit(1...5)
                 .font(BovexaTheme.TypeStyle.subheadline)
                 .submitLabel(.send)
