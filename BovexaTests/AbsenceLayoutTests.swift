@@ -59,6 +59,22 @@ struct AbsenceLayoutTests {
         #expect(bands.isEmpty)
     }
 
+    @Test func partialDayAbsenceIsNotAlsoDrawnAsTimedBlock() {
+        let start = dayStart()
+        let absence = makeEvent(id: "vrij", start: time(start, 13), end: time(start, 17), allDay: false)
+        let meeting = makeEvent(id: "afspraak", category: .work, start: time(start, 9), end: time(start, 10), allDay: false)
+        let timed = AbsenceLayout.timedNonAbsence([absence, meeting])
+        #expect(timed.map(\.id) == ["afspraak"])
+        #expect(AbsenceLayout.bands([absence, meeting], dayStart: start).map(\.event.id) == ["vrij"])
+    }
+
+    @Test func allDayEventsAreNeverTimedBlocks() {
+        let start = dayStart()
+        let absence = makeEvent(id: "vrij", start: start)
+        let holiday = makeEvent(id: "feestdag", category: .social, start: start)
+        #expect(AbsenceLayout.timedNonAbsence([absence, holiday]).isEmpty)
+    }
+
     @Test func partialDayAbsenceUsesEventRangeInsteadOfFullDay() {
         let start = dayStart()
         let event = makeEvent(start: time(start, 13), end: time(start, 17), allDay: false)

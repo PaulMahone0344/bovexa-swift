@@ -18,7 +18,7 @@ struct DayHourGridView: View {
     /// Afwezigheid krijgt een baan over het raster (m7 plak 4), geen chip meer —
     /// het chipje bovenaan blijft voor overige hele-dag-zaken.
     private var allDayEvents: [AgendaEvent] { events.filter { $0.allDay && $0.category != .afwezig } }
-    private var timedEvents: [AgendaEvent] { events.filter { !$0.allDay } }
+    private var timedEvents: [AgendaEvent] { AbsenceLayout.timedNonAbsence(events) }
 
     var body: some View {
         ScrollViewReader { proxy in

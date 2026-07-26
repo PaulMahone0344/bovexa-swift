@@ -15,6 +15,14 @@ struct AbsenceBand: Equatable {
 /// niet over elkaar heen), aan de linkerkant van het raster. Bij één afwezige is
 /// er maar één kolom, dus die baan beslaat de volle beschikbare breedte.
 enum AbsenceLayout {
+    /// Afspraken die als blok in het raster horen. Een afwezigheid wordt als baan
+    /// getekend en mag daar nooit óók als blok bij staan: sinds plak 5 is een
+    /// dagdeel niet meer all-day, en zonder deze filter verscheen zo'n
+    /// afwezigheid dubbel — als baan én als gewoon blok.
+    static func timedNonAbsence(_ events: [AgendaEvent]) -> [AgendaEvent] {
+        events.filter { !$0.allDay && $0.category != .afwezig }
+    }
+
     static func bands(_ events: [AgendaEvent], dayStart: Date) -> [AbsenceBand] {
         let absences = events.filter { $0.category == .afwezig }.sorted { $0.start < $1.start }
         let columnCount = absences.count
