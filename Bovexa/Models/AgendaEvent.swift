@@ -34,6 +34,10 @@ struct AgendaEvent: Decodable, Identifiable {
     /// ContactDisplay valt dan terug op klantNaam/klantTelefoon.
     let contact: String?
     let expand: Expand?
+    /// Extern event (m9, valkuil B) — komt nooit uit PocketBase, alleen uit een externe
+    /// agenda via EventKit. Blokkeert bewerken/verwijderen/toewijzen/zichtbaarheid/
+    /// label/herinneringen expliciet, in plaats van te leunen op een leeg `owner`-veld.
+    let isExternal: Bool
 
     struct Expand: Decodable, Equatable {
         let contact: AgendaContact?
@@ -46,7 +50,8 @@ struct AgendaEvent: Decodable, Identifiable {
         assigneeStatus: [String: String], seriesId: String?, occurrenceDate: String?,
         org: String? = nil, visibilityRaw: String? = nil, viewers: [String] = [],
         assignee: [String] = [], reminderMin: Int? = nil, klantTelefoon: String? = nil,
-        label: String? = nil, contact: String? = nil, expand: Expand? = nil
+        label: String? = nil, contact: String? = nil, expand: Expand? = nil,
+        isExternal: Bool = false
     ) {
         self.id = id
         self.owner = owner
@@ -72,6 +77,7 @@ struct AgendaEvent: Decodable, Identifiable {
         self.label = label
         self.contact = contact
         self.expand = expand
+        self.isExternal = isExternal
     }
 
     /// Kopie met andere id/tijd/serie — gebruikt door RecurrenceExpander om een
@@ -84,7 +90,7 @@ struct AgendaEvent: Decodable, Identifiable {
             seriesId: seriesId, occurrenceDate: occurrenceDate,
             org: org, visibilityRaw: visibilityRaw, viewers: viewers,
             assignee: assignee, reminderMin: reminderMin, klantTelefoon: klantTelefoon, label: label,
-            contact: contact, expand: expand
+            contact: contact, expand: expand, isExternal: isExternal
         )
     }
 
@@ -98,7 +104,7 @@ struct AgendaEvent: Decodable, Identifiable {
             seriesId: seriesId, occurrenceDate: occurrenceDate,
             org: org, visibilityRaw: visibilityRaw, viewers: viewers,
             assignee: assignee, reminderMin: reminderMin, klantTelefoon: klantTelefoon, label: label,
-            contact: contact, expand: expand
+            contact: contact, expand: expand, isExternal: isExternal
         )
     }
 
@@ -112,7 +118,7 @@ struct AgendaEvent: Decodable, Identifiable {
             seriesId: seriesId, occurrenceDate: occurrenceDate,
             org: org, visibilityRaw: visibilityRaw, viewers: viewers,
             assignee: assignee, reminderMin: reminderMin, klantTelefoon: klantTelefoon, label: label,
-            contact: contact, expand: expand
+            contact: contact, expand: expand, isExternal: isExternal
         )
     }
 
@@ -126,7 +132,7 @@ struct AgendaEvent: Decodable, Identifiable {
             seriesId: seriesId, occurrenceDate: occurrenceDate,
             org: org, visibilityRaw: visibilityRaw, viewers: viewers,
             assignee: assignee, reminderMin: reminderMin, klantTelefoon: klantTelefoon, label: label,
-            contact: contact, expand: expand
+            contact: contact, expand: expand, isExternal: isExternal
         )
     }
 
@@ -141,7 +147,7 @@ struct AgendaEvent: Decodable, Identifiable {
             seriesId: seriesId, occurrenceDate: occurrenceDate,
             org: org, visibilityRaw: visibilityRaw, viewers: viewers,
             assignee: assignee, reminderMin: reminderMin, klantTelefoon: klantTelefoon, label: label,
-            contact: contact, expand: nil
+            contact: contact, expand: nil, isExternal: isExternal
         )
     }
 
@@ -190,6 +196,7 @@ struct AgendaEvent: Decodable, Identifiable {
         label = Self.decodeOptional(c, .label)
         contact = Self.decodeOptional(c, .contact)
         expand = Self.decodeOptional(c, .expand)
+        isExternal = false
     }
 
     /// Ontbrekende sleutel, null, of een onverwacht type → nil in plaats van crash.

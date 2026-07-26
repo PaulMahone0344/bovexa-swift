@@ -109,4 +109,14 @@ struct AgendaEventDecodingTests {
         let event = try JSONDecoder().decode(AgendaEvent.self, from: json)
         #expect(event.id == "ev1")
     }
+
+    // MARK: - isExternal (m9, valkuil B)
+
+    @Test func decodeMissingIsExternalDefaultsToFalse() throws {
+        let json = """
+        {"id":"ev1","owner":"u1","title":"Iets","start":"2026-07-24 09:00:00.000Z","all_day":false}
+        """.data(using: .utf8)!
+        let event = try JSONDecoder().decode(AgendaEvent.self, from: json)
+        #expect(event.isExternal == false)
+    }
 }
