@@ -19,6 +19,16 @@ final class PlannerViewModel: ObservableObject {
     @Published var assignee: [String] = []
     @Published var label: String?
     @Published var contactId: String?
+    /// Naam/telefoon van het gekozen contact, meegeschreven als klant_naam zodat een
+    /// collega de klant blijft zien — hij kan het privécontact zelf niet uitlezen.
+    @Published private(set) var contactNaam: String?
+    @Published private(set) var contactTelefoon: String?
+
+    func selectContact(_ contact: AgendaContact?) {
+        contactId = contact?.id
+        contactNaam = contact?.naam
+        contactTelefoon = contact?.telefoon
+    }
 
     @Published private(set) var saving = false
     /// Niet-nil ⇒ caller toont "Dubbele boeking"-alert; proceedPastOverlap() gaat door,
@@ -230,7 +240,8 @@ final class PlannerViewModel: ObservableObject {
                 let payload = AppointmentPayloadBuilder.build(
                     appointment: appointment, ownerId: userId, rawInput: rawInput.isEmpty ? appointment.title : rawInput,
                     org: org, visibility: visibility, viewers: viewers, assignees: effectiveAssignees, reminderMin: reminderMin,
-                    label: org != nil ? label : nil, contact: contactId
+                    label: org != nil ? label : nil, contact: contactId,
+                    contactNaam: contactNaam, contactTelefoon: contactTelefoon
                 )
                 let created = try await repository.createEvent(body: payload.requestBody, token: token)
                 if reminderMin > 0 {

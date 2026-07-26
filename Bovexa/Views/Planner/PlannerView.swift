@@ -286,7 +286,8 @@ struct PlannerView: View {
                         ContactPickerView(
                             selectedContactId: $viewModel.contactId,
                             existingKlantNaam: viewModel.ready?.first?.klantNaam ?? "",
-                            userId: viewModel.ownerId, token: token
+                            userId: viewModel.ownerId, token: token,
+                            onSelect: { viewModel.selectContact($0) }
                         )
                     }
                 }

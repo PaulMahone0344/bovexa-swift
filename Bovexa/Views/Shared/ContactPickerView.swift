@@ -13,6 +13,10 @@ struct ContactPickerView: View {
     let token: String
     var contactRepository: ContactRepository = ContactRepository()
     var disabled: Bool = false
+    /// Wordt geroepen bij elke keuze, ook bij loslaten (dan met nil). De viewmodel
+    /// kopieert naam en telefoon naar klant_naam/klant_telefoon, want een collega
+    /// kan het privécontact zelf niet uitlezen en zou anders geen klant zien.
+    var onSelect: (AgendaContact?) -> Void = { _ in }
 
     @State private var contacts: [AgendaContact] = []
     @State private var showNewForm = false
@@ -29,10 +33,13 @@ struct ContactPickerView: View {
             FlowLayout(spacing: BovexaTheme.Space.xs) {
                 chip(title: noneLabel, active: selectedContactId == nil) {
                     selectedContactId = nil
+                    onSelect(nil)
                 }
                 ForEach(contacts) { contact in
                     chip(title: contact.naam, active: selectedContactId == contact.id) {
-                        selectedContactId = selectedContactId == contact.id ? nil : contact.id
+                        let losgelaten = selectedContactId == contact.id
+                        selectedContactId = losgelaten ? nil : contact.id
+                        onSelect(losgelaten ? nil : contact)
                     }
                 }
                 newContactChip
@@ -147,6 +154,7 @@ struct ContactPickerView: View {
             contacts.append(created)
             contacts.sort { $0.naam.localizedCaseInsensitiveCompare($1.naam) == .orderedAscending }
             selectedContactId = created.id
+            onSelect(created)
             newNaam = ""
             newTelefoon = ""
             withAnimation(.snappy) { showNewForm = false }

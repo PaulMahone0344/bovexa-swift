@@ -21,7 +21,12 @@ enum AppointmentPayloadBuilder {
         assignees: [String],
         reminderMin: Int,
         label: String? = nil,
-        contact: String? = nil
+        contact: String? = nil,
+        /// Naam en telefoon van het gekozen contact: die winnen van wat de planner
+        /// uit de zin haalde, en gaan als klant_naam mee zodat een collega de klant
+        /// blijft zien (het contact zelf is privé en niet uitleesbaar voor hem).
+        contactNaam: String? = nil,
+        contactTelefoon: String? = nil
     ) -> AppointmentCreatePayload {
         let range = AppointmentRange.range(for: appointment)
         let isWork = appointment.category == .work || appointment.category == .focus
@@ -40,8 +45,8 @@ enum AppointmentPayloadBuilder {
             calendar: isWork ? "work" : "private",
             location: appointment.location ?? "",
             recurrence: appointment.recurrence ?? "",
-            klantNaam: appointment.klantNaam ?? "",
-            klantTelefoon: appointment.klantTelefoon ?? "",
+            klantNaam: contactNaam ?? appointment.klantNaam ?? "",
+            klantTelefoon: contactTelefoon ?? appointment.klantTelefoon ?? "",
             start: range.start,
             end: range.end,
             visibility: effectiveVisibility,

@@ -53,12 +53,13 @@ struct EventUpdatePayload {
             "viewers": viewers,
             "assignee_status": assigneeStatus,
         ]
-        if let contact {
-            body["contact"] = contact
-        } else {
-            body["klant_naam"] = klantNaam
-            body["klant_telefoon"] = klantTelefoon
-        }
+        // Naam en telefoon gaan ALTIJD mee, ook met een gekoppeld contact. Contacten
+        // zijn privé (leesregel eigenaar = ingelogde gebruiker), dus een collega kan
+        // de relatie niet uitlezen; zonder deze kopie ziet hij op een gedeelde
+        // afspraak geen klant meer en valt die afspraak uit zijn Klanten-scherm.
+        body["klant_naam"] = klantNaam
+        body["klant_telefoon"] = klantTelefoon
+        if let contact { body["contact"] = contact }
         if let label { body["label"] = label }
         return body
     }

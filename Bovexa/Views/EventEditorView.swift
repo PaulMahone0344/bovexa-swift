@@ -67,7 +67,8 @@ struct EventEditorView: View {
                     ContactPickerView(
                         selectedContactId: $viewModel.contactId,
                         existingKlantNaam: viewModel.klantNaam,
-                        userId: currentUserId, token: token
+                        userId: currentUserId, token: token,
+                        onSelect: { viewModel.selectContact($0) }
                     )
 
                     fieldLabel("Notitie")

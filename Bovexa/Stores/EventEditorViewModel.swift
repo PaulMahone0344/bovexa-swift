@@ -17,6 +17,15 @@ final class EventEditorViewModel: ObservableObject {
     @Published var label: String?
     @Published var contactId: String?
 
+    /// Kiezen van een contact vult klant_naam/klant_telefoon mee: een collega kan het
+    /// privécontact niet uitlezen en zou anders geen klant zien op een gedeelde
+    /// afspraak. Loslaten zet de oorspronkelijke tekst van de afspraak terug.
+    func selectContact(_ contact: AgendaContact?) {
+        contactId = contact?.id
+        klantNaam = contact?.naam ?? originalEvent.klantNaam ?? ""
+        klantTelefoon = contact?.telefoon ?? originalEvent.klantTelefoon ?? ""
+    }
+
     @Published private(set) var isSaving = false
     @Published var titleMissingAlert = false
     @Published var saveFailedAlert = false

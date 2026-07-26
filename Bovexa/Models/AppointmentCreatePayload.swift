@@ -73,12 +73,11 @@ struct AppointmentCreatePayload {
             "reminder_min": reminderMin,
             "assignee_status": assigneeStatus,
         ]
-        if let contact {
-            body["contact"] = contact
-        } else {
-            body["klant_naam"] = klantNaam
-            body["klant_telefoon"] = klantTelefoon
-        }
+        // Zie EventUpdatePayload: de naam reist altijd mee, want een collega kan het
+        // privécontact zelf niet uitlezen.
+        body["klant_naam"] = klantNaam
+        body["klant_telefoon"] = klantTelefoon
+        if let contact { body["contact"] = contact }
         if let label { body["label"] = label }
         return body
     }
