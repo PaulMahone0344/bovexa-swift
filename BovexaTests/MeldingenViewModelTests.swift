@@ -15,14 +15,23 @@ struct MeldingenViewModelTests {
         return defaults
     }
 
-    private func makeViewModel(userId: String = "me", orgId: String? = "org1", seenStore: NoticesSeenStore? = nil) -> MeldingenViewModel {
+    /// De fixtures staan op 24 juli 2026. Sinds toewijzingen op een afspraak die al
+    /// geweest is als verlopen gelden, moet "nu" hier vastgezet worden — anders
+    /// hangt de uitkomst van deze tests aan de kalender van de machine.
+    private static let vasteNu = Date(timeIntervalSince1970: 1_784_808_000) // 23 juli 2026, 12:00 UTC
+
+    private func makeViewModel(
+        userId: String = "me", orgId: String? = "org1", seenStore: NoticesSeenStore? = nil,
+        now: Date = MeldingenViewModelTests.vasteNu
+    ) -> MeldingenViewModel {
         let session = URLProtocolStub.makeSession()
         return MeldingenViewModel(
             userId: userId, orgId: orgId, token: "tok",
             eventRepository: EventRepository(client: PBClient(session: session)),
             noticeRepository: NoticeRepository(client: PBClient(session: session)),
             companyRepository: CompanyRepository(client: PBClient(session: session)),
-            seenStore: seenStore ?? NoticesSeenStore(defaults: makeDefaults())
+            seenStore: seenStore ?? NoticesSeenStore(defaults: makeDefaults()),
+            now: { now }
         )
     }
 

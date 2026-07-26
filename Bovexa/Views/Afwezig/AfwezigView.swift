@@ -8,7 +8,11 @@ struct AfwezigView: View {
     @Environment(\.dismiss) private var dismiss
     private let hasOrg: Bool
 
-    private static let weekLabels = ["M", "D", "W", "D", "V", "Z", "Z"]
+    /// Twee letters, gelijk aan de maandweergave in de Agenda. Één letter gaf
+    /// "M D W D V Z Z": twee keer D en twee keer Z, dus niet te zien of je op
+    /// dinsdag of donderdag tikt. Deze kalender is net zo breed als die in de
+    /// Agenda, dus er is ruimte voor.
+    private static let weekLabels = ["Ma", "Di", "Wo", "Do", "Vr", "Za", "Zo"]
 
     init(userId: String, org: String?, token: String) {
         _viewModel = StateObject(wrappedValue: AfwezigViewModel(userId: userId, org: org, token: token))

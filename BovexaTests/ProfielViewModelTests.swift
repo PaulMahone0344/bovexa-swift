@@ -150,7 +150,14 @@ struct ProfielViewModelTests {
           {"id":"a","owner":"collega","title":"Klus","start":"2026-07-24 09:00:00.000Z","all_day":false,"assignee":["me"],"assignee_status":{}}
         ],"page":1,"perPage":200,"totalItems":1,"totalPages":1}
         """.data(using: .utf8)!) }
-        let vm = ProfielViewModel(repository: EventRepository(client: PBClient(session: URLProtocolStub.makeSession())), defaults: makeDefaults())
+        // now vastzetten op de dag van de fixture: een toewijzing op een afspraak die
+        // al geweest is telt niet meer mee, dus met de echte klok zou deze test
+        // vanaf 25 juli 2026 omvallen op iets waar hij niet over gaat.
+        let vm = ProfielViewModel(
+            repository: EventRepository(client: PBClient(session: URLProtocolStub.makeSession())),
+            now: { self.utcNow("2026-07-24 11:30:00.000Z") },
+            defaults: makeDefaults()
+        )
         await vm.load(userId: "me", orgId: nil, token: "tok")
         #expect(vm.showUnreadDot)
     }

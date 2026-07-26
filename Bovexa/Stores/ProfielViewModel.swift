@@ -87,7 +87,9 @@ final class ProfielViewModel: ObservableObject {
         do {
             let events = try await repository.fetchAllEvents(userId: userId, orgId: orgId, token: token)
             todayCount = EventHelpers.eventsOnDay(events, day: now()).count
-            pendingCount = AssignmentHelpers.pendingCount(events, userId: userId)
+            // now() meegeven, anders blijft de stip branden voor toewijzingen op
+            // afspraken die al geweest zijn.
+            pendingCount = AssignmentHelpers.pendingCount(events, userId: userId, now: now())
         } catch {
             todayCount = nil
             pendingCount = 0

@@ -26,6 +26,10 @@ struct MeldingenView: View {
                             pendingSection
                         }
 
+                        if !viewModel.expired.isEmpty {
+                            expiredSection
+                        }
+
                         if viewModel.isEmpty {
                             EmptyStateView(systemImage: "bell", text: "Hier verschijnen mededelingen van je team en toewijzingen die op je akkoord wachten.", surface: .background)
                         }
@@ -135,6 +139,32 @@ struct MeldingenView: View {
 
             ForEach(viewModel.pending) { event in
                 pendingCard(event)
+            }
+        }
+    }
+
+    /// Toewijzingen waarop nooit geantwoord is en waarvan de afspraak al voorbij is.
+    /// Onder de actuele, zonder knoppen: accepteren of weigeren zegt niets meer over
+    /// een dag die al geweest is. Weggooien ook niet — dan weet je nooit dat er iets
+    /// langs is gekomen.
+    private var expiredSection: some View {
+        VStack(alignment: .leading, spacing: BovexaTheme.Space.sm) {
+            Text("VERLOPEN")
+                .font(BovexaTheme.TypeStyle.caption.weight(.bold))
+                .foregroundStyle(BovexaTheme.Colors.muted)
+                .tracking(0.3)
+
+            ForEach(viewModel.expired) { event in
+                GlassCard(emphasis: .quiet) {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(event.title)
+                            .font(BovexaTheme.TypeStyle.subheadline.weight(.semibold))
+                            .foregroundStyle(BovexaTheme.Colors.inkSoft)
+                        Text("\(EventHelpers.longDay(event.start)) · \(EventHelpers.rowTimeText(event)) · niet beantwoord")
+                            .font(BovexaTheme.TypeStyle.footnote)
+                            .foregroundStyle(BovexaTheme.Colors.muted)
+                    }
+                }
             }
         }
     }

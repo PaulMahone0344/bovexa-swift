@@ -80,11 +80,11 @@ struct AssignmentHelpersTests {
             event(id: "c", assignee: ["me"], status: ["me": "declined"]),
             event(id: "d", assignee: ["collega"], status: [:]),
         ]
-        #expect(AssignmentHelpers.pendingCount(events, userId: "me") == 1)
+        #expect(AssignmentHelpers.pendingCount(events, userId: "me", now: .distantPast) == 1)
     }
 
     @Test func pendingCountIsZeroWithoutAssignments() {
-        #expect(AssignmentHelpers.pendingCount([], userId: "me") == 0)
+        #expect(AssignmentHelpers.pendingCount([], userId: "me", now: .distantPast) == 0)
     }
 
     // MARK: - pendingEvents (m6, Meldingen-scherm)
@@ -105,7 +105,7 @@ struct AssignmentHelpersTests {
             event(id: "c", owner: "collega", start: Date(), assignee: ["me"], status: ["me": "declined"]),
             event(id: "d", owner: "me", start: Date(), assignee: ["me"], status: [:]),
         ]
-        #expect(AssignmentHelpers.pendingEvents(events, userId: "me").map(\.id) == ["a"])
+        #expect(AssignmentHelpers.pendingEvents(events, userId: "me", now: .distantPast).map(\.id) == ["a"])
     }
 
     @Test func pendingEventsSortsNewestStartFirst() {
@@ -115,6 +115,6 @@ struct AssignmentHelpersTests {
             event(id: "old", owner: "collega", start: older, assignee: ["me"], status: [:]),
             event(id: "new", owner: "collega", start: newer, assignee: ["me"], status: [:]),
         ]
-        #expect(AssignmentHelpers.pendingEvents(events, userId: "me").map(\.id) == ["new", "old"])
+        #expect(AssignmentHelpers.pendingEvents(events, userId: "me", now: .distantPast).map(\.id) == ["new", "old"])
     }
 }

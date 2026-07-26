@@ -7,6 +7,10 @@ import Foundation
 @MainActor
 final class MeldingenViewModel: ObservableObject {
     @Published private(set) var pending: [AgendaEvent] = []
+    /// Toewijzingen waarop nooit geantwoord is en waarvan de afspraak al voorbij
+    /// is. Accepteren of weigeren zegt daar niets meer; ze staan apart en zonder
+    /// knoppen, zodat je wel ziet dat er iets langs is gekomen.
+    @Published private(set) var expired: [AgendaEvent] = []
     @Published private(set) var notices: [Notice] = []
     @Published private(set) var role: CompanyRole?
     @Published private(set) var loaded = false
@@ -27,14 +31,17 @@ final class MeldingenViewModel: ObservableObject {
     private let noticeRepository: NoticeRepository
     private let companyRepository: CompanyRepository
     private let seenStore: NoticesSeenStore
+    private let now: () -> Date
 
     init(
         userId: String, orgId: String?, token: String,
         eventRepository: EventRepository = EventRepository(),
         noticeRepository: NoticeRepository = NoticeRepository(),
         companyRepository: CompanyRepository = CompanyRepository(),
-        seenStore: NoticesSeenStore = NoticesSeenStore()
+        seenStore: NoticesSeenStore = NoticesSeenStore(),
+        now: @escaping () -> Date = Date.init
     ) {
+        self.now = now
         self.userId = userId
         self.orgId = orgId
         self.token = token
@@ -47,16 +54,19 @@ final class MeldingenViewModel: ObservableObject {
     /// Valkuil D/E: plus-knop alleen voor admin/manager — de server checkt dit
     /// hoe dan ook, maar de knop moet ook client-side verborgen zijn.
     var canPost: Bool { role == .admin || role == .manager }
-    var isEmpty: Bool { loaded && pending.isEmpty && notices.isEmpty }
+    var isEmpty: Bool { loaded && pending.isEmpty && expired.isEmpty && notices.isEmpty }
     var canSubmit: Bool { !composeBody.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && !posting }
 
     func canDelete(_ notice: Notice) -> Bool { notice.author == userId }
 
     func load() async {
         if let events = try? await eventRepository.fetchAllEvents(userId: userId, orgId: orgId, token: token) {
-            pending = AssignmentHelpers.pendingEvents(events, userId: userId)
+            let moment = now()
+            pending = AssignmentHelpers.pendingEvents(events, userId: userId, now: moment)
+            expired = AssignmentHelpers.expiredPendingEvents(events, userId: userId, now: moment)
         } else {
             pending = []
+            expired = []
         }
 
         guard let orgId else {
