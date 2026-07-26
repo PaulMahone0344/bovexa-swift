@@ -28,7 +28,9 @@ enum BovexaTheme {
         // staat daarmee ver genoeg van het diepe blauw af.
         static let bgTop = Color(hex: "#C9DCF2")
         static let bgMid = Color(hex: "#E4EDF6")
-        static let bgBottom = Color(hex: "#EDF4EE")
+        /// Parelwit met een minimale mintzweem. De mint zelf zit in het hoekveld,
+        /// niet in de verloopstop — anders kleurt de hele onderkant groen.
+        static let bgBottom = Color(hex: "#F1F5F1")
         static let page = Color(hex: "#DDE7F1")
 
         // inkt (donker op licht oppervlak, met blauwzweem)
@@ -122,11 +124,14 @@ enum BovexaTheme {
         static let coolBlur: CGFloat = 45
         static let coolOpacity: Double = 0.48
 
-        /// Warm tegenwicht rechtsonder; linkerrand op ±0.45w.
-        static let warmCenter = CGPoint(x: 0.88, y: 0.74)
-        static let warmDiameter: CGFloat = 0.85
+        /// Koel tegenwicht rechtsonder. v5: kleiner, verder in de hoek en zwakker
+        /// dan het warme veld dat hier stond. Mint op volle sterkte kleurde de hele
+        /// onderste helft groen en gaf een vaal groengrijs waar het blauw eindigde;
+        /// als hoekaccent doet het z'n werk zonder een tweede hoofdkleur te worden.
+        static let warmCenter = CGPoint(x: 0.94, y: 0.86)
+        static let warmDiameter: CGFloat = 0.62
         static let warmBlur: CGFloat = 48
-        static let warmOpacity: Double = 0.44
+        static let warmOpacity: Double = 0.30
 
         /// Derde veld in de kaartzone (Tijdlijn / lijstkaarten). Middelpunt staat
         /// bewust *achter* de kaarten, zodat de afval van de orb over het
