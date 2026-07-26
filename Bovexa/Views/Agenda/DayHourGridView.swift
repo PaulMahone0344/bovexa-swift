@@ -58,6 +58,7 @@ struct DayHourGridView: View {
                             .padding(.horizontal, BovexaTheme.Space.sm)
                             .padding(.vertical, 4)
                             .glassEffect(.regular.tint(EventHelpers.eventColor(event, labelStore: labelStore).opacity(0.35)), in: .capsule)
+                            .contentShape(.capsule)
                     }
                     .buttonStyle(.plain)
                 }
@@ -218,5 +219,9 @@ private struct EventBlockView: View {
             in: shape
         )
         .clipShape(shape)
+        // Zonder dit is alleen de tekst raakbaar: glas telt niet mee voor
+        // hit-testing. Bij een afwezigheidsbaan eronder (die wél een gevulde
+        // shape is) opende een tik in het blok de afwezigheid van de collega.
+        .contentShape(shape)
     }
 }
