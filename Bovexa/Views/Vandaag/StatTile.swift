@@ -12,7 +12,10 @@ struct StatTile: View {
     var tint: Color = BovexaTheme.Colors.blue
 
     var body: some View {
-        VStack(alignment: .leading, spacing: BovexaTheme.Space.xs) {
+        // Icoon naast het cijfer in plaats van erboven (mockup 26 juli): boven
+        // elkaar werd de tegel hoog en smal, en het cijfer — waar het om gaat —
+        // zakte naar het midden van de kaart.
+        HStack(alignment: .top, spacing: BovexaTheme.Space.sm) {
             if let systemImage {
                 Circle()
                     .fill(tint.opacity(0.14))
@@ -22,19 +25,22 @@ struct StatTile: View {
                             .font(.system(size: 17, weight: .medium))
                             .foregroundStyle(tint)
                     }
-                    .padding(.bottom, 2)
             }
 
-            Text(value)
-                .font(BovexaTheme.TypeStyle.statNumber)
-                .foregroundStyle(BovexaTheme.Colors.ink)
-            Text(label)
-                .font(BovexaTheme.TypeStyle.statLabel)
-                .foregroundStyle(BovexaTheme.Colors.inkSoft)
-            if let note {
-                Text(note)
-                    .font(BovexaTheme.TypeStyle.caption)
-                    .foregroundStyle(BovexaTheme.categoryColor(for: .afwezig))
+            VStack(alignment: .leading, spacing: BovexaTheme.Space.xs) {
+                Text(value)
+                    .font(BovexaTheme.TypeStyle.statNumber)
+                    .foregroundStyle(BovexaTheme.Colors.ink)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.7)
+                Text(label)
+                    .font(BovexaTheme.TypeStyle.statLabel)
+                    .foregroundStyle(BovexaTheme.Colors.inkSoft)
+                if let note {
+                    Text(note)
+                        .font(BovexaTheme.TypeStyle.caption)
+                        .foregroundStyle(BovexaTheme.categoryColor(for: .afwezig))
+                }
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)

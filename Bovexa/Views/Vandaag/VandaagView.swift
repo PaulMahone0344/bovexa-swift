@@ -40,9 +40,12 @@ struct VandaagView: View {
 
                         statsRow
 
+                        // "Deze week" stond hier tot 26 juli: zeven staafjes met
+                        // de drukte per dag. Eruit op verzoek van de
+                        // opdrachtgever — het zegt niets wat de agenda zelf niet
+                        // beter laat zien. WeekBusyCard blijft in de repo staan
+                        // voor het geval het terugkomt.
                         timeline
-
-                        WeekBusyCard(counts: viewModel.weekBusyCounts)
                     }
                     .padding(BovexaTheme.Space.xl)
                     // De zwevende tabbalk ligt óver de content. Zonder deze

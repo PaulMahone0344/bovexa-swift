@@ -99,6 +99,13 @@ struct NextUpCard: View {
                 }
 
                 Spacer()
+
+                // Chevron zoals de mockup: de kaart is aantikbaar zodra er een
+                // volgende afspraak is, en dan zit hij er ook. Zonder teken lijkt
+                // de kaart een mededeling in plaats van een ingang.
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 15, weight: .semibold))
+                    .foregroundStyle(BovexaTheme.Colors.muted)
             }
         }
     }
