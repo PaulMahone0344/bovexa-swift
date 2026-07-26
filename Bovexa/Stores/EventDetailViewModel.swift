@@ -30,15 +30,17 @@ final class EventDetailViewModel: ObservableObject {
     }
 
     var isOwner: Bool { event.owner == currentUserId }
-    var canDelete: Bool { isOwner }
-    var canEdit: Bool { isOwner }
-    var showVisibilityPicker: Bool { isOwner && currentUserOrgId != nil }
+    /// Valkuil B: extern event blokkeert altijd, ongeacht `owner` — dat mag nooit de
+    /// enige reden zijn waarom bewerken/verwijderen/toewijzen dicht staat.
+    var canDelete: Bool { isOwner && !event.isExternal }
+    var canEdit: Bool { isOwner && !event.isExternal }
+    var showVisibilityPicker: Bool { isOwner && currentUserOrgId != nil && !event.isExternal }
 
     var isAssignedToMe: Bool { event.assignee.contains(currentUserId) }
     var myAssignmentStatus: String? {
         AssignmentHelpers.assignmentStatus(assignees: event.assignee, statusMap: event.assigneeStatus, userId: currentUserId)
     }
-    var canRespond: Bool { !isResponding && myAssignmentStatus == "pending" }
+    var canRespond: Bool { !isResponding && myAssignmentStatus == "pending" && !event.isExternal }
 
     /// Valkuil D: oude waarden (team/manager/busy/people/leeg) tonen als "company" ("Bedrijf").
     var normalizedVisibility: String {

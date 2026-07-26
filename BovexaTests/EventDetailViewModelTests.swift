@@ -14,13 +14,14 @@ struct EventDetailViewModelTests {
     private func makeEvent(
         id: String = "ev1", owner: String = "owner", assignee: [String] = [],
         assigneeStatus: [String: String] = [:], seriesId: String? = nil,
-        visibilityRaw: String? = nil, viewers: [String] = []
+        visibilityRaw: String? = nil, viewers: [String] = [], isExternal: Bool = false
     ) -> AgendaEvent {
         AgendaEvent(
             id: id, owner: owner, calendar: nil, category: nil, title: "T",
             start: Date(), end: nil, allDay: false, recurrence: nil, location: nil, notes: nil,
             klantNaam: nil, assigneeStatus: assigneeStatus, seriesId: seriesId, occurrenceDate: nil,
-            org: "org1", visibilityRaw: visibilityRaw, viewers: viewers, assignee: assignee
+            org: "org1", visibilityRaw: visibilityRaw, viewers: viewers, assignee: assignee,
+            isExternal: isExternal
         )
     }
 
@@ -82,6 +83,20 @@ struct EventDetailViewModelTests {
         #expect(makeViewModel(event: makeEvent(owner: "owner"), currentUserId: "owner", currentUserOrgId: "org1").showVisibilityPicker)
         #expect(!makeViewModel(event: makeEvent(owner: "owner"), currentUserId: "owner", currentUserOrgId: nil).showVisibilityPicker)
         #expect(!makeViewModel(event: makeEvent(owner: "owner"), currentUserId: "collega", currentUserOrgId: "org1").showVisibilityPicker)
+    }
+
+    // MARK: - extern event is read-only (m9 plak 5, valkuil B)
+
+    @Test func externalEventCannotBeEditedOrDeletedEvenIfOwnerMatches() {
+        let vm = makeViewModel(event: makeEvent(owner: "owner", isExternal: true), currentUserId: "owner")
+        #expect(!vm.canDelete)
+        #expect(!vm.canEdit)
+        #expect(!vm.showVisibilityPicker)
+    }
+
+    @Test func externalEventCannotBeRespondedToEvenIfSomehowAssigned() {
+        let vm = makeViewModel(event: makeEvent(assignee: ["collega"], isExternal: true), currentUserId: "collega")
+        #expect(!vm.canRespond)
     }
 
     @Test func normalizedVisibilityFallsBackToCompanyForLegacyValues() {

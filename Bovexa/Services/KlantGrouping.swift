@@ -14,6 +14,9 @@ enum KlantGrouping {
         var eventsByKey: [String: [AgendaEvent]] = [:]
 
         for event in events {
+            // Valkuil E: een externe agenda is geen klant, ook niet als er toevallig
+            // een klantnaam op het event zou staan.
+            guard !event.isExternal else { continue }
             guard let naam = ContactDisplay.naam(for: event)?.trimmingCharacters(in: .whitespacesAndNewlines), !naam.isEmpty else { continue }
             let key = naam.lowercased()
             if names[key] == nil {

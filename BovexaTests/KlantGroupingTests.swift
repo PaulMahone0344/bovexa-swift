@@ -3,12 +3,13 @@ import Foundation
 @testable import Bovexa
 
 struct KlantGroupingTests {
-    private func event(id: String, klantNaam: String?, klantTelefoon: String? = nil, start: Date, expand: AgendaEvent.Expand? = nil) -> AgendaEvent {
+    private func event(id: String, klantNaam: String?, klantTelefoon: String? = nil, start: Date, expand: AgendaEvent.Expand? = nil, isExternal: Bool = false) -> AgendaEvent {
         AgendaEvent(
             id: id, owner: "me", calendar: nil, category: nil, title: "Afspraak \(id)",
             start: start, end: nil, allDay: false, recurrence: nil, location: nil, notes: nil,
             klantNaam: klantNaam, assigneeStatus: [:], seriesId: nil, occurrenceDate: nil,
-            klantTelefoon: klantTelefoon, contact: expand?.contact?.id, expand: expand
+            klantTelefoon: klantTelefoon, contact: expand?.contact?.id, expand: expand,
+            isExternal: isExternal
         )
     }
 
@@ -34,6 +35,14 @@ struct KlantGroupingTests {
         ]
         let groups = KlantGrouping.group(events)
         #expect(groups.map(\.naam) == ["Jansen"])
+    }
+
+    // MARK: - externe events (m9 plak 5, valkuil E)
+
+    @Test func externalEventsAreExcludedEvenWithAKlantNaam() {
+        let events = [event(id: "a", klantNaam: "Jansen", start: date(100), isExternal: true)]
+        let groups = KlantGrouping.group(events)
+        #expect(groups.isEmpty)
     }
 
     @Test func firstNonEmptyPhoneIsKept() {

@@ -7,6 +7,7 @@ enum EventSearch {
         let q = query.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
         guard !q.isEmpty else { return [] }
         return events
+            .filter { !$0.isExternal }
             .filter { event in
                 [event.title, event.location, event.notes]
                     .compactMap { $0 }

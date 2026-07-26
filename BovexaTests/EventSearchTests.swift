@@ -10,11 +10,11 @@ struct EventSearchTests {
         return Calendar(identifier: .gregorian).date(from: comps)!
     }
 
-    private func event(id: String, title: String = "", location: String? = nil, notes: String? = nil, start: Date) -> AgendaEvent {
+    private func event(id: String, title: String = "", location: String? = nil, notes: String? = nil, start: Date, isExternal: Bool = false) -> AgendaEvent {
         AgendaEvent(
             id: id, owner: "u1", calendar: nil, category: nil, title: title, start: start, end: nil,
             allDay: false, recurrence: nil, location: location, notes: notes, klantNaam: nil,
-            assigneeStatus: [:], seriesId: nil, occurrenceDate: nil
+            assigneeStatus: [:], seriesId: nil, occurrenceDate: nil, isExternal: isExternal
         )
     }
 
@@ -41,6 +41,13 @@ struct EventSearchTests {
     @Test func noMatchReturnsEmpty() {
         let events = [event(id: "a", title: "Tandarts", start: date(2026, 8, 3))]
         #expect(EventSearch.search(events, query: "loodgieter").isEmpty)
+    }
+
+    // MARK: - externe events (m9 plak 5, valkuil E)
+
+    @Test func externalEventsAreExcludedEvenOnTitleMatch() {
+        let events = [event(id: "a", title: "Tandarts", start: date(2026, 8, 3), isExternal: true)]
+        #expect(EventSearch.search(events, query: "tandarts").isEmpty)
     }
 
     @Test func resultsAreSortedNewestFirst() {
