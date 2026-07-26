@@ -23,6 +23,11 @@ enum EventHelpers {
             return labelColor
         }
         if let category = event.category {
+            // Afwezigheid krijgt zijn kleur van de reden (vakantie groen, ziek
+            // rood); de rest van de categorieën heeft één vaste kleur.
+            if category == .afwezig {
+                return BovexaTheme.absenceColor(title: event.title)
+            }
             return BovexaTheme.categoryColor(for: category)
         }
         return event.calendar == "private" ? BovexaTheme.Colors.categoryBlue : BovexaTheme.Colors.blue

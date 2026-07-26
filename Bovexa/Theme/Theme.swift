@@ -9,14 +9,33 @@ enum BovexaTheme {
         case focus, work, social, body, afwezig
     }
 
+    /// Kleurschema van de opdrachtgever (26 juli): blauw is werk, paars is een
+    /// afspraak met iemand, geel is persoonlijk, en afwezigheid krijgt zijn kleur
+    /// van de reden — zie `absenceColor`. Daarvóór lagen social (mint) en afwezig
+    /// (amber) zo dicht bij elkaar dat een vakantie en een klantafspraak in de
+    /// maandweergave op elkaar leken.
     static func categoryColor(for category: Category) -> Color {
         switch category {
         case .focus: return Colors.categoryBlue
         case .work: return Colors.blue
-        case .social: return Colors.categoryGreen
-        case .body: return Colors.categoryLilac
+        case .social: return Colors.categoryLilac
+        case .body: return Colors.categoryAmber
         case .afwezig: return Colors.categoryAmber
         }
+    }
+
+    /// Afwezigheid is één categorie maar niet één soort: vakantie of een vrije dag
+    /// is groen (er is niets aan de hand), ziek is rood (dit raakt de planning).
+    /// De reden staat in de titel, want het scherm Beschikbaarheid schrijft die
+    /// daar naartoe; een vrije toelichting bij "Anders" valt terug op amber.
+    static func absenceColor(title: String) -> Color {
+        // Op een woord in de titel en niet op de hele titel: de RN-app en de
+        // toelichting bij "Anders" leveren regels als "Ziek thuis" of "Vrij
+        // (verhuizing)", en die vielen bij een exacte vergelijking terug op amber.
+        let text = title.lowercased()
+        if text.contains("ziek") { return Colors.categoryRed }
+        if text.contains("vakantie") || text.contains("vrij") { return Colors.categoryGreenDeep }
+        return Colors.categoryAmber
     }
 
     /// Symbool per categorie, voor het icoonrondje in de tijdlijn op Vandaag.
@@ -83,6 +102,12 @@ enum BovexaTheme {
         static let categoryGreen = Color(hex: "#8FD8BE")
         static let categoryLilac = Color(hex: "#C8B7E8")
         static let categoryAmber = Color(hex: "#E9B84F")
+        /// Verzadigder dan `categoryGreen` (dat is de mint uit de ondergrond en
+        /// valt op een lichte kaart bijna weg). Voor vakantie en vrije dagen.
+        static let categoryGreenDeep = Color(hex: "#4F9E5C")
+        /// Alleen voor ziekmelding. Rood is verder nergens in de app een
+        /// categoriekleur, juist zodat het opvalt tussen de rest.
+        static let categoryRed = Color(hex: "#D0564F")
 
         // glas (wit-transparant op het lichte oppervlak)
         static let glassSoft = Color.white.opacity(0.42)

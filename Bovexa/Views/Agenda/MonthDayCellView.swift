@@ -21,7 +21,9 @@ struct MonthDayCellView: View {
 
                 densityContent
             }
-            .frame(maxWidth: .infinity, minHeight: 52, alignment: .top)
+            // In de details-weergave staan er titels in de cel; op 52pt hoog werd
+            // elke titel van twee regels alsnog afgekapt.
+            .frame(maxWidth: .infinity, minHeight: density == .details ? 70 : 52, alignment: .top)
             .opacity(cell.isCurrentMonth ? 1 : 0.35)
             .contentShape(Rectangle())
         }
@@ -82,7 +84,7 @@ struct MonthDayCellView: View {
                     .foregroundStyle(BovexaTheme.Colors.ink)
                     .lineLimit(2)
                     .multilineTextAlignment(.leading)
-                    .minimumScaleFactor(0.8)
+                    .minimumScaleFactor(0.7)
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .padding(.horizontal, 3)
                     .padding(.vertical, 2)

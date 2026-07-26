@@ -14,6 +14,9 @@ struct AgendaView: View {
     @State private var showPlanner = false
     @State private var speechAlertMessage: String?
 
+    /// Anker om na een dag-tik naar het paneel onder de kalender te scrollen.
+    private static let dayPanelAnchor = "day-panel"
+
     private var currentUser: AgendaUser? {
         if case .loggedIn(let user) = authStore.phase { return user }
         return nil
@@ -59,26 +62,6 @@ struct AgendaView: View {
         } message: {
             Text(speechAlertMessage ?? "")
         }
-        .sheet(item: $viewModel.daySheetTarget) { target in
-            if let userId = currentUser?.id {
-                DaySheetView(
-                    day: target.day,
-                    events: viewModel.eventsOnDay(target.day),
-                    currentUserId: userId,
-                    memberColors: viewModel.memberColors,
-                    labelStore: viewModel.labelStore,
-                    onOpenDay: { viewModel.openDayView(target.day) },
-                    onSelectEvent: { event in
-                        viewModel.closeDaySheet()
-                        selectedEvent = event
-                    },
-                    onPlanAppointment: {
-                        viewModel.closeDaySheet()
-                        openPlanner(seed: PlannerSlotSeed.forDay(target.day))
-                    }
-                )
-            }
-        }
         .sheet(isPresented: $showPlanner) {
             if let userId = currentUser?.id {
                 PlannerView(
@@ -109,77 +92,64 @@ struct AgendaView: View {
 
                 VStack(spacing: 0) {
                     if viewModel.viewKind == .lijst, let userId = currentUser?.id {
+                        agendaHeader
+                            .padding(.horizontal, BovexaTheme.Space.xl)
                         AgendaListView(viewModel: viewModel, currentUserId: userId, now: Date.init, selectedEvent: $selectedEvent)
                     } else {
+                        ScrollViewReader { proxy in
                         ScrollView {
-                            MonthGridView(viewModel: viewModel, onYearTap: { showYearOverview = true })
-                                .padding(.horizontal, BovexaTheme.Space.xl)
-                                // Boven de maandregel stond 24pt bovenop de ruimte
-                                // die de grote titel al meebrengt; dat was een gat.
-                                .padding(.top, BovexaTheme.Space.xs)
-                                // De laatste week liep tegen de plan-knop en de
-                                // tabbalk aan, waardoor de kalender eronder leek
-                                // door te lopen.
-                                .padding(.bottom, BovexaTheme.Space.tabBarClearance)
-                        }
-                    }
-                }
-                // Via safeAreaInset en niet als eerste kind van de VStack: daar
-                // liet de grote titel "Agenda" zich niet meer tekenen zodra de chip
-                // verscheen. Zo blijft de titel staan en zakt de inhoud eronder.
-                .safeAreaInset(edge: .top, spacing: 0) { persoonFilterChip }
-            }
-            .navigationTitle("Agenda")
-            .navigationBarTitleDisplayMode(.large)
-            .toolbar {
-                // "Beschikbaarheid doorgeven" stond hier ook, maar staat al als rij
-                // op Profiel. Vijf iconen naast elkaar werd te vol; deze hoort bij
-                // je eigen gegevens, niet bij het bekijken van de agenda.
-                ToolbarItem(placement: .topBarTrailing) {
-                    Button {
-                        showSearch = true
-                    } label: {
-                        Image(systemName: "magnifyingglass")
-                    }
-                    .accessibilityLabel("Zoeken")
-                }
-                if viewModel.canSeeOthersAgenda {
-                    ToolbarItem(placement: .topBarTrailing) {
-                        Button {
-                            showPersoonKiezer = true
-                        } label: {
-                            Image(systemName: "person.2")
-                        }
-                        .accessibilityLabel("Agenda van een collega")
-                    }
-                }
-                ToolbarItem(placement: .topBarTrailing) {
-                    Button {
-                        showLegende = true
-                    } label: {
-                        Image(systemName: "tag")
-                    }
-                    .accessibilityLabel("Legenda")
-                }
-                ToolbarItem(placement: .topBarTrailing) {
-                    Menu {
-                        ForEach(AgendaViewKind.allCases.filter { $0 != .dag }, id: \.self) { kind in
-                            Button {
-                                withAnimation(.snappy) { viewModel.setViewKind(kind) }
-                            } label: {
-                                if viewModel.viewKind == kind {
-                                    Label(kind.label, systemImage: "checkmark")
-                                } else {
-                                    Text(kind.label)
+                            VStack(alignment: .leading, spacing: BovexaTheme.Space.lg) {
+                                agendaHeader
+
+                                MonthGridView(viewModel: viewModel, onYearTap: { showYearOverview = true })
+
+                                // Dagoverzicht onder de kalender in plaats van de
+                                // sheet die er tot 26 juli overheen schoof: de
+                                // blokjes in een maandcel zijn te klein om de dag
+                                // uit te lezen, en de ruimte hieronder stond leeg.
+                                if let target = viewModel.daySheetTarget, let userId = currentUser?.id {
+                                    DayPanelView(
+                                        day: target.day,
+                                        events: viewModel.eventsOnDay(target.day),
+                                        currentUserId: userId,
+                                        memberColors: viewModel.memberColors,
+                                        labelStore: viewModel.labelStore,
+                                        onOpenDay: { viewModel.openDayView(target.day) },
+                                        onSelectEvent: { event in selectedEvent = event },
+                                        onPlanAppointment: {
+                                            openPlanner(seed: PlannerSlotSeed.forDay(target.day))
+                                        }
+                                    )
+                                    .transition(.opacity.combined(with: .move(edge: .top)))
+                                    .id(Self.dayPanelAnchor)
                                 }
                             }
+                            .padding(.horizontal, BovexaTheme.Space.xl)
+                            .padding(.top, BovexaTheme.Space.xs)
+                            // De laatste week liep tegen de plan-knop en de
+                            // tabbalk aan, waardoor de kalender eronder leek
+                            // door te lopen.
+                            .padding(.bottom, BovexaTheme.Space.tabBarClearance)
+                            .animation(.snappy(duration: 0.25), value: viewModel.daySheetTarget)
                         }
-
-                    } label: {
-                        Image(systemName: "square.3.layers.3d")
+                        // Het paneel staat onder een volle maandkalender en viel
+                        // dus buiten beeld: je tikte een dag aan en zag niets
+                        // gebeuren.
+                        .onChange(of: viewModel.daySheetTarget) { _, target in
+                            guard target != nil else { return }
+                            withAnimation(.snappy(duration: 0.3)) {
+                                proxy.scrollTo(Self.dayPanelAnchor, anchor: .bottom)
+                            }
+                        }
+                        }
                     }
                 }
+                .safeAreaInset(edge: .top, spacing: 0) { persoonFilterChip }
             }
+            // Eigen kop in plaats van de grote systeemtitel: de vier iconen
+            // zweefden als losse pil boven "Agenda" zonder zichtbare relatie met
+            // de titel, en de titel duwde de maandregel ver naar beneden.
+            .toolbar(.hidden, for: .navigationBar)
             .navigationDestination(item: $selectedEvent) { event in
                 if let userId = currentUser?.id {
                     EventDetailView(
@@ -222,6 +192,65 @@ struct AgendaView: View {
                 }
             }
         }
+    }
+
+    /// Kop van de Agenda: de titel met de vier knoppen ernaast, in plaats van de
+    /// grote systeemtitel met een zwevende icoonpil erboven. Die pil stond los van
+    /// alles en de systeemtitel duwde de maandregel ver naar beneden.
+    private var agendaHeader: some View {
+        HStack(alignment: .center, spacing: BovexaTheme.Space.xs) {
+            Text("Agenda")
+                .font(.system(size: 34, weight: .bold, design: .rounded))
+                .foregroundStyle(BovexaTheme.Colors.ink)
+
+            Spacer(minLength: BovexaTheme.Space.sm)
+
+            headerButton("magnifyingglass", label: "Zoeken") { showSearch = true }
+
+            if viewModel.canSeeOthersAgenda {
+                headerButton("person.2", label: "Wie zie je") { showPersoonKiezer = true }
+            }
+
+            headerButton("tag", label: "Legenda") { showLegende = true }
+
+            Menu {
+                ForEach(AgendaViewKind.allCases.filter { $0 != .dag }, id: \.self) { kind in
+                    Button {
+                        withAnimation(.snappy) { viewModel.setViewKind(kind) }
+                    } label: {
+                        if viewModel.viewKind == kind {
+                            Label(kind.label, systemImage: "checkmark")
+                        } else {
+                            Text(kind.label)
+                        }
+                    }
+                }
+            } label: {
+                Image(systemName: "square.3.layers.3d")
+                    .font(.system(size: 16, weight: .semibold))
+                    .foregroundStyle(BovexaTheme.Colors.accent)
+                    .frame(width: 34, height: 34)
+                    .contentShape(Rectangle())
+            }
+            .accessibilityLabel("Weergave")
+        }
+    }
+
+    private func headerButton(_ systemImage: String, label: String, action: @escaping () -> Void) -> some View {
+        Button {
+            Haptics.selection()
+            action()
+        } label: {
+            Image(systemName: systemImage)
+                .font(.system(size: 16, weight: .semibold))
+                .foregroundStyle(BovexaTheme.Colors.accent)
+                .frame(width: 34, height: 34)
+                // Glas telt niet mee voor hit-testing; zonder dit is alleen het
+                // icoontje zelf raakbaar.
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(label)
     }
 
     /// Zichtbaar zodra er collega's bij staan. Zonder dat teken is een vol raster

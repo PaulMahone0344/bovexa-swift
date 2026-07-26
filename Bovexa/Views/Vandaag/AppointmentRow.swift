@@ -67,7 +67,10 @@ struct AppointmentRow: View {
                 Text(event.title)
                     .font(BovexaTheme.TypeStyle.body.weight(.semibold))
                     .foregroundStyle(BovexaTheme.Colors.ink)
-                    .lineLimit(1)
+                    // Twee regels: "Werken bij MET logistics" en "Afspraak bij de
+                    // dokter" werden op één regel allebei "Werken…" en waren dan
+                    // niet meer uit elkaar te houden.
+                    .lineLimit(2)
 
                 HStack(spacing: BovexaTheme.Space.xs) {
                     if isColleague, let firstName = memberColors.firstName(for: event.owner) {
