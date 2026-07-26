@@ -9,6 +9,7 @@ struct ProfielView: View {
     @State private var showAfwezig = false
     @State private var showMeldingen = false
     @State private var showKlanten = false
+    @State private var showMensen = false
     @State private var showProfielBewerken = false
     @State private var showWachtwoord = false
     @State private var showDeleteConfirm = false
@@ -100,6 +101,9 @@ struct ProfielView: View {
                             row(icon: "person.2.fill", label: "Mijn klanten") {
                                 showKlanten = true
                             }
+                            row(icon: "person.crop.circle.fill.badge.plus", label: "Mensen") {
+                                showMensen = true
+                            }
                             deviceSyncRow
                             row(icon: "lock.fill", label: "Wachtwoord wijzigen") {
                                 showWachtwoord = true
@@ -146,6 +150,11 @@ struct ProfielView: View {
         .sheet(isPresented: $showKlanten) {
             if let user = currentUser {
                 KlantenView(userId: user.id, orgId: user.defaultOrg, token: authStore.token ?? "")
+            }
+        }
+        .sheet(isPresented: $showMensen) {
+            if let user = currentUser {
+                MensenView(userId: user.id, token: authStore.token ?? "")
             }
         }
         .sheet(isPresented: $showProfielBewerken) {
