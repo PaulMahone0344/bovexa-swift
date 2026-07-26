@@ -43,7 +43,7 @@ enum BovexaTab: String, CaseIterable, Identifiable {
 /// syntax i.p.v. de custom `FloatingTabBar` — dat geeft systeemeigen glas-chrome
 /// en ondersteunt `.tabBarMinimizeBehavior`. Zie DESIGN-NOTES.md.
 struct RootTabView: View {
-    @State private var selected: BovexaTab = .vandaag
+    @EnvironmentObject private var router: TabRouter
     @EnvironmentObject private var authStore: AuthStore
     @EnvironmentObject private var joinCoordinator: JoinCoordinator
 
@@ -60,7 +60,7 @@ struct RootTabView: View {
         // Elk schermtype (VandaagView/AgendaView/DagtakenView/BedrijfView/ProfielView)
         // bevat al zijn eigen `AppBackground()` — dus geen extra achtergrond hier
         // omheen zetten, dat zou 'm dubbel tekenen.
-        TabView(selection: $selected) {
+        TabView(selection: $router.selected) {
             Tab(BovexaTab.vandaag.label, systemImage: BovexaTab.vandaag.icon, value: .vandaag) {
                 VandaagView()
             }
@@ -95,7 +95,7 @@ struct RootTabView: View {
         .onChange(of: joinCoordinator.outcome) { _, outcome in
             guard outcome == .joined else { return }
             Haptics.success()
-            selected = .bedrijf
+            router.open(.bedrijf)
             Task { await authStore.refreshCurrentUser() }
             joinCoordinator.reset()
         }
@@ -120,6 +120,7 @@ struct RootTabView: View {
 
 #Preview {
     RootTabView()
+        .environmentObject(TabRouter())
         .environmentObject(AuthStore())
         .environmentObject(JoinCoordinator())
 }

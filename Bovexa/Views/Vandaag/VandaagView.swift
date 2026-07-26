@@ -2,6 +2,7 @@ import SwiftUI
 
 struct VandaagView: View {
     @EnvironmentObject private var authStore: AuthStore
+    @EnvironmentObject private var router: TabRouter
     @StateObject private var viewModel = VandaagViewModel()
     @State private var selectedEvent: AgendaEvent?
 
@@ -40,12 +41,17 @@ struct VandaagView: View {
 
                         statsRow
 
-                        // "Deze week" stond hier tot 26 juli: zeven staafjes met
-                        // de drukte per dag. Eruit op verzoek van de
-                        // opdrachtgever — het zegt niets wat de agenda zelf niet
-                        // beter laat zien. WeekBusyCard blijft in de repo staan
-                        // voor het geval het terugkomt.
                         timeline
+
+                        // "Deze week" stond hier tot 26 juli: zeven staafjes met
+                        // de drukte per dag. Eruit op verzoek van de opdrachtgever
+                        // — het herhaalde wat de agenda zelf al laat zien.
+                        // WeekBusyCard blijft in de repo staan voor het geval het
+                        // terugkomt. Hiervoor in de plaats: de dagtaken, de enige
+                        // informatie op dit scherm die niet uit de agenda komt.
+                        OpenTasksCard(tasks: viewModel.openTasks) {
+                            router.open(.dagtaken)
+                        }
                     }
                     .padding(BovexaTheme.Space.xl)
                     // De zwevende tabbalk ligt óver de content. Zonder deze
@@ -71,6 +77,10 @@ struct VandaagView: View {
             await refresh()
         }
         .onAppear {
+            // Dagtaken staan lokaal en kunnen op de andere tab veranderd zijn;
+            // dit is goedkoop (UserDefaults) en hoeft niet op het netwerk te
+            // wachten, dus los van refresh().
+            viewModel.reloadOpenTasks()
             Task { await refresh() }
         }
     }
@@ -91,7 +101,9 @@ struct VandaagView: View {
                     } placeholder: {
                         Color.clear
                     }
-                    .frame(maxWidth: 118, maxHeight: 24)
+                    // Kleiner dan 118×24: daar hield het logo de titel eronder in
+                    // evenwicht in plaats van eronder te blijven.
+                    .frame(maxWidth: 96, maxHeight: 20)
                 }
             }
 
@@ -124,7 +136,9 @@ struct VandaagView: View {
     /// Twee cijfers naast elkaar als rustige pillen: informatie die je wel wilt
     /// zien, maar die de hero-kaart niet mag beconcurreren.
     private var statsRow: some View {
-        HStack(spacing: BovexaTheme.Space.md) {
+        // .top plus gelijke hoogtes: de tegels stonden los van elkaar uitgelijnd
+        // omdat er maar in één een bijregel staat.
+        HStack(alignment: .top, spacing: BovexaTheme.Space.md) {
             GlassCard(padding: BovexaTheme.Space.md, emphasis: .quiet) {
                 StatTile(
                     value: "\(viewModel.appointmentCount)",
@@ -187,5 +201,7 @@ struct VandaagView: View {
 }
 
 #Preview {
-    VandaagView().environmentObject(AuthStore())
+    VandaagView()
+        .environmentObject(AuthStore())
+        .environmentObject(TabRouter())
 }

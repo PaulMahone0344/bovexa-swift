@@ -8,6 +8,7 @@ final class PlanningNoteStore {
 
     private let defaults: UserDefaults
     private let encoder: JSONEncoder
+    private let decoder: JSONDecoder
     private(set) var notes: [PlanningNote]
 
     init(defaults: UserDefaults = .standard) {
@@ -15,15 +16,26 @@ final class PlanningNoteStore {
 
         let decoder = JSONDecoder()
         decoder.dateDecodingStrategy = .iso8601
+        self.decoder = decoder
         let encoder = JSONEncoder()
         encoder.dateEncodingStrategy = .iso8601
         self.encoder = encoder
 
-        if let data = defaults.data(forKey: Self.key), let stored = try? decoder.decode([PlanningNote].self, from: data) {
-            notes = PlanningNoteSorting.sort(stored)
-        } else {
+        notes = []
+        reload()
+    }
+
+    /// Opnieuw uit UserDefaults lezen. Nodig omdat er meerdere stores naast elkaar
+    /// bestaan — Dagtaken heeft er een en de kaart op Vandaag ook. Zonder dit bleef
+    /// Vandaag de lijst tonen zoals die bij het starten van de app was, en verdween
+    /// een net afgevinkte taak daar pas na een herstart.
+    func reload() {
+        guard let data = defaults.data(forKey: Self.key),
+              let stored = try? decoder.decode([PlanningNote].self, from: data) else {
             notes = []
+            return
         }
+        notes = PlanningNoteSorting.sort(stored)
     }
 
     @discardableResult

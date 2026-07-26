@@ -4,6 +4,7 @@ import SwiftUI
 struct RootRouterView: View {
     @StateObject private var authStore = AuthStore()
     @StateObject private var joinCoordinator = JoinCoordinator()
+    @StateObject private var tabRouter = TabRouter()
 
     var body: some View {
         Group {
@@ -26,6 +27,7 @@ struct RootRouterView: View {
         }
         .environmentObject(authStore)
         .environmentObject(joinCoordinator)
+        .environmentObject(tabRouter)
         .task {
             await authStore.bootstrap()
         }

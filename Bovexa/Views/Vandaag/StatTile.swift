@@ -36,14 +36,16 @@ struct StatTile: View {
                 Text(label)
                     .font(BovexaTheme.TypeStyle.statLabel)
                     .foregroundStyle(BovexaTheme.Colors.inkSoft)
-                if let note {
-                    Text(note)
-                        .font(BovexaTheme.TypeStyle.caption)
-                        .foregroundStyle(BovexaTheme.categoryColor(for: .afwezig))
-                }
+                // Altijd een regel, ook zonder bijregel: zonder deze lege plek was
+                // de tegel met "1 afwezigheid" hoger dan die ernaast en zakten de
+                // twee cijfers naar verschillende hoogtes.
+                Text(note ?? " ")
+                    .font(BovexaTheme.TypeStyle.caption)
+                    .foregroundStyle(BovexaTheme.categoryColor(for: .afwezig))
+                    .opacity(note == nil ? 0 : 1)
             }
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
+        .frame(maxWidth: .infinity, alignment: .topLeading)
     }
 }
 

@@ -91,9 +91,10 @@ struct AppointmentRow: View {
                 .foregroundStyle(BovexaTheme.Colors.muted)
         }
         .padding(.vertical, BovexaTheme.Space.sm)
-        // Tijdlijnrijen zijn hoger: de stip, het icoonrondje en de doorlopende lijn
-        // hebben lucht nodig, anders raken de rondjes elkaar.
-        .frame(minHeight: style == .timeline ? 68 : 44)
+        // Tijdlijnrijen zijn iets hoger dan gewone rijen — de stip, het icoonrondje
+        // en de doorlopende lijn hebben lucht nodig. Op 68 werd het gat tussen twee
+        // afspraken zo groot dat de kaart leger oogde dan hij is.
+        .frame(minHeight: style == .timeline ? 54 : 44)
         .contentShape(Rectangle())
     }
 

@@ -16,9 +16,12 @@ struct VandaagHeaderArt: View {
             // De zon staat ónder de berg in de stapel, zodat hij er half achter
             // wegzakt zoals in de mockup. Los ervóór hing hij als een bal in de
             // lucht en trok hij meer aandacht dan de kaart eronder.
+            // Kleiner en zachter dan eerst: op 44pt en volle dekking trok de zon
+            // ongeveer evenveel aandacht als het woord "Vandaag" ernaast, terwijl
+            // dit een achtergrondtekening hoort te zijn.
             Circle()
-                .fill(sunColor.opacity(0.9))
-                .frame(width: 40, height: 40)
+                .fill(sunColor.opacity(0.72))
+                .frame(width: 37, height: 37)
                 .offset(x: 30, y: 2)
 
             Mountain()

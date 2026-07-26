@@ -14,6 +14,10 @@ final class VandaagViewModel: ObservableObject {
     @Published private(set) var plannedHoursText = "0 uur"
     @Published private(set) var weekBusyCounts: [Int] = Array(repeating: 0, count: 7)
     @Published private(set) var orgLogoURL: URL?
+    /// Dagtaken die nog openstaan, voor de kaart onder de tijdlijn. Lokaal
+    /// opgeslagen (UserDefaults), dus geen netwerkverzoek — wel opnieuw inlezen
+    /// bij elke focus, want op de Dagtaken-tab kan er intussen iets afgevinkt zijn.
+    @Published private(set) var openTasks: [PlanningNote] = []
 
     let memberColors: MemberColors
     let labelStore: LabelStore
@@ -21,6 +25,7 @@ final class VandaagViewModel: ObservableObject {
     private let repository: EventRepository
     private let labelRepository: LabelRepository
     private let externalCalendarService: ExternalCalendarService
+    private let planningStore: PlanningNoteStore
     private let defaults: UserDefaults
     private let now: () -> Date
 
@@ -28,6 +33,7 @@ final class VandaagViewModel: ObservableObject {
         repository: EventRepository = EventRepository(), memberColors: MemberColors = MemberColors(),
         labelRepository: LabelRepository = LabelRepository(), labelStore: LabelStore = LabelStore(),
         externalCalendarService: ExternalCalendarService = ExternalCalendarService(),
+        planningStore: PlanningNoteStore = PlanningNoteStore(),
         now: @escaping () -> Date = Date.init, defaults: UserDefaults = .standard
     ) {
         self.repository = repository
@@ -35,11 +41,20 @@ final class VandaagViewModel: ObservableObject {
         self.labelRepository = labelRepository
         self.labelStore = labelStore
         self.externalCalendarService = externalCalendarService
+        self.planningStore = planningStore
         self.now = now
         self.defaults = defaults
     }
 
+    /// Alleen de taken die nog te doen zijn: afgevinkt en gearchiveerd horen op
+    /// Vandaag niet thuis — dit is een lijstje "nog doen", geen overzicht.
+    func reloadOpenTasks() {
+        planningStore.reload()
+        openTasks = planningStore.notes.filter { !$0.done && !$0.archived }
+    }
+
     func load(userId: String, orgId: String?, token: String) async {
+        reloadOpenTasks()
         isLoading = true
         defer {
             isLoading = false
