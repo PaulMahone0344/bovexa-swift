@@ -37,4 +37,16 @@ struct PlannerSlotSeedTests {
         let seed = PlannerSlotSeed.forHour(9, on: day(2026, 12, 25))
         #expect(seed.contains("december"))
     }
+
+    // Vanuit de dagsheet is er geen uur gekozen — dan mag de seed er ook geen
+    // noemen, anders staat de planner meteen op een uur dat niemand vroeg.
+    @Test func dayWithoutHourOmitsTime() {
+        let seed = PlannerSlotSeed.forDay(day(2026, 8, 3))
+        #expect(seed == "Plan op maandag 3 augustus 2026")
+    }
+
+    @Test func dayWithoutHourNeverMentionsAnHour() {
+        let seed = PlannerSlotSeed.forDay(day(2026, 8, 2))
+        #expect(!seed.contains("om "))
+    }
 }

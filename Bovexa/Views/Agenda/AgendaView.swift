@@ -74,7 +74,7 @@ struct AgendaView: View {
                     },
                     onPlanAppointment: {
                         viewModel.closeDaySheet()
-                        openPlanner(seed: PlannerSlotSeed.forHour(7, on: target.day))
+                        openPlanner(seed: PlannerSlotSeed.forDay(target.day))
                     }
                 )
             }

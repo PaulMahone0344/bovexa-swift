@@ -17,9 +17,11 @@ struct DayHourGridView: View {
 
     /// Breedte van één afwezigheidsstrook.
     private static let absenceLaneWidth: CGFloat = 22
+
     /// Het uur waar het raster op opent; de naam in een afwezigheidsbaan zakt
-    /// hiernaartoe zodat hij zichtbaar is zodra je de dag opent.
-    private static let scrollAnchorHour = 7
+    /// hiernaartoe zodat hij zichtbaar is zodra je de dag opent. Op vandaag is dat
+    /// het uur van de nu-lijn, op andere dagen de ochtend.
+    private var scrollAnchorHour: Int { DayNowIndicator.anchorHour(now: Date(), day: day) }
 
     /// Afwezigheid krijgt een baan over het raster (m7 plak 4), geen chip meer —
     /// het chipje bovenaan blijft voor overige hele-dag-zaken.
@@ -45,6 +47,7 @@ struct DayHourGridView: View {
                             hourLines
                             absenceBands(bands, laneWidth: laneWidth)
                             eventBlocks(availableWidth: grid - laneInset, xInset: laneInset)
+                            nowLine(gridWidth: grid)
                         }
                     }
                     .frame(height: hourHeight * 24)
@@ -52,7 +55,7 @@ struct DayHourGridView: View {
                 .padding(.horizontal, BovexaTheme.Space.md)
             }
             .onAppear {
-                proxy.scrollTo(7, anchor: .top)
+                proxy.scrollTo(scrollAnchorHour, anchor: .top)
             }
         }
     }
@@ -105,6 +108,33 @@ struct DayHourGridView: View {
         }
     }
 
+    /// Nu-lijn zoals de iOS Agenda: een dunne streep met een bolletje op de
+    /// urenkolom, alleen op de dag die vandaag is. In `warm` — het enige
+    /// signaaltoken in het palet, en amber op blauw blijft over de volle hoogte van
+    /// het verloop leesbaar. Niet in een categorie- of persoonskleur: die betekenen
+    /// hier iets anders. Verschuift elke minuut via TimelineView; hij ligt bovenop
+    /// de blokken maar vangt geen tikken, anders zou de lijn een afspraak afdekken.
+    @ViewBuilder
+    private func nowLine(gridWidth: CGFloat) -> some View {
+        TimelineView(.everyMinute) { context in
+            if let minutes = DayNowIndicator.minutesFromMidnight(now: context.date, day: day) {
+                HStack(spacing: 0) {
+                    Circle()
+                        .fill(BovexaTheme.Colors.warm)
+                        .frame(width: 7, height: 7)
+                    Rectangle()
+                        .fill(BovexaTheme.Colors.warm)
+                        .frame(height: 1.5)
+                }
+                .frame(width: gridWidth + 3.5)
+                .offset(x: gutterWidth - 3.5, y: hourHeight * minutes / 60 - 0.75)
+                .allowsHitTesting(false)
+                .accessibilityElement()
+                .accessibilityLabel("Nu, \(EventHelpers.fmtTime(context.date))")
+            }
+        }
+    }
+
     /// Nooit meer dan een derde van het raster opeisen, ook niet bij veel
     /// afwezigen; de rest blijft voor de afspraken.
     private func laneWidth(bandCount: Int, gridWidth: CGFloat) -> CGFloat {
@@ -133,7 +163,7 @@ struct DayHourGridView: View {
                     // 00:00 — en daar kijk je nooit, want het raster opent op 07:00.
                     // Je zag een gekleurde strook zonder te weten van wie. Nu zakt
                     // het label mee naar het uur waar je binnenkomt.
-                    labelOffset: max(0, CGFloat(Self.scrollAnchorHour) * hourHeight - hourHeight * band.startMinutes / 60)
+                    labelOffset: max(0, CGFloat(scrollAnchorHour) * hourHeight - hourHeight * band.startMinutes / 60)
                 )
             }
             .buttonStyle(.plain)
