@@ -6,6 +6,12 @@ import SwiftUI
 /// verwijderde labels laten afspraken netjes terugvallen (valkuil H, in LabelStore).
 struct LegendeView: View {
     @StateObject private var viewModel: LegendeViewModel
+    /// Rechtstreeks observeren, net als elke andere view die labels tekent. Via
+    /// `viewModel.labelStore` lezen werkt niet: een geneste ObservableObject laat
+    /// de buitenste niet publiceren, dus de legenda hertekende nooit als de labels
+    /// binnenkwamen en bleef "Nog geen labels" tonen tot de view opnieuw werd
+    /// opgebouwd.
+    @ObservedObject private var labelStore: LabelStore
 
     @State private var renamingLabel: AgendaLabel?
     @State private var renameText = ""
@@ -18,6 +24,7 @@ struct LegendeView: View {
 
     init(userId: String, org: String, token: String, labelStore: LabelStore) {
         _viewModel = StateObject(wrappedValue: LegendeViewModel(userId: userId, org: org, token: token, labelStore: labelStore))
+        _labelStore = ObservedObject(wrappedValue: labelStore)
     }
 
     /// Vaste regel "Externe agenda" onderaan (m9 plak 4, valkuil D) — niet aan te
@@ -44,16 +51,16 @@ struct LegendeView: View {
             VStack(alignment: .leading, spacing: BovexaTheme.Space.sm) {
                 header
 
-                if viewModel.labelStore.orderedLabels.isEmpty {
+                if labelStore.orderedLabels.isEmpty {
                     Text("Nog geen labels. Voeg er één toe om afspraken makkelijker terug te zien.")
                         .font(BovexaTheme.TypeStyle.footnote)
                         .foregroundStyle(BovexaTheme.Colors.muted)
                     newLabelButton
                 } else if isExpanded {
                     VStack(spacing: 0) {
-                        ForEach(viewModel.labelStore.orderedLabels) { label in
+                        ForEach(labelStore.orderedLabels) { label in
                             labelRow(label)
-                            if label.id != viewModel.labelStore.orderedLabels.last?.id || showsExternalCalendarRow {
+                            if label.id != labelStore.orderedLabels.last?.id || showsExternalCalendarRow {
                                 Divider().overlay(BovexaTheme.Colors.edgeSoft)
                             }
                         }
@@ -111,7 +118,7 @@ struct LegendeView: View {
                     .foregroundStyle(BovexaTheme.Colors.accent)
                     .tracking(0.3)
                 Spacer()
-                if !viewModel.labelStore.orderedLabels.isEmpty {
+                if !labelStore.orderedLabels.isEmpty {
                     Text(isExpanded ? "Klaar" : "Wijzigen")
                         .font(BovexaTheme.TypeStyle.footnote.weight(.semibold))
                         .foregroundStyle(BovexaTheme.Colors.accent)
@@ -124,7 +131,7 @@ struct LegendeView: View {
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
-        .disabled(viewModel.labelStore.orderedLabels.isEmpty)
+        .disabled(labelStore.orderedLabels.isEmpty)
     }
 
     /// Ingeklapte weergave: stip plus naam per label, horizontaal scrollend zodat
@@ -132,7 +139,7 @@ struct LegendeView: View {
     private var collapsedStrip: some View {
         ScrollView(.horizontal, showsIndicators: false) {
             HStack(spacing: BovexaTheme.Space.sm) {
-                ForEach(viewModel.labelStore.orderedLabels) { label in
+                ForEach(labelStore.orderedLabels) { label in
                     HStack(spacing: 6) {
                         Circle()
                             .fill(Color(hex: label.kleur))
