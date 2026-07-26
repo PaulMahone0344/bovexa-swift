@@ -11,6 +11,7 @@ struct LegendeView: View {
     @State private var renameText = ""
     @State private var colorPickingLabelId: String?
     @State private var pendingDelete: AgendaLabel?
+    @State private var isExpanded = false
     @State private var showNewLabelForm = false
     @State private var newLabelName = ""
     @State private var newLabelColor = BovexaTheme.LabelPalette.options[0].hex
@@ -22,16 +23,14 @@ struct LegendeView: View {
     var body: some View {
         GlassCard {
             VStack(alignment: .leading, spacing: BovexaTheme.Space.sm) {
-                Text("LEGENDA")
-                    .font(BovexaTheme.TypeStyle.caption.weight(.bold))
-                    .foregroundStyle(BovexaTheme.Colors.accent)
-                    .tracking(0.3)
+                header
 
                 if viewModel.labelStore.orderedLabels.isEmpty {
                     Text("Nog geen labels. Voeg er één toe om afspraken makkelijker terug te zien.")
                         .font(BovexaTheme.TypeStyle.footnote)
                         .foregroundStyle(BovexaTheme.Colors.muted)
-                } else {
+                    newLabelButton
+                } else if isExpanded {
                     VStack(spacing: 0) {
                         ForEach(viewModel.labelStore.orderedLabels) { label in
                             labelRow(label)
@@ -40,9 +39,11 @@ struct LegendeView: View {
                             }
                         }
                     }
+                    newLabelButton
+                } else {
+                    collapsedStrip
                 }
 
-                newLabelButton
                 if showNewLabelForm { newLabelForm }
             }
         }
@@ -71,6 +72,59 @@ struct LegendeView: View {
         } message: {
             Text("Kon dit niet opslaan. Probeer het nog een keer.")
         }
+    }
+
+    /// Kop is de schakelaar. Ingeklapt blijft de legenda zichtbaar als strip, want
+    /// de opdrachtgever vroeg om "niet weggestopt"; uitgeklapt vulde hij bij veel
+    /// labels het halve scherm en duwde hij de maandkalender weg — de kaart staat
+    /// buiten de ScrollView, dus daar viel niet langs te scrollen.
+    private var header: some View {
+        Button {
+            Haptics.selection()
+            withAnimation(.snappy) { isExpanded.toggle() }
+        } label: {
+            HStack(spacing: BovexaTheme.Space.xs) {
+                Text("LEGENDA")
+                    .font(BovexaTheme.TypeStyle.caption.weight(.bold))
+                    .foregroundStyle(BovexaTheme.Colors.accent)
+                    .tracking(0.3)
+                Spacer()
+                if !viewModel.labelStore.orderedLabels.isEmpty {
+                    Text(isExpanded ? "Klaar" : "Wijzigen")
+                        .font(BovexaTheme.TypeStyle.footnote.weight(.semibold))
+                        .foregroundStyle(BovexaTheme.Colors.accent)
+                    Image(systemName: "chevron.down")
+                        .font(.system(size: 11, weight: .bold))
+                        .foregroundStyle(BovexaTheme.Colors.accent)
+                        .rotationEffect(.degrees(isExpanded ? 180 : 0))
+                }
+            }
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .disabled(viewModel.labelStore.orderedLabels.isEmpty)
+    }
+
+    /// Ingeklapte weergave: stip plus naam per label, horizontaal scrollend zodat
+    /// tien labels de kaart niet laten groeien.
+    private var collapsedStrip: some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: BovexaTheme.Space.sm) {
+                ForEach(viewModel.labelStore.orderedLabels) { label in
+                    HStack(spacing: 6) {
+                        Circle()
+                            .fill(Color(hex: label.kleur))
+                            .frame(width: 10, height: 10)
+                        Text(label.naam)
+                            .font(BovexaTheme.TypeStyle.footnote)
+                            .foregroundStyle(BovexaTheme.Colors.ink)
+                            .lineLimit(1)
+                    }
+                }
+            }
+            .padding(.vertical, 2)
+        }
+        .scrollBounceBehavior(.basedOnSize, axes: .horizontal)
     }
 
     private func labelRow(_ label: AgendaLabel) -> some View {
