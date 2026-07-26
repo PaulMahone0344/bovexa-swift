@@ -68,6 +68,7 @@ struct WachtwoordView: View {
                         .disabled(!canSubmit)
                     }
                     .padding(BovexaTheme.Space.xl)
+                    .padding(.bottom, BovexaTheme.Space.tabBarClearance)
                 }
             }
             .navigationTitle("Wachtwoord")

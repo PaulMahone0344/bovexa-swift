@@ -45,7 +45,7 @@ struct RootTabView: View {
     @EnvironmentObject private var joinCoordinator: JoinCoordinator
 
     var body: some View {
-        // Elk schermtype (VandaagView/AgendaView/ComingSoonView/ProfielPlaceholderView)
+        // Elk schermtype (VandaagView/AgendaView/DagtakenView/BedrijfView/ProfielView)
         // bevat al zijn eigen `AppBackground()` — dus geen extra achtergrond hier
         // omheen zetten, dat zou 'm dubbel tekenen.
         TabView(selection: $selected) {

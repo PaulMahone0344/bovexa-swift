@@ -84,6 +84,7 @@ struct ProfielBewerkenView: View {
                         .disabled(!viewModel.canSave)
                     }
                     .padding(BovexaTheme.Space.xl)
+                    .padding(.bottom, BovexaTheme.Space.tabBarClearance)
                 }
             }
             .navigationTitle("Profiel bewerken")

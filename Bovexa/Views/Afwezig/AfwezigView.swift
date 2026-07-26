@@ -41,7 +41,7 @@ struct AfwezigView: View {
                         .foregroundStyle(BovexaTheme.Colors.muted)
                         .multilineTextAlignment(.center)
                         .padding(.horizontal, BovexaTheme.Space.xl)
-                        .padding(.bottom, BovexaTheme.Space.xl)
+                        .padding(.bottom, BovexaTheme.Space.tabBarClearance)
                 }
             }
             .navigationTitle("Beschikbaarheid")
