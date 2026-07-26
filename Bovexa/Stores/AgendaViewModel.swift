@@ -19,6 +19,9 @@ final class AgendaViewModel: ObservableObject {
     @Published var displayedMonth: Date
     /// Nil is "iedereen"; anders de userId van de persoon wiens agenda je bekijkt.
     @Published private(set) var personFilter: String?
+    /// Of de kiezer mag verschijnen — hangt aan mag_agenda_anderen_zien, dat al
+    /// meekomt in de ledenlijst die deze view toch al ophaalt.
+    @Published private(set) var canSeeOthersAgenda = false
     @Published var daySheetTarget: DaySheetTarget?
     @Published var dayViewFocusDate: Date
 
@@ -79,6 +82,11 @@ final class AgendaViewModel: ObservableObject {
         events = ExternalCalendarMerge.merge(ownEvents, external: await externalResult)
         if let members = await membersResult {
             memberColors.prime(members: members.items, org: members.org)
+            canSeeOthersAgenda = AgendaPersonFilterAccess.isAllowed(userId: userId, members: members.items)
+            // Recht ingetrokken terwijl er nog op een collega gefilterd stond:
+            // terug naar iedereen, anders blijf je naar een raster kijken dat je
+            // niet meer mag kiezen.
+            if !canSeeOthersAgenda { personFilter = nil }
         }
         if let orgId, let labels = try? await labelRepository.fetchLabels(orgId: orgId, token: token) {
             labelStore.prime(labels: labels)

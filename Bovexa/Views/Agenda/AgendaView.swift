@@ -13,7 +13,6 @@ struct AgendaView: View {
     @State private var plannerSeed: String?
     @State private var showPlanner = false
     @State private var speechAlertMessage: String?
-    @State private var showAfwezig = false
 
     private var currentUser: AgendaUser? {
         if case .loggedIn(let user) = authStore.phase { return user }
@@ -133,14 +132,9 @@ struct AgendaView: View {
             .navigationTitle("Agenda")
             .navigationBarTitleDisplayMode(.large)
             .toolbar {
-                ToolbarItem(placement: .topBarTrailing) {
-                    Button {
-                        showAfwezig = true
-                    } label: {
-                        Image(systemName: "person.crop.circle.badge.clock")
-                    }
-                    .accessibilityLabel("Beschikbaarheid doorgeven")
-                }
+                // "Beschikbaarheid doorgeven" stond hier ook, maar staat al als rij
+                // op Profiel. Vijf iconen naast elkaar werd te vol; deze hoort bij
+                // je eigen gegevens, niet bij het bekijken van de agenda.
                 ToolbarItem(placement: .topBarTrailing) {
                     Button {
                         showSearch = true
@@ -149,13 +143,15 @@ struct AgendaView: View {
                     }
                     .accessibilityLabel("Zoeken")
                 }
-                ToolbarItem(placement: .topBarTrailing) {
-                    Button {
-                        showPersoonKiezer = true
-                    } label: {
-                        Image(systemName: "person.2")
+                if viewModel.canSeeOthersAgenda {
+                    ToolbarItem(placement: .topBarTrailing) {
+                        Button {
+                            showPersoonKiezer = true
+                        } label: {
+                            Image(systemName: "person.2")
+                        }
+                        .accessibilityLabel("Agenda van een collega")
                     }
-                    .accessibilityLabel("Agenda van een collega")
                 }
                 ToolbarItem(placement: .topBarTrailing) {
                     Button {
@@ -220,11 +216,6 @@ struct AgendaView: View {
                         showYearOverview = false
                         viewModel.openDayView(date)
                     }
-                }
-            }
-            .sheet(isPresented: $showAfwezig) {
-                if let userId = currentUser?.id {
-                    AfwezigView(userId: userId, org: currentUser?.defaultOrg, token: authStore.token ?? "")
                 }
             }
         }
