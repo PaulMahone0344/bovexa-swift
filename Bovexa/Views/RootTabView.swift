@@ -64,8 +64,8 @@ struct RootTabView: View {
     private static func applyTabBarAppearance() {
         let appearance = UITabBarAppearance()
         appearance.configureWithTransparentBackground()
-        appearance.backgroundEffect = UIBlurEffect(style: .systemThinMaterialLight)
-        appearance.backgroundColor = UIColor(BovexaTheme.Colors.floatingSurface.opacity(0.82))
+        appearance.backgroundEffect = UIBlurEffect(style: .systemMaterialLight)
+        appearance.backgroundColor = UIColor(BovexaTheme.Colors.floatingSurface.opacity(0.96))
         appearance.shadowColor = UIColor(BovexaTheme.Colors.edge)
 
         UITabBar.appearance().standardAppearance = appearance
