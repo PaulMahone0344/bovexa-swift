@@ -222,7 +222,7 @@ struct ProfielView: View {
             Text("Andere agenda toevoegen")
                 .font(BovexaTheme.TypeStyle.subheadline.weight(.semibold))
                 .foregroundStyle(BovexaTheme.Colors.ink)
-            Text("Plak een ICS- of webcal-link om 'm in je iPhone Agenda te abonneren")
+            Text("Plak een ICS- of webcal-link. Je abonneert je via je iPhone Agenda; de afspraken verschijnen daarna ook hier in Bovexa Flow.")
                 .font(BovexaTheme.TypeStyle.caption)
                 .foregroundStyle(BovexaTheme.Colors.muted)
 
@@ -247,11 +247,45 @@ struct ProfielView: View {
                 }
                 .buttonStyle(.glassSecondaryBrand)
             }
+
+            externalCalendarsPickerRow
         }
         .alert("Ongeldige link", isPresented: $externalCalendarLinkInvalid) {
             Button("OK", role: .cancel) {}
         } message: {
             Text("Dit is geen geldige agenda-link. Controleer de link en probeer het opnieuw.")
+        }
+    }
+
+    /// Welke toestelagenda's in Bovexa Flow te zien zijn (m9 plak 3, valkuil F/I).
+    @ViewBuilder
+    private var externalCalendarsPickerRow: some View {
+        if viewModel.externalCalendarAccessDenied {
+            Text("Geef Bovexa Flow toegang tot je agenda's in Instellingen om afspraken uit een andere agenda hier te zien.")
+                .font(BovexaTheme.TypeStyle.caption)
+                .foregroundStyle(BovexaTheme.Colors.muted)
+                .padding(.top, BovexaTheme.Space.xs)
+        } else if !viewModel.externalCalendars.isEmpty {
+            VStack(alignment: .leading, spacing: BovexaTheme.Space.xs) {
+                Text("Tonen in Bovexa Flow")
+                    .font(BovexaTheme.TypeStyle.caption.weight(.semibold))
+                    .foregroundStyle(BovexaTheme.Colors.inkSoft)
+                    .padding(.top, BovexaTheme.Space.xs)
+                ForEach(viewModel.externalCalendars) { calendar in
+                    HStack {
+                        Text(calendar.title)
+                            .font(BovexaTheme.TypeStyle.footnote)
+                            .foregroundStyle(BovexaTheme.Colors.ink)
+                        Spacer()
+                        Toggle("", isOn: Binding(
+                            get: { viewModel.selectedExternalCalendarIds.contains(calendar.id) },
+                            set: { _ in viewModel.toggleExternalCalendar(calendar.id) }
+                        ))
+                        .labelsHidden()
+                        .tint(BovexaTheme.Colors.teal)
+                    }
+                }
+            }
         }
     }
 
@@ -297,6 +331,7 @@ struct ProfielView: View {
     private func refresh() async {
         guard let user = currentUser else { return }
         await viewModel.load(userId: user.id, orgId: user.defaultOrg, token: authStore.token ?? "")
+        await viewModel.loadExternalCalendars()
     }
 
     private func deleteAccount() async {

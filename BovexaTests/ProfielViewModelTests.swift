@@ -172,4 +172,46 @@ struct ProfielViewModelTests {
         let vmReloaded = ProfielViewModel(defaults: defaults)
         #expect(!vmReloaded.deviceSyncEnabled)
     }
+
+    // MARK: - Externe agenda's (m9 plak 3, valkuil F/I)
+
+    @Test func externalCalendarsAreEmptyAndDeniedWithoutPermission() async {
+        let reader = FakeDeviceCalendarReader()
+        reader.accessGranted = false
+        let vm = ProfielViewModel(externalCalendarService: ExternalCalendarService(reader: reader), defaults: makeDefaults())
+        await vm.loadExternalCalendars()
+        #expect(vm.externalCalendars.isEmpty)
+        #expect(vm.externalCalendarAccessDenied)
+    }
+
+    @Test func externalCalendarsAppearWithPermission() async {
+        let reader = FakeDeviceCalendarReader()
+        reader.calendars = [DeviceCalendarInfo(id: "cal1", title: "Werk"), DeviceCalendarInfo(id: "cal2", title: "Verjaardagen")]
+        let vm = ProfielViewModel(externalCalendarService: ExternalCalendarService(reader: reader), defaults: makeDefaults())
+        await vm.loadExternalCalendars()
+        #expect(vm.externalCalendars == reader.calendars)
+        #expect(!vm.externalCalendarAccessDenied)
+    }
+
+    @Test func noneSelectedByDefaultMeansNothingToShow() {
+        let vm = ProfielViewModel(defaults: makeDefaults())
+        #expect(vm.selectedExternalCalendarIds.isEmpty)
+    }
+
+    @Test func selectedExternalCalendarsSurviveARestart() {
+        let defaults = makeDefaults()
+        let vm = ProfielViewModel(defaults: defaults)
+        vm.toggleExternalCalendar("cal1")
+        #expect(vm.selectedExternalCalendarIds == ["cal1"])
+
+        let vmReloaded = ProfielViewModel(defaults: defaults)
+        #expect(vmReloaded.selectedExternalCalendarIds == ["cal1"])
+    }
+
+    @Test func togglingATwiceRemovesTheSelection() {
+        let vm = ProfielViewModel(defaults: makeDefaults())
+        vm.toggleExternalCalendar("cal1")
+        vm.toggleExternalCalendar("cal1")
+        #expect(vm.selectedExternalCalendarIds.isEmpty)
+    }
 }

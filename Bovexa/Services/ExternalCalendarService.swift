@@ -79,6 +79,13 @@ final class ExternalCalendarService {
         self.reader = reader
     }
 
+    /// Voor Profiel (m9 plak 3): granted onderscheidt "geweigerd" van "wel toegang, geen
+    /// agenda's op het toestel" (valkuil F) zodat de uitlegregel alleen bij weigering komt.
+    func loadCalendars() async -> (granted: Bool, calendars: [DeviceCalendarInfo]) {
+        let granted = await reader.requestFullAccess()
+        return (granted, granted ? reader.availableCalendars() : [])
+    }
+
     func calendars() async -> [DeviceCalendarInfo] {
         guard await reader.requestFullAccess() else { return [] }
         return reader.availableCalendars()

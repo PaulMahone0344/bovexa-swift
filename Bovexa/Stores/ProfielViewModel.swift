@@ -9,10 +9,15 @@ final class ProfielViewModel: ObservableObject {
     @Published private(set) var pendingCount = 0
     @Published private(set) var unreadNotice = false
     @Published private(set) var deviceSyncEnabled: Bool
+    /// Agenda's van het toestel (m9 plak 3) — leeg zolang niet geladen of geweigerd.
+    @Published private(set) var externalCalendars: [DeviceCalendarInfo] = []
+    @Published private(set) var externalCalendarAccessDenied = false
+    @Published private(set) var selectedExternalCalendarIds: Set<String>
 
     private let repository: EventRepository
     private let noticeRepository: NoticeRepository
     private let seenStore: NoticesSeenStore
+    private let externalCalendarService: ExternalCalendarService
     private let now: () -> Date
     private let defaults: UserDefaults
 
@@ -20,15 +25,18 @@ final class ProfielViewModel: ObservableObject {
         repository: EventRepository = EventRepository(),
         noticeRepository: NoticeRepository = NoticeRepository(),
         seenStore: NoticesSeenStore = NoticesSeenStore(),
+        externalCalendarService: ExternalCalendarService = ExternalCalendarService(),
         now: @escaping () -> Date = Date.init,
         defaults: UserDefaults = .standard
     ) {
         self.repository = repository
         self.noticeRepository = noticeRepository
         self.seenStore = seenStore
+        self.externalCalendarService = externalCalendarService
         self.now = now
         self.defaults = defaults
         self.deviceSyncEnabled = DeviceCalendarSyncPreference.isEnabled(defaults: defaults)
+        self.selectedExternalCalendarIds = ExternalCalendarSelectionPreference.selectedIds(defaults: defaults)
     }
 
     /// Ongelezen-stip op de Meldingen-rij: openstaande toewijzingen (teller telt
@@ -45,6 +53,23 @@ final class ProfielViewModel: ObservableObject {
     func setDeviceSync(_ enabled: Bool) {
         deviceSyncEnabled = enabled
         DeviceCalendarSyncPreference.setEnabled(enabled, defaults: defaults)
+    }
+
+    /// Valkuil F: geweigerde toegang geeft een lege lijst en een uitlegregel, nooit een
+    /// kapot scherm.
+    func loadExternalCalendars() async {
+        let result = await externalCalendarService.loadCalendars()
+        externalCalendars = result.calendars
+        externalCalendarAccessDenied = !result.granted
+    }
+
+    func toggleExternalCalendar(_ id: String) {
+        if selectedExternalCalendarIds.contains(id) {
+            selectedExternalCalendarIds.remove(id)
+        } else {
+            selectedExternalCalendarIds.insert(id)
+        }
+        ExternalCalendarSelectionPreference.setSelectedIds(selectedExternalCalendarIds, defaults: defaults)
     }
 
     func load(userId: String, orgId: String?, token: String) async {
