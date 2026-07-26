@@ -19,7 +19,18 @@ targets:
         CFBundleShortVersionString: $(MARKETING_VERSION)
         CFBundleVersion: $(CURRENT_PROJECT_VERSION)
         UILaunchScreen: {}
+        # Zonder deze sleutel vraagt App Store Connect bij ELKE upload of de app
+        # niet-vrijgestelde encryptie gebruikt, en blijft de build hangen tot je
+        # dat handmatig beantwoordt. De app praat alleen over HTTPS met de eigen
+        # server, en dat is vrijgesteld.
+        ITSAppUsesNonExemptEncryption: false
         UISupportedInterfaceOrientations: [UIInterfaceOrientationPortrait]
+        # Op iPad ook staand. Apple eist dat een iPad-app óf alle oriëntaties
+        # ondersteunt (voor multitasking naast een andere app), óf expliciet zegt
+        # dat hij het hele scherm nodig heeft. Dit is een agenda die je staand
+        # gebruikt; liggende layouts zijn nooit ontworpen.
+        UISupportedInterfaceOrientations~ipad: [UIInterfaceOrientationPortrait, UIInterfaceOrientationPortraitUpsideDown]
+        UIRequiresFullScreen: true
         NSCalendarsWriteOnlyAccessUsageDescription: Bovexa Flow kan nieuwe afspraken ook in je iPhone Agenda zetten.
         NSCalendarsFullAccessUsageDescription: Bovexa Flow kan agenda's van je toestel uitlezen om afspraken uit een andere agenda te tonen.
         NSSpeechRecognitionUsageDescription: Bovexa Flow gebruikt spraakherkenning om je planning te dicteren.
@@ -30,7 +41,16 @@ targets:
     settings:
       base:
         SWIFT_VERSION: "5.0"
-        TARGETED_DEVICE_FAMILY: "1"
+        # iPhone én iPad. De Swift-app was bewust iPhone-only, maar de RN-app die
+        # hij in de store vervangt ondersteunde iPad, en Apple weigert een update
+        # die toestellen laat vallen (fout 90101).
+        TARGETED_DEVICE_FAMILY: "1,2"
+        # MOET hier staan, niet alleen als CFBundleIdentifier in de Info.plist:
+        # xcodegen leidt de build-setting anders af uit bundleIdPrefix + targetnaam
+        # (com.bovexa.Bovexa) en dáár tekent de codesign-stap op. Op een debug-build
+        # valt dat niet op; bij het exporteren voor de store weigert Xcode het,
+        # omdat het profiel dan niet bij de app-id past.
+        PRODUCT_BUNDLE_IDENTIFIER: com.bovexa.flow
         # De Swift-app vervangt de RN-app onder dezelfde bundle-id; de store eist
         # hoger dan de live RN-versie 1.0.2 build 20.
         MARKETING_VERSION: "2.0.0"

@@ -6,10 +6,14 @@ import Foundation
 enum TaskCompletionFormatting {
     static func label(completedAt: Date, now: Date = Date(), calendar: Calendar = .current) -> String {
         let time = timeString(completedAt)
-        if calendar.isDateInToday(completedAt) {
+        // Vergelijken met `now` en niet met de systeemklok (isDateInToday): die
+        // parameter werd genegeerd, dus wie de app om middernacht open had staan
+        // zag "Klaar om 23:50" over een taak van de vorige dag.
+        if calendar.isDate(completedAt, inSameDayAs: now) {
             return "Klaar om \(time)"
         }
-        if calendar.isDateInYesterday(completedAt) {
+        if let yesterday = calendar.date(byAdding: .day, value: -1, to: now),
+           calendar.isDate(completedAt, inSameDayAs: yesterday) {
             return "Klaar gisteren om \(time)"
         }
         return "Klaar \(dayString(completedAt)) om \(time)"

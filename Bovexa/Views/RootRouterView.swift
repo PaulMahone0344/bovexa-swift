@@ -17,9 +17,11 @@ struct RootRouterView: View {
                 }
             case .loggedOut:
                 LoginView()
+                    .readableWidth()
             case .loggedIn:
                 if authStore.justRegistered {
                     OnboardingView()
+                        .readableWidth()
                 } else {
                     RootTabView()
                 }

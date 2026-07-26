@@ -79,10 +79,12 @@ struct RootTabView: View {
         TabView(selection: $router.selected) {
             Tab(BovexaTab.vandaag.label, systemImage: BovexaTab.vandaag.icon, value: .vandaag) {
                 VandaagView()
+                    .readableWidth()
             }
 
             Tab(BovexaTab.agenda.label, systemImage: BovexaTab.agenda.icon, value: .agenda) {
                 AgendaView()
+                    .readableWidth()
             }
 
             // Deze drie via een eigen label: een tabbalk tekent elk symbool
@@ -90,18 +92,21 @@ struct RootTabView: View {
             // uit als "briefcase.fill". `symbolVariants(.none)` zet dat terug.
             Tab(value: .dagtaken) {
                 DagtakenView()
+                    .readableWidth()
             } label: {
                 outlineLabel(BovexaTab.dagtaken)
             }
 
             Tab(value: .bedrijf) {
                 BedrijfView()
+                    .readableWidth()
             } label: {
                 outlineLabel(BovexaTab.bedrijf)
             }
 
             Tab(value: .profiel) {
                 ProfielView()
+                    .readableWidth()
             } label: {
                 outlineLabel(BovexaTab.profiel)
             }
