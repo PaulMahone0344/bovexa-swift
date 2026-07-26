@@ -80,6 +80,7 @@ struct MensenView: View {
                 .foregroundStyle(BovexaTheme.Colors.muted)
             TextField("Zoek in Mensen", text: $viewModel.query)
                 .autocorrectionDisabled()
+                .textInputAutocapitalization(.never)
                 .font(BovexaTheme.TypeStyle.body)
         }
         .padding(.horizontal, BovexaTheme.Space.md)

@@ -68,6 +68,7 @@ struct LedenLijstView: View {
                 .foregroundStyle(BovexaTheme.Colors.muted)
             TextField("Zoek collega", text: $viewModel.memberQuery)
                 .autocorrectionDisabled()
+                .textInputAutocapitalization(.never)
                 .font(BovexaTheme.TypeStyle.body)
         }
         .padding(.horizontal, BovexaTheme.Space.sm)

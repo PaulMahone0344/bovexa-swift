@@ -93,6 +93,7 @@ struct AssigneePickerView: View {
                 .foregroundStyle(BovexaTheme.Colors.muted)
             TextField("Zoek collega", text: $query)
                 .autocorrectionDisabled()
+                .textInputAutocapitalization(.never)
                 .disabled(disabled)
         }
         .padding(.horizontal, BovexaTheme.Space.md)

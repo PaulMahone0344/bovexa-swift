@@ -54,6 +54,7 @@ struct SearchView: View {
             TextField("Zoek in je afspraken…", text: $viewModel.query)
                 .focused($searchFocused)
                 .autocorrectionDisabled()
+                .textInputAutocapitalization(.never)
                 .submitLabel(.search)
             if !viewModel.query.isEmpty {
                 Button {
