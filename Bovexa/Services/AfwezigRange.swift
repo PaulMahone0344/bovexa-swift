@@ -26,4 +26,16 @@ enum AfwezigRange {
         }
         return result
     }
+
+    /// Dag uit `day`, uur/minuut uit `time` — voor een dagdeel-afwezigheid (m7 plak 5):
+    /// zelfde geselecteerde dag, maar de tijd komt uit de tijdkiezers in plaats van
+    /// het middaguur.
+    static func combine(day: Date, time: Date, calendar: Calendar = .current) -> Date {
+        var comps = calendar.dateComponents([.year, .month, .day], from: day)
+        let timeComps = calendar.dateComponents([.hour, .minute], from: time)
+        comps.hour = timeComps.hour
+        comps.minute = timeComps.minute
+        comps.second = 0
+        return calendar.date(from: comps) ?? day
+    }
 }

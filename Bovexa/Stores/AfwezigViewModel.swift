@@ -12,6 +12,11 @@ final class AfwezigViewModel: ObservableObject {
     @Published private(set) var saving = false
     @Published var savedAlertMessage: String?
     @Published var saveFailedAlert = false
+    /// Schakelaar "Hele dag" (m7 plak 5), standaard aan. Alleen relevant bij één
+    /// geselecteerde dag — zie `effectiveHeleDag`.
+    @Published var heleDag = true
+    @Published var startTime: Date
+    @Published var endTime: Date
 
     private let userId: String
     private let org: String?
@@ -29,6 +34,8 @@ final class AfwezigViewModel: ObservableObject {
         self.repository = repository
         self.calendar = calendar
         cursorMonth = today
+        startTime = Self.defaultTime(hour: 9, calendar: calendar, reference: today)
+        endTime = Self.defaultTime(hour: 17, calendar: calendar, reference: today)
     }
 
     var range: [Date] {
@@ -37,7 +44,23 @@ final class AfwezigViewModel: ObservableObject {
     }
 
     var tooLong: Bool { range.count > AfwezigRange.maxDays }
-    var canSave: Bool { from != nil && !tooLong && !saving }
+
+    /// Beperking uit het plan: een dagdeel kan alleen bij één geselecteerde dag.
+    var isSingleDaySelection: Bool { range.count == 1 }
+
+    /// De schakelaar telt alleen mee bij één dag; bij meerdere dagen blijft het
+    /// hele dagen, ook als de gebruiker 'm eerder had uitgezet (plan: "de
+    /// schakelaar verdwijnt" — geen aparte reset nodig, dit is de ene bron van
+    /// waarheid die save() en de UI allebei gebruiken).
+    var effectiveHeleDag: Bool { isSingleDaySelection ? heleDag : true }
+
+    private var partialDayRangeIsValid: Bool { effectiveHeleDag || endTime > startTime }
+
+    var canSave: Bool { from != nil && !tooLong && !saving && partialDayRangeIsValid }
+
+    private static func defaultTime(hour: Int, calendar: Calendar, reference: Date) -> Date {
+        calendar.date(bySettingHour: hour, minute: 0, second: 0, of: reference) ?? reference
+    }
 
     func pickDay(_ day: Date) {
         let day = calendar.startOfDay(for: day)
@@ -71,13 +94,16 @@ final class AfwezigViewModel: ObservableObject {
         defer { saving = false }
 
         let days = AfwezigRange.days(from: from, to: to ?? from, calendar: calendar)
+        let partial = !effectiveHeleDag
         do {
             for day in days {
                 let payload = AfwezigCreatePayload(
                     owner: userId, org: org ?? "", title: reason.label,
                     calendar: org != nil ? "work" : "private",
                     visibility: org != nil ? "company" : "private",
-                    start: day, rawInput: "afwezig: \(reason.label.lowercased())"
+                    start: partial ? AfwezigRange.combine(day: day, time: startTime, calendar: calendar) : day,
+                    end: partial ? AfwezigRange.combine(day: day, time: endTime, calendar: calendar) : nil,
+                    rawInput: "afwezig: \(reason.label.lowercased())"
                 )
                 _ = try await repository.createEvent(body: payload.requestBody, token: token)
             }

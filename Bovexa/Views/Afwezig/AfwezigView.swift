@@ -26,6 +26,9 @@ struct AfwezigView: View {
                         VStack(alignment: .leading, spacing: BovexaTheme.Space.lg) {
                             reasonSection
                             periodSection
+                            if viewModel.isSingleDaySelection {
+                                heleDagSection
+                            }
                             if viewModel.tooLong {
                                 Text("Maximaal \(AfwezigRange.maxDays) dagen per keer.")
                                     .font(BovexaTheme.TypeStyle.footnote.weight(.semibold))
@@ -36,7 +39,9 @@ struct AfwezigView: View {
                     }
                     .padding(BovexaTheme.Space.xl)
 
-                    Text("Je team ziet dit als hele-dag blok\(hasOrg ? " in de gedeelde agenda" : "").")
+                    Text(viewModel.effectiveHeleDag
+                         ? "Je team ziet dit als hele-dag blok\(hasOrg ? " in de gedeelde agenda" : "")."
+                         : "Je team ziet dit als tijdsblok\(hasOrg ? " in de gedeelde agenda" : "").")
                         .font(BovexaTheme.TypeStyle.caption)
                         .foregroundStyle(BovexaTheme.Colors.muted)
                         .multilineTextAlignment(.center)
@@ -198,6 +203,34 @@ struct AfwezigView: View {
                 .clipShape(RoundedRectangle(cornerRadius: BovexaTheme.Radius.sm, style: .continuous))
         }
         .disabled(past)
+    }
+
+    private var heleDagSection: some View {
+        VStack(alignment: .leading, spacing: BovexaTheme.Space.sm) {
+            Toggle(isOn: $viewModel.heleDag) {
+                Text("Hele dag")
+                    .font(BovexaTheme.TypeStyle.subheadline.weight(.semibold))
+                    .foregroundStyle(BovexaTheme.Colors.ink)
+            }
+            .tint(BovexaTheme.categoryColor(for: .afwezig))
+
+            if !viewModel.heleDag {
+                HStack(spacing: BovexaTheme.Space.sm) {
+                    DatePicker("Van", selection: $viewModel.startTime, displayedComponents: .hourAndMinute)
+                        .labelsHidden()
+                    Text("t/m")
+                        .font(BovexaTheme.TypeStyle.footnote)
+                        .foregroundStyle(BovexaTheme.Colors.muted)
+                    DatePicker("Tot", selection: $viewModel.endTime, displayedComponents: .hourAndMinute)
+                        .labelsHidden()
+                }
+                if viewModel.endTime <= viewModel.startTime {
+                    Text("Eindtijd moet na de begintijd liggen.")
+                        .font(BovexaTheme.TypeStyle.footnote.weight(.semibold))
+                        .foregroundStyle(BovexaTheme.Colors.danger)
+                }
+            }
+        }
     }
 
     private var submitButton: some View {

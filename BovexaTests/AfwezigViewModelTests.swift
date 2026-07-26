@@ -11,9 +11,9 @@ struct AfwezigViewModelTests {
         URLProtocolStub.errorHandler = nil
     }
 
-    private func day(_ d: Int, _ m: Int = 8, _ y: Int = 2026) -> Date {
+    private func day(_ d: Int, _ m: Int = 8, _ y: Int = 2026, hour: Int = 0) -> Date {
         var comps = DateComponents()
-        comps.year = y; comps.month = m; comps.day = d
+        comps.year = y; comps.month = m; comps.day = d; comps.hour = hour
         return Calendar(identifier: .gregorian).date(from: comps)!
     }
 
@@ -175,6 +175,92 @@ struct AfwezigViewModelTests {
         #expect(vm.saveFailedAlert == true)
         #expect(vm.saving == false)
         #expect(vm.range.count == 1) // selectie blijft staan, gebruiker kan opnieuw proberen
+    }
+
+    // MARK: - heleDag (m7 plak 5)
+
+    @Test func heleDagDefaultsToTrue() {
+        let vm = makeViewModel()
+        #expect(vm.heleDag == true)
+    }
+
+    @Test func effectiveHeleDagIsForcedTrueForMultiDaySelectionEvenIfToggledOff() {
+        let vm = makeViewModel()
+        vm.pickDay(day(3))
+        vm.pickDay(day(5))
+        vm.heleDag = false
+        #expect(vm.isSingleDaySelection == false)
+        #expect(vm.effectiveHeleDag == true)
+    }
+
+    @Test func effectiveHeleDagRespectsToggleForSingleDaySelection() {
+        let vm = makeViewModel()
+        vm.pickDay(day(3))
+        vm.heleDag = false
+        #expect(vm.isSingleDaySelection == true)
+        #expect(vm.effectiveHeleDag == false)
+    }
+
+    @Test func canSaveIsFalseWhenPartialDayEndIsBeforeStart() {
+        let vm = makeViewModel()
+        vm.pickDay(day(3))
+        vm.heleDag = false
+        vm.startTime = day(3, hour: 17)
+        vm.endTime = day(3, hour: 9)
+        #expect(vm.canSave == false)
+    }
+
+    @Test func canSaveIsTrueWhenPartialDayEndIsAfterStart() {
+        let vm = makeViewModel()
+        vm.pickDay(day(3))
+        vm.heleDag = false
+        vm.startTime = day(3, hour: 9)
+        vm.endTime = day(3, hour: 17)
+        #expect(vm.canSave == true)
+    }
+
+    @Test func savePartialDaySendsAllDayFalseWithStartAndEnd() async {
+        let vm = makeViewModel()
+        vm.pickDay(day(3))
+        vm.heleDag = false
+        vm.startTime = day(3, hour: 13)
+        vm.endTime = day(3, hour: 17)
+
+        let expectedStart = PBDate.format(AfwezigRange.combine(day: AfwezigRange.atNoon(day(3)), time: vm.startTime))
+        let expectedEnd = PBDate.format(AfwezigRange.combine(day: AfwezigRange.atNoon(day(3)), time: vm.endTime))
+
+        var capturedBody: [String: Any] = [:]
+        URLProtocolStub.requestHandler = { request in
+            capturedBody = (try? JSONSerialization.jsonObject(with: self.bodyData(from: request)) as? [String: Any]) ?? [:]
+            return (200, Data("""
+            {"id":"ev1","owner":"u1","title":"Vakantie","start":"\(expectedStart)","end":"\(expectedEnd)","all_day":false}
+            """.utf8))
+        }
+        await vm.save()
+
+        #expect(capturedBody["all_day"] as? Bool == false)
+        #expect(capturedBody["start"] as? String == expectedStart)
+        #expect(capturedBody["end"] as? String == expectedEnd)
+    }
+
+    @Test func saveMultiDayIgnoresHeleDagToggleAndStaysAllDay() async {
+        let vm = makeViewModel()
+        vm.pickDay(day(3))
+        vm.pickDay(day(5))
+        vm.heleDag = false
+
+        var createdBodies: [[String: Any]] = []
+        URLProtocolStub.requestHandler = { request in
+            createdBodies.append((try? JSONSerialization.jsonObject(with: self.bodyData(from: request)) as? [String: Any]) ?? [:])
+            return (200, Data("""
+            {"id":"ev1","owner":"u1","title":"Vakantie","start":"2026-08-03 12:00:00.000Z","all_day":true}
+            """.utf8))
+        }
+        await vm.save()
+
+        #expect(createdBodies.count == 3)
+        #expect(createdBodies.allSatisfy { $0["all_day"] as? Bool == true })
+        #expect(createdBodies.allSatisfy { $0["end"] == nil })
     }
 
     @Test func saveWhenCannotSaveDoesNothing() async {
