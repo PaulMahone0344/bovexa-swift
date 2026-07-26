@@ -17,8 +17,13 @@ final class AgendaViewModel: ObservableObject {
     @Published private(set) var isLoading = false
     @Published private(set) var hasLoadedOnce = false
     @Published var displayedMonth: Date
-    /// Nil is "iedereen"; anders de userId van de persoon wiens agenda je bekijkt.
-    @Published private(set) var personFilter: String?
+    /// Wiens agenda's het raster laat zien. Je eigen agenda zit er altijd in en is
+    /// niet uit te vinken (besluit 26 juli): de Agenda begint bij jouw dag, en
+    /// collega's vink je erbij. Zo open je de app nooit op het raster van twaalf man.
+    @Published private(set) var selectedPeople: Set<String> = []
+    /// Bewust niet bewaard tussen sessies: elke start begint weer bij jezelf,
+    /// anders kijk je zonder het te merken nog naar de agenda van gisteren-erbij.
+    private var currentUserId = ""
     /// Of de kiezer mag verschijnen — hangt aan mag_agenda_anderen_zien, dat al
     /// meekomt in de ledenlijst die deze view toch al ophaalt.
     @Published private(set) var canSeeOthersAgenda = false
@@ -65,6 +70,8 @@ final class AgendaViewModel: ObservableObject {
     }
 
     func load(userId: String, orgId: String?, token: String) async {
+        currentUserId = userId
+        selectedPeople.insert(userId)
         isLoading = true
         defer {
             isLoading = false
@@ -83,10 +90,10 @@ final class AgendaViewModel: ObservableObject {
         if let members = await membersResult {
             memberColors.prime(members: members.items, org: members.org)
             canSeeOthersAgenda = AgendaPersonFilterAccess.isAllowed(userId: userId, members: members.items)
-            // Recht ingetrokken terwijl er nog op een collega gefilterd stond:
-            // terug naar iedereen, anders blijf je naar een raster kijken dat je
-            // niet meer mag kiezen.
-            if !canSeeOthersAgenda { personFilter = nil }
+            // Recht ingetrokken terwijl er nog collega's aangevinkt stonden: terug
+            // naar alleen jezelf, anders blijf je naar agenda's kijken die je niet
+            // meer mag opvragen.
+            if !canSeeOthersAgenda { showOnlyOwnAgenda() }
         }
         if let orgId, let labels = try? await labelRepository.fetchLabels(orgId: orgId, token: token) {
             labelStore.prime(labels: labels)
@@ -139,14 +146,35 @@ final class AgendaViewModel: ObservableObject {
     /// volledige set, zodat het filter alleen de weergave raakt en niet opnieuw
     /// geladen hoeft te worden als je van persoon wisselt.
     var visibleEvents: [AgendaEvent] {
-        AgendaPersonFilter.apply(events, userId: personFilter)
+        AgendaPersonFilter.apply(events, userIds: selectedPeople)
     }
 
     func eventsOnDay(_ day: Date, calendar: Calendar = .current) -> [AgendaEvent] {
         EventHelpers.eventsOnDay(visibleEvents, day: day, calendar: calendar)
     }
 
-    func setPersonFilter(_ userId: String?) {
-        personFilter = userId
+    /// De collega's die je er zelf bij hebt gezet — jezelf dus niet. Bepaalt of de
+    /// chip verschijnt die vertelt dat je meer ziet dan je eigen dag.
+    var extraPeople: Set<String> {
+        selectedPeople.subtracting([currentUserId])
+    }
+
+    /// Jezelf uitvinken kan niet: de Agenda begint bij jouw dag. Zonder die regel
+    /// kun je alles uitzetten en naar een leeg raster kijken zonder te weten waarom.
+    func togglePerson(_ userId: String) {
+        guard userId != currentUserId else { return }
+        if selectedPeople.contains(userId) {
+            selectedPeople.remove(userId)
+        } else {
+            selectedPeople.insert(userId)
+        }
+    }
+
+    func showEveryone() {
+        selectedPeople = Set(memberColors.members.map(\.userId)).union([currentUserId])
+    }
+
+    func showOnlyOwnAgenda() {
+        selectedPeople = [currentUserId]
     }
 }

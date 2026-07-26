@@ -201,7 +201,10 @@ struct AgendaView: View {
                 if let userId = currentUser?.id {
                     AgendaPersoonKiezerView(
                         memberColors: viewModel.memberColors, currentUserId: userId,
-                        selected: viewModel.personFilter, onPick: { viewModel.setPersonFilter($0) }
+                        selected: viewModel.selectedPeople,
+                        onToggle: { viewModel.togglePerson($0) },
+                        onSelectEveryone: { viewModel.showEveryone() },
+                        onSelectOnlyMe: { viewModel.showOnlyOwnAgenda() }
                     )
                 }
             }
@@ -221,28 +224,33 @@ struct AgendaView: View {
         }
     }
 
-    /// Zonder dit teken lijkt een gefilterde agenda simpelweg leeg. Dat is de
-    /// grootste valkuil van het personenfilter: je ziet drie afspraken in plaats
-    /// van twintig en denkt dat er iets stuk is.
+    /// Zichtbaar zodra er collega's bij staan. Zonder dat teken is een vol raster
+    /// niet te onderscheiden van je eigen drukke dag: je ziet twintig blokken en
+    /// weet niet van wie ze zijn.
     @ViewBuilder
     private var persoonFilterChip: some View {
-        if let filter = viewModel.personFilter {
+        let extra = viewModel.extraPeople
+        if let label = AgendaFilterChipText.text(
+            extraNames: extra.compactMap { viewModel.memberColors.firstName(for: $0) }
+        ) {
             HStack(spacing: BovexaTheme.Space.xs) {
-                Circle()
-                    .fill(viewModel.memberColors.color(for: filter))
-                    .frame(width: 10, height: 10)
-                Text("Agenda van \(viewModel.memberColors.firstName(for: filter) ?? "collega")")
+                ForEach(extra.sorted().prefix(3), id: \.self) { userId in
+                    Circle()
+                        .fill(viewModel.memberColors.color(for: userId))
+                        .frame(width: 10, height: 10)
+                }
+                Text(label)
                     .font(BovexaTheme.TypeStyle.footnote.weight(.semibold))
                     .foregroundStyle(BovexaTheme.Colors.ink)
                 Button {
                     Haptics.selection()
-                    viewModel.setPersonFilter(nil)
+                    viewModel.showOnlyOwnAgenda()
                 } label: {
                     Image(systemName: "xmark.circle.fill")
                         .font(.system(size: 15))
                         .foregroundStyle(BovexaTheme.Colors.muted)
                 }
-                .accessibilityLabel("Weer iedereen tonen")
+                .accessibilityLabel("Alleen mijn eigen agenda tonen")
             }
             .padding(.horizontal, BovexaTheme.Space.md)
             .padding(.vertical, BovexaTheme.Space.xs)

@@ -167,4 +167,85 @@ struct AgendaViewModelTests {
         #expect(viewModel.events.contains { $0.title == "Volgende maand" })
         #expect(!viewModel.events.contains { $0.title == "Overleg" })
     }
+
+    // MARK: - Wie zie je in de agenda (26 juli: eigen agenda is het startpunt)
+
+    /// Stub met twee collega's naast de ingelogde gebruiker, allemaal met het recht
+    /// om andermans agenda te zien.
+    private func stubMembers() {
+        URLProtocolStub.requestHandler = { request in
+            let path = request.url!.path
+            if path.contains("agenda_labels") {
+                return (200, """
+                {"items":[],"page":1,"perPage":200,"totalItems":0,"totalPages":0}
+                """.data(using: .utf8)!)
+            }
+            if path.contains("agenda_events") {
+                return (200, """
+                {"items":[{"id":"mine","owner":"me","title":"Eigen","start":"2026-07-24 09:00:00.000Z","all_day":false},
+                          {"id":"his","owner":"u2","title":"Van Daan","start":"2026-07-24 10:00:00.000Z","all_day":false}],
+                 "page":1,"perPage":200,"totalItems":2,"totalPages":2}
+                """.data(using: .utf8)!)
+            }
+            return (200, """
+            {"items":[
+              {"id":"m1","userId":"me","naam":"Ik","email":"ik@bovexa.nl","avatar":"","role":"admin","status":"active","is_owner":true,
+               "mag_maken":true,"mag_wijzigen":true,"mag_verwijderen":true,"mag_klant_zien":true,"mag_agenda_anderen_zien":true},
+              {"id":"m2","userId":"u2","naam":"Daan","email":"daan@bovexa.nl","avatar":"","role":"member","status":"active","is_owner":false,
+               "mag_maken":true,"mag_wijzigen":true,"mag_verwijderen":false,"mag_klant_zien":true,"mag_agenda_anderen_zien":false},
+              {"id":"m3","userId":"u3","naam":"Nora","email":"nora@bovexa.nl","avatar":"","role":"member","status":"active","is_owner":false,
+               "mag_maken":true,"mag_wijzigen":true,"mag_verwijderen":false,"mag_klant_zien":true,"mag_agenda_anderen_zien":false}
+            ],"org":null}
+            """.data(using: .utf8)!)
+        }
+    }
+
+    @Test func agendaStartsOnYourOwnEventsOnly() async {
+        stubMembers()
+        let viewModel = makeViewModel()
+
+        await viewModel.load(userId: "me", orgId: "org1", token: "tok")
+
+        #expect(viewModel.selectedPeople == ["me"])
+        #expect(viewModel.extraPeople.isEmpty)
+        #expect(Set(viewModel.visibleEvents.map(\.id)) == ["mine"])
+    }
+
+    @Test func togglingAColleagueAddsAndRemovesTheirEvents() async {
+        stubMembers()
+        let viewModel = makeViewModel()
+        await viewModel.load(userId: "me", orgId: "org1", token: "tok")
+
+        viewModel.togglePerson("u2")
+        #expect(viewModel.extraPeople == ["u2"])
+        #expect(Set(viewModel.visibleEvents.map(\.id)) == ["mine", "his"])
+
+        viewModel.togglePerson("u2")
+        #expect(viewModel.extraPeople.isEmpty)
+        #expect(Set(viewModel.visibleEvents.map(\.id)) == ["mine"])
+    }
+
+    /// Jezelf uitvinken kan niet; anders kun je alles uitzetten en naar een leeg
+    /// raster kijken zonder te weten waarom.
+    @Test func youCannotSwitchOffYourOwnAgenda() async {
+        stubMembers()
+        let viewModel = makeViewModel()
+        await viewModel.load(userId: "me", orgId: "org1", token: "tok")
+
+        viewModel.togglePerson("me")
+
+        #expect(viewModel.selectedPeople.contains("me"))
+    }
+
+    @Test func everyoneSelectsAllMembersAndOnlyMeReturns() async {
+        stubMembers()
+        let viewModel = makeViewModel()
+        await viewModel.load(userId: "me", orgId: "org1", token: "tok")
+
+        viewModel.showEveryone()
+        #expect(viewModel.selectedPeople == ["me", "u2", "u3"])
+
+        viewModel.showOnlyOwnAgenda()
+        #expect(viewModel.selectedPeople == ["me"])
+    }
 }

@@ -5,6 +5,9 @@ import Foundation
 /// m10 plak 1: "de agenda van persoon P" is alles wat P bezit óf wat aan P is
 /// toegewezen. Een afspraak die de baas aanmaakt en aan Daan toewijst hoort in
 /// Daans dag, anders mist een medewerker precies zijn eigen werk.
+///
+/// Omgedraaid op 26 juli: je vinkt mensen aan in plaats van er één te kiezen, en
+/// je eigen agenda staat altijd aan.
 struct AgendaPersonFilterTests {
     private func event(
         id: String = "e1", owner: String, assignee: [String] = [], isExternal: Bool = false
@@ -18,40 +21,42 @@ struct AgendaPersonFilterTests {
         )
     }
 
-    @Test("Zonder filter komt alles door")
-    func nilFilterPassesEverything() {
-        let own = event(owner: "u1")
-        let other = event(owner: "u2")
-        let external = event(owner: "", isExternal: true)
-        #expect(AgendaPersonFilter.matches(own, userId: nil))
-        #expect(AgendaPersonFilter.matches(other, userId: nil))
-        #expect(AgendaPersonFilter.matches(external, userId: nil))
+    @Test("Alleen jezelf aangevinkt laat andermans afspraak weg")
+    func onlyOwnAgendaHidesColleagues() {
+        #expect(AgendaPersonFilter.matches(event(owner: "u1"), userIds: ["u1"]))
+        #expect(!AgendaPersonFilter.matches(event(owner: "u2"), userIds: ["u1"]))
     }
 
-    @Test("Eigenaar matcht")
-    func ownerMatches() {
-        #expect(AgendaPersonFilter.matches(event(owner: "u2"), userId: "u2"))
+    @Test("Een collega erbij vinken laat zijn afspraak zien")
+    func addingAColleagueShowsTheirEvents() {
+        #expect(AgendaPersonFilter.matches(event(owner: "u2"), userIds: ["u1", "u2"]))
     }
 
     @Test("Toegewezene matcht, ook als iemand anders de eigenaar is")
     func assigneeMatches() {
         let assigned = event(owner: "u1", assignee: ["u2", "u3"])
-        #expect(AgendaPersonFilter.matches(assigned, userId: "u2"))
-        #expect(AgendaPersonFilter.matches(assigned, userId: "u3"))
+        #expect(AgendaPersonFilter.matches(assigned, userIds: ["u2"]))
+        #expect(AgendaPersonFilter.matches(assigned, userIds: ["u3"]))
     }
 
     @Test("Iemand die er niets mee te maken heeft matcht niet")
     func unrelatedDoesNotMatch() {
-        #expect(!AgendaPersonFilter.matches(event(owner: "u1", assignee: ["u2"]), userId: "u9"))
+        #expect(!AgendaPersonFilter.matches(event(owner: "u1", assignee: ["u2"]), userIds: ["u9"]))
     }
 
-    /// Externe afspraken komen van het toestel van de ingelogde gebruiker en
-    /// hebben geen eigenaar; die horen nooit bij een collega.
-    @Test("Externe afspraak matcht geen enkele persoon")
-    func externalNeverMatchesAPerson() {
+    /// Externe afspraken komen van het toestel van de ingelogde gebruiker en hebben
+    /// geen eigenaar. Ze horen bij niemand in het bedrijf, maar wél bij jou — en
+    /// jouw agenda staat altijd aan, dus ze blijven staan.
+    @Test("Externe afspraak blijft staan, wie je ook aanvinkt")
+    func externalAlwaysVisible() {
         let external = event(owner: "", isExternal: true)
-        #expect(!AgendaPersonFilter.matches(external, userId: "u1"))
-        #expect(!AgendaPersonFilter.matches(external, userId: "u2"))
+        #expect(AgendaPersonFilter.matches(external, userIds: ["u1"]))
+        #expect(AgendaPersonFilter.matches(external, userIds: ["u1", "u2"]))
+    }
+
+    @Test("Lege selectie toont alles in plaats van niets")
+    func emptySelectionFallsBackToEverything() {
+        #expect(AgendaPersonFilter.matches(event(owner: "u2"), userIds: []))
     }
 
     @Test("Filteren van een lijst houdt de volgorde aan")
@@ -61,7 +66,8 @@ struct AgendaPersonFilterTests {
             event(id: "b", owner: "u2"),
             event(id: "c", owner: "u1", assignee: ["u2"]),
         ]
-        #expect(AgendaPersonFilter.apply(events, userId: "u2").map(\.id) == ["b", "c"])
-        #expect(AgendaPersonFilter.apply(events, userId: nil).map(\.id) == ["a", "b", "c"])
+        #expect(AgendaPersonFilter.apply(events, userIds: ["u2"]).map(\.id) == ["b", "c"])
+        #expect(AgendaPersonFilter.apply(events, userIds: ["u1", "u2"]).map(\.id) == ["a", "b", "c"])
+        #expect(AgendaPersonFilter.apply(events, userIds: ["u1"]).map(\.id) == ["a", "c"])
     }
 }
