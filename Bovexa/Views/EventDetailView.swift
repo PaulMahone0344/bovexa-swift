@@ -15,14 +15,25 @@ struct EventDetailView: View {
     @State private var isEditing = false
 
     private let token: String
+    /// Het scherm dat dit detail opende, kan zijn eigen lijst verversen. Zonder dat
+    /// bericht blijft een gewijzigde of geweigerde afspraak in de agenda staan tot de
+    /// app opnieuw start: terugklappen laat `.onAppear` daar niet opnieuw vuren.
+    private let onChanged: () -> Void
+    private let onDeleted: (String) -> Void
 
-    init(event: AgendaEvent, currentUserId: String, currentUserOrgId: String?, token: String, memberColors: MemberColors, labelStore: LabelStore) {
+    init(
+        event: AgendaEvent, currentUserId: String, currentUserOrgId: String?, token: String,
+        memberColors: MemberColors, labelStore: LabelStore,
+        onChanged: @escaping () -> Void = {}, onDeleted: @escaping (String) -> Void = { _ in }
+    ) {
         _viewModel = StateObject(wrappedValue: EventDetailViewModel(
             event: event, currentUserId: currentUserId, currentUserOrgId: currentUserOrgId, token: token
         ))
         self.memberColors = memberColors
         self.labelStore = labelStore
         self.token = token
+        self.onChanged = onChanged
+        self.onDeleted = onDeleted
     }
 
     private var event: AgendaEvent { viewModel.event }
@@ -41,6 +52,7 @@ struct EventDetailView: View {
                         onSaved: { updated in
                             viewModel.applyEditorSave(updated)
                             isEditing = false
+                            onChanged()
                         }
                     )
                     .padding(BovexaTheme.Space.xl)
@@ -90,8 +102,10 @@ struct EventDetailView: View {
             Button("Verwijder", role: .destructive) {
                 Task {
                     isDeleting = true
+                    let recordId = EventHelpers.eventRecordId(event)
                     if await viewModel.delete() {
                         Haptics.warning()
+                        onDeleted(recordId)
                         dismiss()
                     }
                     isDeleting = false
@@ -231,6 +245,9 @@ struct EventDetailView: View {
                     if viewModel.respondFailedAlert {
                         Haptics.warning()
                     } else {
+                        // Een geweigerde toewijzing hoort niet meer in de agenda;
+                        // dat filter zit aan de kant van het ophalen.
+                        onChanged()
                         dismiss()
                     }
                 }

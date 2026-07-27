@@ -272,21 +272,47 @@ struct DagtakenViewModelTests {
 
     // MARK: - toggleTeamTask (valkuil E + F)
 
-    private func makeTask(id: String = "t1", owner: String = "u1", status: TaskStatus = .open) -> AgendaTask {
+    private func makeTask(
+        id: String = "t1", owner: String = "u1", status: TaskStatus = .open,
+        visibility: TaskVisibility = .company
+    ) -> AgendaTask {
         AgendaTask(
             id: id, owner: owner, org: "org1", title: "Taak", notes: nil, status: status,
-            visibility: .company, viewers: [], created: Date(timeIntervalSince1970: 0), updated: Date(timeIntervalSince1970: 0)
+            visibility: visibility, viewers: [], created: Date(timeIntervalSince1970: 0), updated: Date(timeIntervalSince1970: 0)
         )
     }
 
-    @Test func toggleTeamTaskOnColleagueTaskDoesNothing() async {
+    /// Sinds 27 juli mag een collega een gedeelde bedrijfstaak wél afvinken: wie hem
+    /// doet, vinkt hem af. Wissen blijft van de eigenaar.
+    @Test func toggleTeamTaskOnColleagueCompanyTaskIsAllowed() async {
         let vm = makeViewModel()
         URLProtocolStub.requestHandler = { _ in
-            Issue.record("mag niet afvinken bij andermans taak")
+            let json = """
+            {"id":"t1","owner":"u2","org":"org1","title":"Taak","notes":"","status":"klaar",
+             "visibility":"company","viewers":[],"created":"2026-07-24 09:00:00.000Z",
+             "updated":"2026-07-24 09:00:00.000Z","completed_at":"2026-07-27 12:00:00.000Z"}
+            """.data(using: .utf8)!
+            return (200, json)
+        }
+
+        await vm.toggleTeamTask(makeTask(owner: "u2"), userId: "u1", token: "tok")
+
+        // De taak zat nog niet in de lijst van dit viewmodel; het gaat hier om of het
+        // verzoek überhaupt de deur uit mocht (de stub records geen Issue meer).
+        #expect(!vm.deleteTeamTaskFailedAlert)
+    }
+
+    /// Een privétaak van een collega blijft onaanraakbaar — die hoort er sowieso niet
+    /// te staan, en als hij er staat gaat er geen verzoek uit.
+    @Test func toggleTeamTaskOnColleaguePrivateTaskDoesNothing() async {
+        let vm = makeViewModel()
+        URLProtocolStub.requestHandler = { _ in
+            Issue.record("mag niet afvinken bij een privétaak van een ander")
             return (500, Data())
         }
-        let colleagueTask = makeTask(owner: "u2")
-        await vm.toggleTeamTask(colleagueTask, userId: "u1", token: "tok")
+
+        await vm.toggleTeamTask(makeTask(owner: "u2", visibility: .private), userId: "u1", token: "tok")
+
         #expect(vm.teamTasks.isEmpty)
     }
 

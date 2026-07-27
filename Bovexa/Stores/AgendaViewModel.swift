@@ -24,6 +24,11 @@ final class AgendaViewModel: ObservableObject {
     /// Bewust niet bewaard tussen sessies: elke start begint weer bij jezelf,
     /// anders kijk je zonder het te merken nog naar de agenda van gisteren-erbij.
     private var currentUserId = ""
+    /// Bewaard zodat verversen na aanmaken/verwijderen niet afhangt van een scherm
+    /// dat toevallig opnieuw verschijnt: een sheet die sluit en een detailscherm dat
+    /// terugklapt laten `.onAppear` niet opnieuw vuren.
+    private var currentOrgId: String?
+    private var currentToken = ""
     /// Of de kiezer mag verschijnen — hangt aan mag_agenda_anderen_zien, dat al
     /// meekomt in de ledenlijst die deze view toch al ophaalt.
     @Published private(set) var canSeeOthersAgenda = false
@@ -71,6 +76,8 @@ final class AgendaViewModel: ObservableObject {
 
     func load(userId: String, orgId: String?, token: String) async {
         currentUserId = userId
+        currentOrgId = orgId
+        currentToken = token
         selectedPeople.insert(userId)
         isLoading = true
         defer {
@@ -100,6 +107,23 @@ final class AgendaViewModel: ObservableObject {
         }
     }
 
+    /// Opnieuw ophalen met de gegevens van de laatste `load`. Nodig na het aanmaken,
+    /// wijzigen of verwijderen van een afspraak: die schermen zitten in een sheet of
+    /// op de navigatiestapel, en als die sluiten laadt de Agenda zichzelf niet.
+    func reload() async {
+        guard !currentUserId.isEmpty else { return }
+        await load(userId: currentUserId, orgId: currentOrgId, token: currentToken)
+    }
+
+    /// Meteen weghalen na een geslaagde verwijdering, zodat de afspraak niet blijft
+    /// staan tot de server-ronde klaar is. `reload` bevestigt het daarna. Vergelijken
+    /// gaat op record-id: bij een herhaling verdwijnt de hele reeks, precies zoals de
+    /// server hem verwijdert.
+    func removeLocally(recordId: String) {
+        ownEvents.removeAll { EventHelpers.eventRecordId($0) == recordId }
+        events.removeAll { EventHelpers.eventRecordId($0) == recordId }
+    }
+
     func openDaySheet(_ day: Date) {
         daySheetTarget = DaySheetTarget(day: day)
     }
@@ -108,8 +132,13 @@ final class AgendaViewModel: ObservableObject {
         daySheetTarget = nil
     }
 
-    func openDayView(_ day: Date) {
-        dayViewFocusDate = day
+    /// De dagweergave scrollt naar een dag uit haar eigen venster, en dat venster
+    /// bestaat uit middernacht-datums. Kwam hier een datum mét tijd binnen (de
+    /// planner geeft het starttijdstip terug), dan matchte die nergens op: de
+    /// carousel bleef op de eerste dag van het venster staan — twee maanden terug —
+    /// en schreef die terug als focus. Zo sprong de agenda naar een andere maand.
+    func openDayView(_ day: Date, calendar: Calendar = .current) {
+        dayViewFocusDate = calendar.startOfDay(for: day)
         daySheetTarget = nil
         setViewKind(.dag)
     }

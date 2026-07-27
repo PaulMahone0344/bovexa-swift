@@ -248,4 +248,84 @@ struct AgendaViewModelTests {
         viewModel.showOnlyOwnAgenda()
         #expect(viewModel.selectedPeople == ["me"])
     }
+
+    // MARK: - Verversen na aanmaken/verwijderen (27 juli)
+
+    /// De dagweergave scrollt naar een dag-id uit haar eigen venster, en dat venster
+    /// bestaat uit middernacht-datums. Een focusdatum met een tijd erin matcht dan
+    /// nergens op, de carousel blijft op de eerste dag staan (twee maanden terug) en
+    /// schrijft die terug — zo sprong de agenda naar een andere maand.
+    @Test func openDayViewNormalisesFocusToStartOfDay() {
+        let viewModel = makeViewModel()
+        let calendar = Calendar.current
+        let middayNextMonth = calendar.date(byAdding: .day, value: 40, to: calendar.startOfDay(for: Date()))!
+            .addingTimeInterval(13 * 3600 + 45 * 60)
+
+        viewModel.openDayView(middayNextMonth)
+
+        #expect(viewModel.dayViewFocusDate == calendar.startOfDay(for: middayNextMonth))
+    }
+
+    /// Na het aanmaken of verwijderen van een afspraak moet de agenda opnieuw laden;
+    /// een sheet die sluit of een detailscherm dat terugklapt laat `.onAppear` niet
+    /// opnieuw vuren, dus zonder dit blijft de oude lijst staan tot de app herstart.
+    @Test func reloadRefetchesEventsWithTheSameCredentials() async {
+        var eventsJSON = """
+        {"items":[{"id":"a","owner":"me","title":"Eigen","start":"2026-07-24 09:00:00.000Z","all_day":false}],
+         "page":1,"perPage":200,"totalItems":1,"totalPages":1}
+        """
+        URLProtocolStub.requestHandler = { request in
+            let path = request.url!.path
+            if path.contains("agenda_labels") {
+                return (200, """
+                {"items":[],"page":1,"perPage":200,"totalItems":0,"totalPages":0}
+                """.data(using: .utf8)!)
+            }
+            if path.contains("agenda_events") {
+                return (200, eventsJSON.data(using: .utf8)!)
+            }
+            return (200, """
+            {"items":[],"org":null}
+            """.data(using: .utf8)!)
+        }
+        let viewModel = makeViewModel()
+        await viewModel.load(userId: "me", orgId: "org1", token: "tok")
+        #expect(viewModel.events.count == 1)
+
+        eventsJSON = """
+        {"items":[{"id":"a","owner":"me","title":"Eigen","start":"2026-07-24 09:00:00.000Z","all_day":false},
+                  {"id":"b","owner":"me","title":"Nieuw","start":"2026-07-25 09:00:00.000Z","all_day":false}],
+         "page":1,"perPage":200,"totalItems":2,"totalPages":2}
+        """
+        await viewModel.reload()
+
+        #expect(Set(viewModel.events.map(\.id)) == ["a", "b"])
+    }
+
+    /// Zonder inloggegevens valt er niets te verversen — dan moet reload niets doen
+    /// in plaats van een lege agenda over de geladen agenda heen te zetten.
+    @Test func reloadWithoutAPreviousLoadDoesNothing() async {
+        stubEmptyEventsAndMembers(labelsJSON: """
+        {"items":[],"page":1,"perPage":200,"totalItems":0,"totalPages":0}
+        """)
+        let viewModel = makeViewModel()
+
+        await viewModel.reload()
+
+        #expect(viewModel.hasLoadedOnce == false)
+    }
+
+    /// Verwijderen mag niet wachten op de server: de afspraak verdwijnt meteen uit
+    /// het raster, de herlaadslag bevestigt het daarna.
+    @Test func removeLocallyDropsTheEventImmediately() async {
+        stubMembers()
+        let viewModel = makeViewModel()
+        await viewModel.load(userId: "me", orgId: "org1", token: "tok")
+        #expect(viewModel.events.contains { $0.id == "mine" })
+
+        viewModel.removeLocally(recordId: "mine")
+
+        #expect(!viewModel.events.contains { $0.id == "mine" })
+        #expect(viewModel.events.contains { $0.id == "his" })
+    }
 }

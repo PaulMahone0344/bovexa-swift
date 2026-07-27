@@ -65,7 +65,11 @@ struct VandaagView: View {
                 if let userId = currentUser?.id {
                     EventDetailView(
                         event: event, currentUserId: userId, currentUserOrgId: currentUser?.defaultOrg,
-                        token: authStore.token ?? "", memberColors: viewModel.memberColors, labelStore: viewModel.labelStore
+                        token: authStore.token ?? "", memberColors: viewModel.memberColors, labelStore: viewModel.labelStore,
+                        // Terugklappen vuurt `.onAppear` hier niet opnieuw; zonder dit
+                        // staat een verwijderde afspraak nog op Vandaag.
+                        onChanged: { Task { await refresh() } },
+                        onDeleted: { _ in Task { await refresh() } }
                     )
                 }
             }

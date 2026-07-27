@@ -87,7 +87,13 @@ struct AgendaView: View {
                 PlannerView(
                     userId: userId, token: authStore.token ?? "", org: currentUser?.defaultOrg,
                     memberColors: viewModel.memberColors, labelStore: viewModel.labelStore, seed: plannerSeed,
-                    onConfirmed: { date in viewModel.openDayView(date) }
+                    // Opnieuw laden hoort hier: de planner maakt de afspraak aan op de
+                    // server, en de Agenda laadt zichzelf niet als een sheet sluit.
+                    // Zonder dit stond de nieuwe afspraak er pas na een herstart.
+                    onConfirmed: { date in
+                        viewModel.openDayView(date)
+                        Task { await viewModel.reload() }
+                    }
                 )
             }
         }
@@ -143,7 +149,12 @@ struct AgendaView: View {
                 if let userId = currentUser?.id {
                     EventDetailView(
                         event: event, currentUserId: userId, currentUserOrgId: currentUser?.defaultOrg,
-                        token: authStore.token ?? "", memberColors: viewModel.memberColors, labelStore: viewModel.labelStore
+                        token: authStore.token ?? "", memberColors: viewModel.memberColors, labelStore: viewModel.labelStore,
+                        onChanged: { Task { await viewModel.reload() } },
+                        onDeleted: { recordId in
+                            viewModel.removeLocally(recordId: recordId)
+                            Task { await viewModel.reload() }
+                        }
                     )
                 }
             }

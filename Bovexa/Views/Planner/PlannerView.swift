@@ -13,6 +13,10 @@ struct PlannerView: View {
     @Environment(\.dismiss) private var dismiss
     @State private var input = ""
     @State private var speechAlertMessage: String?
+    /// Zichtbaarheid, toewijzen, label, contact en herinnering staan standaard dicht.
+    /// Uitgeklapt duwden ze "Zet in agenda" ver onder de vouw, terwijl je meestal
+    /// niets wilt wijzigen: de planner heeft het al ingevuld.
+    @State private var showDetails = false
 
     private let hasOrg: Bool
     private let org: String
@@ -249,6 +253,91 @@ struct PlannerView: View {
     @ViewBuilder
     private var confirmBlock: some View {
         VStack(alignment: .leading, spacing: BovexaTheme.Space.md) {
+            detailsToggle
+
+            if showDetails {
+                detailPickers
+                    // Van bovenaf invouwen: de rij waarop je tikt blijft staan en de
+                    // inhoud groeit eronder, in plaats van dat het blok verspringt.
+                    .transition(.opacity.combined(with: .move(edge: .top)))
+            }
+
+            Button {
+                Task { await viewModel.confirm() }
+            } label: {
+                if viewModel.saving {
+                    ProgressView().tint(BovexaTheme.Colors.white)
+                } else {
+                    Text("Zet in agenda")
+                }
+            }
+            .buttonStyle(.glassProminentBrand)
+            .frame(maxWidth: .infinity)
+            .disabled(viewModel.saving)
+        }
+    }
+
+    /// De rij met de chevron. Toont samengevat wat er onder zit, zodat dichtklappen
+    /// geen informatie kost.
+    private var detailsToggle: some View {
+        Button {
+            Haptics.selection()
+            withAnimation(.snappy(duration: 0.25)) { showDetails.toggle() }
+        } label: {
+            HStack(spacing: BovexaTheme.Space.sm) {
+                Image(systemName: "slider.horizontal.3")
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundStyle(BovexaTheme.Colors.accent)
+
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Details")
+                        .font(BovexaTheme.TypeStyle.subheadline.weight(.bold))
+                        .foregroundStyle(BovexaTheme.Colors.ink)
+                    if !detailsSummary.isEmpty {
+                        Text(detailsSummary)
+                            .font(BovexaTheme.TypeStyle.caption)
+                            .foregroundStyle(BovexaTheme.Colors.muted)
+                            .lineLimit(1)
+                    }
+                }
+
+                Spacer(minLength: BovexaTheme.Space.sm)
+
+                Image(systemName: "chevron.down")
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundStyle(BovexaTheme.Colors.muted)
+                    .rotationEffect(.degrees(showDetails ? 180 : 0))
+            }
+            .padding(.horizontal, BovexaTheme.Space.md)
+            .padding(.vertical, BovexaTheme.Space.sm + 2)
+            .frame(maxWidth: .infinity)
+            .background(BovexaTheme.Colors.glass)
+            .clipShape(RoundedRectangle(cornerRadius: BovexaTheme.Radius.md, style: .continuous))
+            .overlay(
+                RoundedRectangle(cornerRadius: BovexaTheme.Radius.md, style: .continuous)
+                    .strokeBorder(BovexaTheme.Colors.edge, lineWidth: 1)
+            )
+            // Glas telt niet mee voor hit-testing; zonder dit is alleen de tekst raakbaar.
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(showDetails ? "Details verbergen" : "Details tonen")
+    }
+
+    private var detailsSummary: String {
+        PlannerDetailsSummary.text(
+            visibility: hasOrg ? viewModel.visibility : nil,
+            companyName: memberColors.orgName,
+            assigneeCount: hasOrg ? viewModel.assignee.count : 0,
+            labelName: hasOrg ? labelStore.label(for: viewModel.label)?.naam : nil,
+            contactName: hasOrg ? viewModel.contactNaam : nil,
+            reminderMin: viewModel.reminderMin
+        )
+    }
+
+    @ViewBuilder
+    private var detailPickers: some View {
+        VStack(alignment: .leading, spacing: BovexaTheme.Space.md) {
             if hasOrg {
                 VisibilityPickerView(value: viewModel.visibility, companyName: memberColors.orgName ?? "Bedrijf") { value in
                     viewModel.visibility = value
@@ -296,19 +385,6 @@ struct PlannerView: View {
             }
 
             ReminderChipsView(minutesBefore: $viewModel.reminderMin)
-
-            Button {
-                Task { await viewModel.confirm() }
-            } label: {
-                if viewModel.saving {
-                    ProgressView().tint(BovexaTheme.Colors.white)
-                } else {
-                    Text("Zet in agenda")
-                }
-            }
-            .buttonStyle(.glassProminentBrand)
-            .frame(maxWidth: .infinity)
-            .disabled(viewModel.saving)
         }
     }
 

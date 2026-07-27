@@ -16,6 +16,11 @@ struct DayView: View {
     @State private var days: [Date] = []
     @State private var scrollDay: Date?
     @State private var selectedEvent: AgendaEvent?
+    /// De dag waar de carousel naartoe moet. Zolang die er staat, is elke andere
+    /// scrollpositie een tussenstand van het scrollen zelf en mag hij de focus niet
+    /// overschrijven — anders bepaalt een halve scrollbeweging naar welke maand de
+    /// "‹ maand"-knop terugkeert.
+    @State private var pendingFocus: Date?
 
     var body: some View {
         NavigationStack {
@@ -49,19 +54,43 @@ struct DayView: View {
             .navigationDestination(item: $selectedEvent) { event in
                 EventDetailView(
                     event: event, currentUserId: currentUserId, currentUserOrgId: currentUserOrgId,
-                    token: authStore.token ?? "", memberColors: viewModel.memberColors, labelStore: viewModel.labelStore
+                    token: authStore.token ?? "", memberColors: viewModel.memberColors, labelStore: viewModel.labelStore,
+                    onChanged: { Task { await viewModel.reload() } },
+                    onDeleted: { recordId in
+                        viewModel.removeLocally(recordId: recordId)
+                        Task { await viewModel.reload() }
+                    }
                 )
             }
         }
-        .onAppear {
-            if days.isEmpty {
-                days = Self.buildWindow(around: viewModel.dayViewFocusDate)
-            }
-            scrollDay = viewModel.dayViewFocusDate
+        .onAppear { focus(on: viewModel.dayViewFocusDate) }
+        // De focus kan verschuiven terwijl dit scherm al staat (planner klaar,
+        // dag gekozen in het jaaroverzicht). Zonder dit blijft de carousel op de
+        // vorige dag staan en lijkt de nieuwe afspraak te ontbreken.
+        .onChange(of: viewModel.dayViewFocusDate) { _, newValue in
+            guard newValue != scrollDay else { return }
+            focus(on: newValue)
         }
         .onChange(of: scrollDay) { _, newValue in
-            if let newValue { viewModel.dayViewFocusDate = newValue }
+            guard let newValue else { return }
+            if let pendingFocus {
+                if newValue == pendingFocus { self.pendingFocus = nil }
+                return
+            }
+            viewModel.dayViewFocusDate = newValue
         }
+    }
+
+    /// Zet de carousel op `day`. Het venster wordt opnieuw gebouwd zodra de dag er
+    /// niet in zit: het loopt zestig dagen ver, en een afspraak verder weg was
+    /// anders onbereikbaar — de scroll bleef dan op de eerste dag van het venster.
+    private func focus(on day: Date) {
+        let target = Calendar.current.startOfDay(for: day)
+        if !days.contains(target) {
+            days = Self.buildWindow(around: target)
+        }
+        pendingFocus = target
+        scrollDay = target
     }
 
     private var header: some View {

@@ -1,14 +1,15 @@
 import SwiftUI
 
-/// Eén regel in "Dagtaken — <bedrijf>". Vinkje en wissen zijn alleen actief voor
-/// eigen taken (valkuil E) — bij een taak van een collega tonen we ze uitgegrijsd
-/// resp. helemaal niet, in plaats van ze onklikbaar maar normaal te laten ogen.
+/// Eén regel in "Dagtaken — <bedrijf>". Vinkje links (ook voor een collega bij een
+/// gedeelde taak — wie hem doet, vinkt hem af), en de rij zelf opent het detail.
+/// Wissen zit sinds 27 juli alleen nog in dat detailscherm: de rode knop trok in
+/// een lijst waar je meestal alleen afvinkt alle aandacht naar zich toe.
 struct TeamTaskRowView: View {
     let task: AgendaTask
-    let isMine: Bool
+    let canToggle: Bool
     let ownerLabel: String
     let onToggle: () -> Void
-    let onDelete: () -> Void
+    let onOpen: () -> Void
 
     private var isDone: Bool { task.status == .klaar }
 
@@ -31,42 +32,59 @@ struct TeamTaskRowView: View {
                                 .foregroundStyle(BovexaTheme.Colors.white)
                         }
                     }
+                    // Een vinkje van 22 punten is krap om te raken naast een rij die
+                    // zelf ook reageert; dit vergroot het raakvlak zonder het beeld
+                    // te veranderen.
+                    .frame(width: 40, height: 32, alignment: .leading)
+                    .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
-                .disabled(!isMine)
-                .opacity(isMine ? 1 : 0.45)
-                .padding(.top, 1)
+                .disabled(!canToggle)
+                .opacity(canToggle ? 1 : 0.45)
+                .accessibilityLabel(isDone ? "Afvinken ongedaan maken" : "Afvinken")
 
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(task.title)
-                        .font(BovexaTheme.TypeStyle.subheadline.weight(.bold))
-                        .foregroundStyle(isDone ? BovexaTheme.Colors.muted : BovexaTheme.Colors.ink)
-                        .strikethrough(isDone)
+                Button(action: {
+                    Haptics.selection()
+                    onOpen()
+                }) {
+                    HStack(alignment: .top, spacing: BovexaTheme.Space.sm) {
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(task.title)
+                                .font(BovexaTheme.TypeStyle.subheadline.weight(.bold))
+                                .foregroundStyle(isDone ? BovexaTheme.Colors.muted : BovexaTheme.Colors.ink)
+                                .strikethrough(isDone)
+                                .multilineTextAlignment(.leading)
 
-                    if let notes = task.notes, !notes.isEmpty {
-                        Text(notes)
-                            .font(BovexaTheme.TypeStyle.footnote)
+                            if let notes = task.notes, !notes.isEmpty {
+                                Text(notes)
+                                    .font(BovexaTheme.TypeStyle.footnote)
+                                    .foregroundStyle(BovexaTheme.Colors.muted)
+                                    .multilineTextAlignment(.leading)
+                                    .lineLimit(1)
+                            }
+
+                            Text(TaskAuthorFormatting.shortLabel(owner: ownerLabel, created: task.created))
+                                .font(BovexaTheme.TypeStyle.caption.weight(.bold))
+                                .foregroundStyle(BovexaTheme.Colors.muted)
+
+                            if let completedAt = task.completedAt {
+                                Text(TaskCompletionFormatting.label(completedAt: completedAt))
+                                    .font(BovexaTheme.TypeStyle.caption.weight(.semibold))
+                                    .foregroundStyle(BovexaTheme.Colors.muted)
+                            }
+                        }
+
+                        Spacer(minLength: BovexaTheme.Space.sm)
+
+                        Image(systemName: "chevron.right")
+                            .font(.system(size: 12, weight: .semibold))
                             .foregroundStyle(BovexaTheme.Colors.muted)
+                            .padding(.top, 2)
                     }
-
-                    Text(ownerLabel)
-                        .font(BovexaTheme.TypeStyle.caption.weight(.bold))
-                        .foregroundStyle(BovexaTheme.Colors.muted)
-
-                    if let completedAt = task.completedAt {
-                        Text(TaskCompletionFormatting.label(completedAt: completedAt))
-                            .font(BovexaTheme.TypeStyle.caption.weight(.semibold))
-                            .foregroundStyle(BovexaTheme.Colors.muted)
-                    }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .contentShape(Rectangle())
                 }
-
-                Spacer(minLength: BovexaTheme.Space.sm)
-
-                if isMine {
-                    Button("Wissen", action: onDelete)
-                        .font(BovexaTheme.TypeStyle.footnote.weight(.bold))
-                        .foregroundStyle(BovexaTheme.Colors.danger)
-                }
+                .buttonStyle(.plain)
             }
         }
     }
@@ -78,11 +96,11 @@ struct TeamTaskRowView: View {
         VStack(spacing: BovexaTheme.Space.sm) {
             TeamTaskRowView(
                 task: AgendaTask(id: "1", owner: "u1", org: "org1", title: "Voorraad tellen", notes: "Voor vrijdag", status: .open, visibility: .company, viewers: [], created: Date(), updated: Date()),
-                isMine: true, ownerLabel: "Jij", onToggle: {}, onDelete: {}
+                canToggle: true, ownerLabel: "Jij", onToggle: {}, onOpen: {}
             )
             TeamTaskRowView(
-                task: AgendaTask(id: "2", owner: "u2", org: "org1", title: "Klant bellen", notes: nil, status: .klaar, visibility: .company, viewers: [], created: Date(), updated: Date()),
-                isMine: false, ownerLabel: "Karim", onToggle: {}, onDelete: {}
+                task: AgendaTask(id: "2", owner: "u2", org: "org1", title: "Klant bellen", notes: nil, status: .klaar, visibility: .company, viewers: [], created: Date(), updated: Date(), completedAt: Date()),
+                canToggle: true, ownerLabel: "Karim", onToggle: {}, onOpen: {}
             )
         }
         .padding()

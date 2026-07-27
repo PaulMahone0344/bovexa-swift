@@ -114,9 +114,10 @@ final class DagtakenViewModel: ObservableObject {
         }
     }
 
-    /// Valkuil E: alleen eigen team-taken mogen worden afgevinkt.
+    /// Afvinken mag ook een collega bij een gedeelde bedrijfstaak (27 juli): wie hem
+    /// doet, vinkt hem af. Wissen blijft van de eigenaar.
     func toggleTeamTask(_ task: AgendaTask, userId: String, token: String) async {
-        guard task.owner == userId else { return }
+        guard TaskPermissions.canToggle(task, userId: userId) else { return }
         let previousStatus = task.status
         let previousCompletedAt = task.completedAt
         let nextStatus: TaskStatus = task.status == .klaar ? .open : .klaar
@@ -133,7 +134,7 @@ final class DagtakenViewModel: ObservableObject {
 
     /// Valkuil E: alleen eigen team-taken mogen worden gewist.
     func deleteTeamTask(_ task: AgendaTask, userId: String, token: String) async {
-        guard task.owner == userId else { return }
+        guard TaskPermissions.canDelete(task, userId: userId) else { return }
         do {
             try await taskRepository.deleteTask(id: task.id, token: token)
             teamTasks.removeAll { $0.id == task.id }
