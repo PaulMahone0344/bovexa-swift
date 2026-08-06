@@ -73,8 +73,12 @@ struct PlannerEntryPillView: View {
             TextField("Typ of spreek een planning", text: $text)
                 .font(BovexaTheme.TypeStyle.subheadline)
                 .submitLabel(.send)
-                .focused($fieldFocused)
+                .keyboardDone(focused: $fieldFocused)
                 .onSubmit {
+                    // Eerst focus loslaten: de pill klapt hierna in en een veld
+                    // dat nog focus heeft terwijl het uit de hiërarchie verdwijnt
+                    // laat het toetsenbord hangen.
+                    fieldFocused = false
                     onSubmit()
                     expanded = false
                 }
@@ -85,6 +89,9 @@ struct PlannerEntryPillView: View {
 
             Button {
                 Haptics.selection()
+                // Zelfde volgorde als onSubmit: zonder dit blijft het toetsenbord
+                // over de planner-sheet heen staan.
+                fieldFocused = false
                 onOpenPlanner()
                 expanded = false
             } label: {

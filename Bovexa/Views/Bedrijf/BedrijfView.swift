@@ -141,13 +141,9 @@ private struct BedrijfCardView: View {
     private var logo: some View {
         if let org = viewModel.org, !org.logo.isEmpty,
            let url = URL(string: "\(PBEndpoint.base.absoluteString)/api/files/agenda_orgs/\(org.id)/\(org.logo)") {
-            AsyncImage(url: url) { image in
-                image.resizable().aspectRatio(contentMode: .fit)
-            } placeholder: {
-                Color.clear
-            }
-            .frame(width: 44, height: 44)
-            .clipShape(RoundedRectangle(cornerRadius: BovexaTheme.Radius.sm, style: .continuous))
+            RemoteLogoView(url: url)
+                .frame(width: 44, height: 44)
+                .clipShape(RoundedRectangle(cornerRadius: BovexaTheme.Radius.sm, style: .continuous))
         } else {
             RoundedRectangle(cornerRadius: BovexaTheme.Radius.sm, style: .continuous)
                 .fill(BovexaTheme.Colors.glassStrong)

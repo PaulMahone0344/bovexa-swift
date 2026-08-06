@@ -30,9 +30,16 @@ final class EventRepository {
         return RecurrenceExpander.expand(items)
     }
 
-    /// Faalt stil (geen bedrijf gekoppeld, netwerkfout, ...) — dan gewoon geen kleuren/logo.
+    /// Faalt stil (geen bedrijf gekoppeld, netwerkfout, ...) — dan gewoon geen
+    /// kleuren/logo. Wel één retry na een korte pauze: dit is de enige bron voor
+    /// persoonskleuren en het bedrijfslogo, en één hikje bij het openen liet
+    /// anders het hele scherm kleurloos achter tot de volgende focus.
     func listMembers(token: String) async -> MembersResponse? {
-        try? await client.postCustom(MembersResponse.self, path: "/api/agenda/company/members", token: token)
+        if let first = try? await client.postCustom(MembersResponse.self, path: "/api/agenda/company/members", token: token) {
+            return first
+        }
+        try? await Task.sleep(nanoseconds: 700_000_000)
+        return try? await client.postCustom(MembersResponse.self, path: "/api/agenda/company/members", token: token)
     }
 
     private static let collection = "agenda_events"

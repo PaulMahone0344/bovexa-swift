@@ -17,6 +17,9 @@ struct LabelPickerView: View {
     @State private var newLabelName = ""
     @State private var newLabelColor = BovexaTheme.LabelPalette.options[0].hex
     @State private var isCreating = false
+    /// Vrije kleur (systeem-ColorPicker) naast de vaste swatches — commit pas
+    /// bij "Toevoegen", dus geen debounce nodig.
+    @State private var newCustomColor = Color(hex: BovexaTheme.LabelPalette.options[0].hex)
 
     var body: some View {
         VStack(alignment: .leading, spacing: BovexaTheme.Space.sm) {
@@ -105,7 +108,7 @@ struct LabelPickerView: View {
                 )
                 .clipShape(RoundedRectangle(cornerRadius: BovexaTheme.Radius.md, style: .continuous))
 
-            HStack(spacing: BovexaTheme.Space.xs) {
+            FlowLayout(spacing: BovexaTheme.Space.xs) {
                 ForEach(BovexaTheme.LabelPalette.options) { option in
                     Circle()
                         .fill(Color(hex: option.hex))
@@ -121,6 +124,12 @@ struct LabelPickerView: View {
                             newLabelColor = option.hex
                         }
                 }
+
+                ColorPicker("Vrije kleur", selection: $newCustomColor, supportsOpacity: false)
+                    .labelsHidden()
+                    .onChange(of: newCustomColor) { _, newValue in
+                        newLabelColor = newValue.hexString
+                    }
             }
 
             Button {

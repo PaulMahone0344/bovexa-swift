@@ -100,14 +100,10 @@ struct VandaagView: View {
                 // eromheen laat het als advertentie lezen; het blijft dus een vrij
                 // staand merkteken, alleen groter dan voorheen.
                 if let logoURL = viewModel.orgLogoURL {
-                    AsyncImage(url: logoURL) { image in
-                        image.resizable().scaledToFit()
-                    } placeholder: {
-                        Color.clear
-                    }
-                    // Kleiner dan 118×24: daar hield het logo de titel eronder in
-                    // evenwicht in plaats van eronder te blijven.
-                    .frame(maxWidth: 96, maxHeight: 20)
+                    RemoteLogoView(url: logoURL)
+                        // Kleiner dan 118×24: daar hield het logo de titel eronder in
+                        // evenwicht in plaats van eronder te blijven.
+                        .frame(maxWidth: 96, maxHeight: 20)
                 }
             }
 

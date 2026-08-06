@@ -281,10 +281,10 @@ enum BovexaTheme {
 
     /// Vaste kleurenset voor labels (m7, valkuil F): geen vrije kleurkiezer, want
     /// die levert op het lichte glas onleesbare combinaties op (bv. lichtgeel op
-    /// wit). Elke optie is gecontroleerd op leesbaarheid en te onderscheiden van
-    /// de rest, in dezelfde donkere-op-licht-glas stijl als `MemberColors.palette`.
-    /// Richting uit de schermafbeelding van de opdrachtgever: rood, oranje, geel,
-    /// groen, teal, blauw, donkerblauw, paars, roze, bruin, grijs.
+    /// wit). Kleuren zijn het iPhone-agendapalet: de zeven agenda-presets van
+    /// Apple Agenda exact (rood/roze, oranje, geel, groen, lichtblauw, paars,
+    /// bruin) aangevuld met de iOS-systeemkleuren uit hetzelfde raster, zodat
+    /// elke tint die de gebruiker van de iPhone-agenda kent hier ook bestaat.
     enum LabelPalette {
         struct Option: Identifiable, Equatable {
             var id: String { hex }
@@ -293,17 +293,19 @@ enum BovexaTheme {
         }
 
         static let options: [Option] = [
-            Option(name: "Rood", hex: "#D6524B"),
-            Option(name: "Oranje", hex: "#E08A3C"),
-            Option(name: "Geel", hex: "#C99A16"),
-            Option(name: "Groen", hex: "#4F9E5C"),
-            Option(name: "Teal", hex: "#2E9C97"),
-            Option(name: "Blauw", hex: "#3E87D6"),
-            Option(name: "Donkerblauw", hex: "#2C5C99"),
-            Option(name: "Paars", hex: "#8E5BD1"),
-            Option(name: "Roze", hex: "#D45AA4"),
-            Option(name: "Bruin", hex: "#A56A3E"),
-            Option(name: "Grijs", hex: "#6B7280"),
+            Option(name: "Rood", hex: "#FF3B30"),
+            Option(name: "Oranje", hex: "#FF9500"),
+            Option(name: "Geel", hex: "#FFCC00"),
+            Option(name: "Groen", hex: "#63DA38"),
+            Option(name: "Mint", hex: "#00C7BE"),
+            Option(name: "Teal", hex: "#30B0C7"),
+            Option(name: "Lichtblauw", hex: "#1BADF8"),
+            Option(name: "Blauw", hex: "#007AFF"),
+            Option(name: "Indigo", hex: "#5856D6"),
+            Option(name: "Paars", hex: "#CC73E1"),
+            Option(name: "Roze", hex: "#FF2968"),
+            Option(name: "Bruin", hex: "#A2845E"),
+            Option(name: "Grijs", hex: "#8E8E93"),
         ]
     }
 

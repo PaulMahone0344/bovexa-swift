@@ -25,6 +25,15 @@ struct LegendeView: View {
     @State private var newLabelName = ""
     @State private var newLabelColor = BovexaTheme.LabelPalette.options[0].hex
 
+    /// Vrije kleur (ColorPicker) voor een bestaand label. De picker vuurt bij
+    /// elke sleep in het spectrum; de commit-taak debounced zodat niet elke
+    /// tussenkleur een API-call wordt.
+    @State private var customColor: Color = .white
+    @State private var customCommitTask: Task<Void, Never>?
+    /// Vrije kleur voor het nieuw-label-formulier — commit gebeurt daar pas bij
+    /// "Toevoegen", dus geen debounce nodig.
+    @State private var newCustomColor = Color(hex: BovexaTheme.LabelPalette.options[0].hex)
+
     init(userId: String, org: String, token: String, labelStore: LabelStore) {
         _viewModel = StateObject(wrappedValue: LegendeViewModel(userId: userId, org: org, token: token, labelStore: labelStore))
         _labelStore = ObservedObject(wrappedValue: labelStore)
@@ -136,6 +145,9 @@ struct LegendeView: View {
             HStack(spacing: BovexaTheme.Space.sm) {
                 Button {
                     Haptics.selection()
+                    // Seeden vóór openen: zo toont de vrije-kleur-well de huidige
+                    // labelkleur en vuurt onChange niet meteen een commit af.
+                    customColor = Color(hex: label.kleur)
                     withAnimation(.snappy) { colorPickingLabelId = colorPickingLabelId == label.id ? nil : label.id }
                 } label: {
                     Circle()
@@ -170,16 +182,13 @@ struct LegendeView: View {
             .padding(.vertical, BovexaTheme.Space.xs)
 
             if colorPickingLabelId == label.id {
-                colorSwatchRow { hex in
-                    Task { await viewModel.updateColor(label, to: hex) }
-                    withAnimation(.snappy) { colorPickingLabelId = nil }
-                }
+                colorSwatchRow(for: label)
             }
         }
     }
 
-    private func colorSwatchRow(onPick: @escaping (String) -> Void) -> some View {
-        HStack(spacing: BovexaTheme.Space.xs) {
+    private func colorSwatchRow(for label: AgendaLabel) -> some View {
+        FlowLayout(spacing: BovexaTheme.Space.xs) {
             ForEach(BovexaTheme.LabelPalette.options) { option in
                 Circle()
                     .fill(Color(hex: option.hex))
@@ -187,9 +196,28 @@ struct LegendeView: View {
                     .overlay(Circle().strokeBorder(BovexaTheme.Colors.edge, lineWidth: 1))
                     .onTapGesture {
                         Haptics.selection()
-                        onPick(option.hex)
+                        customCommitTask?.cancel()
+                        Task { await viewModel.updateColor(label, to: option.hex) }
+                        withAnimation(.snappy) { colorPickingLabelId = nil }
                     }
             }
+
+            // Vrije kleur via de systeem-picker (raster/spectrum/sliders). Sluit
+            // de rij hier bewust niet: de picker-sheet leeft in deze view, en
+            // tijdens slepen komen er continu tussenkleuren binnen — vandaar
+            // debounce in plaats van commit-per-wijziging.
+            ColorPicker("Vrije kleur", selection: $customColor, supportsOpacity: false)
+                .labelsHidden()
+                .onChange(of: customColor) { _, newValue in
+                    let hex = newValue.hexString
+                    guard hex.caseInsensitiveCompare(label.kleur) != .orderedSame else { return }
+                    customCommitTask?.cancel()
+                    customCommitTask = Task {
+                        try? await Task.sleep(nanoseconds: 600_000_000)
+                        guard !Task.isCancelled else { return }
+                        await viewModel.updateColor(label, to: hex)
+                    }
+                }
         }
         .padding(.bottom, BovexaTheme.Space.xs)
     }
@@ -222,7 +250,7 @@ struct LegendeView: View {
                 )
                 .clipShape(RoundedRectangle(cornerRadius: BovexaTheme.Radius.md, style: .continuous))
 
-            HStack(spacing: BovexaTheme.Space.xs) {
+            FlowLayout(spacing: BovexaTheme.Space.xs) {
                 ForEach(BovexaTheme.LabelPalette.options) { option in
                     Circle()
                         .fill(Color(hex: option.hex))
@@ -234,6 +262,12 @@ struct LegendeView: View {
                             newLabelColor = option.hex
                         }
                 }
+
+                ColorPicker("Vrije kleur", selection: $newCustomColor, supportsOpacity: false)
+                    .labelsHidden()
+                    .onChange(of: newCustomColor) { _, newValue in
+                        newLabelColor = newValue.hexString
+                    }
             }
 
             Button("Toevoegen") {
