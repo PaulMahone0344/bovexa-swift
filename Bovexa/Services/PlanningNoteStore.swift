@@ -103,9 +103,14 @@ final class PlanningNoteStore {
         commit(notes.filter { $0.id != id })
     }
 
+    /// Schrijft uitsluitend naar de sleutel van de ingelogde gebruiker. Zonder
+    /// gebruiker gebeurt er niets — een terugval op de oude gedeelde sleutel zou
+    /// die precies weer tot leven wekken, en dan erft de volgende collega die op
+    /// dit toestel inlogt alsnog andermans dagtaken. Dat is de bug die 3c oplost.
     private func commit(_ next: [PlanningNote]) {
+        guard let userId else { return }
         notes = PlanningNoteSorting.sort(next)
         guard let data = try? encoder.encode(notes) else { return }
-        defaults.set(data, forKey: userId.map(Self.key(for:)) ?? Self.legacyKey)
+        defaults.set(data, forKey: Self.key(for: userId))
     }
 }

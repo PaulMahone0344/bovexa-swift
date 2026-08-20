@@ -190,6 +190,42 @@ struct PlanningNoteStoreTests {
         #expect(store.notes.isEmpty)
     }
 
+    /// Nalezing van plak 3: `commit()` had een terugval op de oude gedeelde
+    /// sleutel. Die was vandaag onbereikbaar, maar het is precies de landmijn die
+    /// 3c moest opruimen — mist ooit één nieuw mutatiepad de guard, dan herleeft
+    /// de gedeelde sleutel en erft de volgende collega op dit toestel de data.
+    @Test func mutatingWithoutAUserWritesNothingToAnyKey() {
+        let defaults = makeDefaults()
+        let store = PlanningNoteStore(defaults: defaults)
+
+        // Nooit ingelogd geweest: geen enkele mutatie mag iets wegschrijven.
+        #expect(store.add(text: "Zonder gebruiker") == nil)
+        store.toggle(id: "wat-dan-ook")
+        store.setArchived(id: "wat-dan-ook", archived: true)
+        store.delete(id: "wat-dan-ook")
+
+        #expect(defaults.data(forKey: Self.legacyKey) == nil)
+        #expect(defaults.data(forKey: "bovexaflow_planning_notes_u1") == nil)
+        #expect(store.notes.isEmpty)
+    }
+
+    /// En na uitloggen ook niet: de lijst van de vorige gebruiker blijft ongemoeid
+    /// en er ontstaat geen gedeelde sleutel.
+    @Test func mutatingAfterLoggingOutTouchesNoKey() {
+        let defaults = makeDefaults()
+        let store = PlanningNoteStore(defaults: defaults)
+        store.reload(userId: "u1")
+        store.add(text: "Van u1")
+        let snapshot = defaults.data(forKey: "bovexaflow_planning_notes_u1")
+
+        store.reload(userId: nil)
+        #expect(store.add(text: "Na uitloggen") == nil)
+        store.toggle(id: "wat-dan-ook")
+
+        #expect(defaults.data(forKey: Self.legacyKey) == nil)
+        #expect(defaults.data(forKey: "bovexaflow_planning_notes_u1") == snapshot)
+    }
+
     @Test func reloadWithNilUserIdEmptiesTheList() {
         let defaults = makeDefaults()
         let store = PlanningNoteStore(defaults: defaults)
