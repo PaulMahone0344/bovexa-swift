@@ -123,6 +123,59 @@ struct AppointmentPayloadBuilderTests {
         #expect(payload.requestBody["label"] as? String == "l1")
     }
 
+    // MARK: - handmatige tak (M12 plak 2)
+
+    @Test func manualBuildWritesSourceManualAndEmptyRawInput() {
+        let start = Date(timeIntervalSince1970: 1_785_000_000)
+        let payload = AppointmentPayloadBuilder.buildManual(
+            title: "Kapper", category: .work, start: start, end: start.addingTimeInterval(1800),
+            ownerId: "u1", org: "org1", visibility: "company", assignees: [], reminderMin: 0
+        )
+        #expect(payload.requestBody["source"] as? String == "manual")
+        #expect(payload.requestBody["raw_input"] as? String == "")
+    }
+
+    @Test func manualBuildWithoutOrgForcesPrivateAndDropsAssignees() {
+        let start = Date(timeIntervalSince1970: 1_785_000_000)
+        let payload = AppointmentPayloadBuilder.buildManual(
+            title: "Kapper", category: .work, start: start, end: start.addingTimeInterval(1800),
+            ownerId: "u1", org: nil, visibility: "company", assignees: ["u2"], reminderMin: 0
+        )
+        #expect(payload.org == "")
+        #expect(payload.visibility == "private")
+        #expect(payload.assignee.isEmpty)
+        #expect(payload.viewers.isEmpty)
+    }
+
+    /// Valkuil A: twee plekken maken afspraken aan, dus moeten ze exact dezelfde
+    /// velden schrijven — alleen `source` en `raw_input` mogen verschillen.
+    @Test func manualAndPlannerBranchWriteTheSameFieldsApartFromSourceAndRawInput() {
+        let proposal = ProposedAppointment(
+            title: "Kapper", date: "2026-08-03", start: "09:00", end: "09:30", category: .work
+        )
+        let range = AppointmentRange.range(for: proposal)
+        let planner = AppointmentPayloadBuilder.build(
+            appointment: proposal, ownerId: "u1", rawInput: "morgen 9 uur kapper", org: "org1",
+            visibility: "company", viewers: [], assignees: ["u2"], reminderMin: 15,
+            label: "l1", contact: "c1", contactNaam: "Jansen", contactTelefoon: "0612"
+        )
+        let manual = AppointmentPayloadBuilder.buildManual(
+            title: "Kapper", category: .work, start: range.start, end: range.end,
+            ownerId: "u1", org: "org1", visibility: "company", assignees: ["u2"], reminderMin: 15,
+            label: "l1", contact: "c1", klantNaam: "Jansen", klantTelefoon: "0612"
+        )
+
+        let plannerBody = planner.requestBody
+        let manualBody = manual.requestBody
+        #expect(Set(plannerBody.keys) == Set(manualBody.keys))
+        for key in plannerBody.keys where key != "source" && key != "raw_input" {
+            #expect(
+                String(describing: plannerBody[key]!) == String(describing: manualBody[key]!),
+                "veld \(key) verschilt tussen de AI-tak en de handmatige tak"
+            )
+        }
+    }
+
     @Test func startAndEndAreFormattedAsPocketBaseUtc() {
         let payload = AppointmentPayloadBuilder.build(
             appointment: appointment(), ownerId: "u1", rawInput: "raw", org: "org1",

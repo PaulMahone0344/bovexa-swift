@@ -33,4 +33,10 @@ struct AppointmentCreatePayloadTests {
     @Test func manualSourceEndsUpInTheRequestBody() {
         #expect(payload(source: "manual").requestBody["source"] as? String == "manual")
     }
+
+    /// Notitie hoort alleen in de body als er iets staat: de AI-tak zet 'm nooit,
+    /// en beide takken moeten voor dezelfde invoer dezelfde body schrijven.
+    @Test func notesAreOmittedWhenEmptyOrMissing() {
+        #expect(payload().requestBody["notes"] == nil)
+    }
 }

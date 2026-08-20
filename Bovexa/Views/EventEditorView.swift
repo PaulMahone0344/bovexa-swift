@@ -1,8 +1,11 @@
 import SwiftUI
 
-/// Bewerkscherm van een afspraak: titel, categorie, datum/tijd/duur-steppers,
-/// klant, notitie, herinnering, toewijzen (alleen bij org-afspraak). Vervangt de
-/// inhoud van het afspraak-detail — geen apart navigatiescherm.
+/// Formulier van een afspraak: titel, categorie, label, datum/tijd/duur-steppers,
+/// contact, notitie, herinnering, toewijzen (alleen bij org-afspraak). Twee modi:
+///  - bewerken — vervangt de inhoud van het afspraak-detail, geen apart scherm;
+///  - aanmaken (M12) — hetzelfde formulier met een voorzet, plus zichtbaarheid
+///    (bij bewerken zit die in het detail; bij aanmaken zou een nieuwe afspraak
+///    anders ongemerkt altijd op "privé" staan) en de knop "Toevoegen".
 struct EventEditorView: View {
     @FocusState private var notesFocused: Bool
     @StateObject private var viewModel: EventEditorViewModel
@@ -27,11 +30,35 @@ struct EventEditorView: View {
         self.currentUserId = currentUserId
         self.token = token
         self.org = event.org ?? ""
+        self.companyName = ""
+    }
+
+    /// Aanmaken (M12): zelfde formulier, gevuld vanuit de voorzet. `org` leeg ⇒ geen
+    /// bedrijf, dus geen zichtbaarheidskeuze, geen label en geen toewijzen.
+    init(
+        seed: NieuweAfspraakSeed, currentUserId: String, org: String, companyName: String, token: String,
+        members: [Member], labelStore: LabelStore,
+        defaultDurationMin: Int = EventEditorViewModel.fallbackDurationMin,
+        onCancel: @escaping () -> Void, onSaved: @escaping (AgendaEvent) -> Void
+    ) {
+        _viewModel = StateObject(wrappedValue: EventEditorViewModel(
+            mode: .create(seed), ownerId: currentUserId, org: org, token: token,
+            defaultDurationMin: defaultDurationMin
+        ))
+        self.labelStore = labelStore
+        self.members = members
+        self.onCancel = onCancel
+        self.onSaved = onSaved
+        self.currentUserId = currentUserId
+        self.token = token
+        self.org = org
+        self.companyName = companyName
     }
 
     private let currentUserId: String
     private let token: String
     private let org: String
+    private let companyName: String
 
     private var overlapPresented: Binding<Bool> {
         Binding(get: { viewModel.overlapEvent != nil }, set: { if !$0 { viewModel.overlapEvent = nil } })
@@ -87,13 +114,21 @@ struct EventEditorView: View {
                     fieldLabel("Herinnering")
                     ReminderChipsView(minutesBefore: $viewModel.reminderMin)
 
-                    // `org != nil` is in de praktijk altijd waar: PocketBase geeft
-                    // een lege relatie terug als "". Zelfde conditie als de
-                    // labelkiezer hierboven.
-                    if let org = viewModel.originalEvent.org, !org.isEmpty {
+                    // PocketBase geeft een lege relatie terug als "", niet als null:
+                    // vandaar `!org.isEmpty` en geen nil-check. Zelfde conditie als
+                    // de labelkiezer hierboven.
+                    if !org.isEmpty {
                         fieldLabel("Toegewezen aan")
                         AssigneePickerView(members: members, currentUserId: currentUserId, selectedIds: $viewModel.assignee)
                     }
+                }
+            }
+
+            // Alleen bij aanmaken én met een bedrijf: zonder bedrijf is er niets te
+            // kiezen (alles is privé), en bij bewerken staat de keuze in het detail.
+            if viewModel.isCreating && !org.isEmpty {
+                VisibilityPickerView(value: viewModel.visibility, companyName: companyName.isEmpty ? "Bedrijf" : companyName) { value in
+                    viewModel.visibility = value
                 }
             }
 
@@ -148,7 +183,7 @@ struct EventEditorView: View {
                     if viewModel.isSaving {
                         ProgressView().tint(BovexaTheme.Colors.white)
                     } else {
-                        Text("Opslaan")
+                        Text(viewModel.isCreating ? "Toevoegen" : "Opslaan")
                             .font(BovexaTheme.TypeStyle.headline)
                     }
                 }

@@ -30,12 +30,17 @@ struct AppointmentCreatePayload {
     /// Gekozen contact-id (m8). Aanwezig ⇒ klant_naam/klant_telefoon blijven weg
     /// (valkuil D: die twee zijn alleen voor afspraken zonder contact).
     let contact: String?
+    /// Notitie uit het handmatige formulier (M12). De AI-planner kent dit veld niet
+    /// en laat het weg; leeg of nil ⇒ veld blijft uit de body, zodat beide takken
+    /// voor dezelfde invoer dezelfde body schrijven.
+    let notes: String?
 
     init(
         owner: String, org: String, title: String, category: BovexaTheme.Category, calendar: String,
         location: String, recurrence: String, klantNaam: String, klantTelefoon: String, start: Date, end: Date,
         visibility: String, viewers: [String], assignee: [String], rawInput: String, reminderMin: Int,
-        assigneeStatus: [String: String], source: String = "nl", label: String? = nil, contact: String? = nil
+        assigneeStatus: [String: String], source: String = "nl", label: String? = nil, contact: String? = nil,
+        notes: String? = nil
     ) {
         self.owner = owner
         self.org = org
@@ -57,6 +62,7 @@ struct AppointmentCreatePayload {
         self.source = source
         self.label = label
         self.contact = contact
+        self.notes = notes
     }
 
     var requestBody: [String: Any] {
@@ -84,6 +90,7 @@ struct AppointmentCreatePayload {
         body["klant_telefoon"] = klantTelefoon
         if let contact { body["contact"] = contact }
         if let label { body["label"] = label }
+        if let notes, !notes.isEmpty { body["notes"] = notes }
         return body
     }
 }
