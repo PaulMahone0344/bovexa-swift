@@ -1,7 +1,8 @@
 import Foundation
 
-/// Create-payload voor een AI-voorstel → agenda_events — valkuil A: exact deze velden,
-/// veld "source" altijd 'nl' ('ai' geeft een 400 — validation_invalid_value).
+/// Create-payload voor een nieuwe afspraak → agenda_events — valkuil A: exact deze
+/// velden. Beide aanmaakroutes vullen 'm: de AI-planner (source 'nl') en het
+/// handmatige formulier (source 'manual', M12).
 struct AppointmentCreatePayload {
     let owner: String
     let org: String
@@ -20,6 +21,9 @@ struct AppointmentCreatePayload {
     let rawInput: String
     let reminderMin: Int
     let assigneeStatus: [String: String]
+    /// PB-select met exact twee toegestane waarden: 'nl' (AI-planner) en 'manual'
+    /// (handmatig formulier). 'ai' geeft een 400 — validation_invalid_value.
+    let source: String
     /// Gekozen label-id (m7). Ontbreekt de keuze: veld weglaten (valkuil H —
     /// bestaand gedrag mag niet veranderen zonder label).
     let label: String?
@@ -31,7 +35,7 @@ struct AppointmentCreatePayload {
         owner: String, org: String, title: String, category: BovexaTheme.Category, calendar: String,
         location: String, recurrence: String, klantNaam: String, klantTelefoon: String, start: Date, end: Date,
         visibility: String, viewers: [String], assignee: [String], rawInput: String, reminderMin: Int,
-        assigneeStatus: [String: String], label: String? = nil, contact: String? = nil
+        assigneeStatus: [String: String], source: String = "nl", label: String? = nil, contact: String? = nil
     ) {
         self.owner = owner
         self.org = org
@@ -50,6 +54,7 @@ struct AppointmentCreatePayload {
         self.rawInput = rawInput
         self.reminderMin = reminderMin
         self.assigneeStatus = assigneeStatus
+        self.source = source
         self.label = label
         self.contact = contact
     }
@@ -68,7 +73,7 @@ struct AppointmentCreatePayload {
             "visibility": visibility,
             "viewers": viewers,
             "assignee": assignee,
-            "source": "nl",
+            "source": source,
             "raw_input": rawInput,
             "reminder_min": reminderMin,
             "assignee_status": assigneeStatus,
