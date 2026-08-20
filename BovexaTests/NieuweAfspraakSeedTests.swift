@@ -45,6 +45,22 @@ struct NieuweAfspraakSeedTests {
         #expect(seed.plannerSeed(calendar: calendar) == "vrijdag 15:00 tandarts")
     }
 
+    // MARK: - withText (tekstveld in de AI-kaart)
+
+    @Test func withTextKeepsTheChosenDayAndHour() {
+        let seed = NieuweAfspraakSeed.forHour(9, on: day(2026, 8, 3)).withText("kapper om 11 uur")
+        #expect(seed.date == day(2026, 8, 3))
+        #expect(seed.hour == 9)
+        #expect(seed.plannerSeed(calendar: calendar) == "kapper om 11 uur")
+    }
+
+    /// Leeg tekstveld mag de voorzet niet wissen: dan valt de planner terug op de
+    /// dag waarop de gebruiker tikte.
+    @Test func withEmptyTextFallsBackToTheDaySentence() {
+        let seed = NieuweAfspraakSeed.forDay(day(2026, 8, 3)).withText("   ")
+        #expect(seed.plannerSeed(calendar: calendar) == "Plan op maandag 3 augustus 2026")
+    }
+
     // MARK: - startDate
 
     @Test func startDateUsesTheChosenHourOnTheChosenDay() {

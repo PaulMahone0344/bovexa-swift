@@ -40,6 +40,13 @@ struct NieuweAfspraakSeed: Equatable {
         NieuweAfspraakSeed(text: text)
     }
 
+    /// Kopie met de tekst uit het veld in de AI-kaart erbij. De dag/het uur waar de
+    /// gebruiker vandaan kwam blijft staan, zodat een leeg veld nog steeds die dag
+    /// meegeeft aan de planner.
+    func withText(_ text: String) -> NieuweAfspraakSeed {
+        NieuweAfspraakSeed(date: date, hour: hour, text: text)
+    }
+
     /// Getypte tekst zonder witruimte eromheen; leeg of alleen spaties ⇒ nil.
     var trimmedText: String? {
         guard let trimmed = text?.trimmingCharacters(in: .whitespacesAndNewlines), !trimmed.isEmpty else { return nil }

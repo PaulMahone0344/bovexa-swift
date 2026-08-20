@@ -1,5 +1,14 @@
 import SwiftUI
 
+/// Hoe de planner in beeld staat. Als sheet-root brengt hij zijn eigen
+/// NavigationStack en sluitkruisje mee; gepusht (vanuit de keuzesheet "Nieuwe
+/// afspraak", M12) levert de omliggende stack de balk en de terugknop, en sluit de
+/// caller de sheet na een geslaagde bevestiging.
+enum PlannerPresentation {
+    case sheet
+    case pushed
+}
+
 /// AI-planner chatscherm — geport uit planner.tsx. Startkaart met voorbeeld-chips,
 /// chat-thread, quick-reply-chips, concept-kaarten, "Even kijken…", "Opnieuw proberen",
 /// reset, bevestig-blok (zichtbaarheid/toewijzen/herinnering/"Zet in agenda") en een
@@ -22,6 +31,7 @@ struct PlannerView: View {
     private let org: String
     private let token: String
     private let seed: String?
+    private let presentation: PlannerPresentation
     private let onConfirmed: (Date) -> Void
 
     private static let examples = [
@@ -32,7 +42,7 @@ struct PlannerView: View {
 
     init(
         userId: String, token: String, org: String?, memberColors: MemberColors, labelStore: LabelStore = LabelStore(),
-        seed: String? = nil, onConfirmed: @escaping (Date) -> Void = { _ in }
+        seed: String? = nil, presentation: PlannerPresentation = .sheet, onConfirmed: @escaping (Date) -> Void = { _ in }
     ) {
         _viewModel = StateObject(wrappedValue: PlannerViewModel(userId: userId, token: token, org: org))
         self.memberColors = memberColors
@@ -41,6 +51,7 @@ struct PlannerView: View {
         self.org = org ?? ""
         self.token = token
         self.seed = seed
+        self.presentation = presentation
         self.onConfirmed = onConfirmed
     }
 
@@ -52,72 +63,15 @@ struct PlannerView: View {
     }
 
     var body: some View {
-        NavigationStack {
-            ZStack {
-                AppBackground()
-                VStack(spacing: 0) {
-                    ScrollViewReader { proxy in
-                        ScrollView {
-                            VStack(alignment: .leading, spacing: BovexaTheme.Space.md) {
-                                if viewModel.thread.isEmpty {
-                                    startCard
-                                }
-                                threadContent
-                                if viewModel.ready != nil {
-                                    confirmBlock
-                                }
-                                // Anker ná het bevestig-blok: stond het erboven,
-                                // dan scrolde het scherm tot net onder de
-                                // conceptkaart en viel "Zet in agenda" onder de
-                                // vouw — juist de volgende handeling (4k).
-                                Color.clear.frame(height: 1).id("bottom")
-                            }
-                            .padding(BovexaTheme.Space.xl)
-                        }
-                        .onChange(of: viewModel.thread.count) {
-                            withAnimation(.snappy) { proxy.scrollTo("bottom", anchor: .bottom) }
-                        }
-                        .onChange(of: viewModel.loading) {
-                            withAnimation(.snappy) { proxy.scrollTo("bottom", anchor: .bottom) }
-                        }
-                    }
-                    composer
-                }
-            }
-            .navigationTitle("AI Planner")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                if !viewModel.thread.isEmpty {
-                    ToolbarItem(placement: .topBarTrailing) {
-                        Button {
-                            Haptics.selection()
-                            // Ook het getypte bericht: dat bleef staan terwijl het
-                            // gesprek eromheen verdween (4k).
-                            input = ""
-                            viewModel.reset()
-                        } label: {
-                            Image(systemName: "plus")
-                        }
-                        .accessibilityLabel("Nieuw gesprek")
-                    }
-                }
-                SheetCloseButton { dismiss() }
-
-            }
-            .alert("Dubbele boeking", isPresented: overlapPresented) {
-                Button("Aanpassen", role: .cancel) { viewModel.cancelOverlap() }
-                Button("Toch plannen") {
-                    Task { await viewModel.proceedPastOverlap() }
-                }
-            } message: {
-                if let overlap = viewModel.overlapEvent {
-                    Text("Je staat al \(EventHelpers.fmtTime(overlap.start))–\(EventHelpers.fmtTime(overlap.end)) op \"\(overlap.title)\". Toch plannen?")
-                }
-            }
-            .alert("Mislukt", isPresented: $viewModel.saveFailedAlert) {
-                Button("Oké", role: .cancel) {}
-            } message: {
-                Text("Kon de afspraak niet opslaan. Probeer het nog een keer.")
+        Group {
+            switch presentation {
+            case .sheet:
+                // Sheet-root: eigen stapel, eigen kruisje.
+                NavigationStack { screen }
+            case .pushed:
+                // Gepusht in de keuzesheet: de stapel eromheen levert titelbalk en
+                // terugknop. Een tweede NavigationStack zou twee balken tekenen.
+                screen
             }
         }
         .task {
@@ -130,7 +84,10 @@ struct PlannerView: View {
             if let date {
                 Haptics.success()
                 onConfirmed(date)
-                dismiss()
+                // Alleen als sheet-root sluit de planner zichzelf. Gepusht zou
+                // `dismiss()` deze pagina van de stapel halen en de keuzesheet open
+                // laten staan; daar sluit de caller de sheet in onConfirmed.
+                if presentation == .sheet { dismiss() }
             }
         }
         .onChange(of: speech.transcript) { _, transcript in
@@ -143,6 +100,78 @@ struct PlannerView: View {
             Button("Oké", role: .cancel) {}
         } message: {
             Text(speechAlertMessage ?? "")
+        }
+    }
+
+    private var screen: some View {
+        ZStack {
+            AppBackground()
+            VStack(spacing: 0) {
+                ScrollViewReader { proxy in
+                    ScrollView {
+                        VStack(alignment: .leading, spacing: BovexaTheme.Space.md) {
+                            if viewModel.thread.isEmpty {
+                                startCard
+                            }
+                            threadContent
+                            if viewModel.ready != nil {
+                                confirmBlock
+                            }
+                            // Anker ná het bevestig-blok: stond het erboven,
+                            // dan scrolde het scherm tot net onder de
+                            // conceptkaart en viel "Zet in agenda" onder de
+                            // vouw — juist de volgende handeling (4k).
+                            Color.clear.frame(height: 1).id("bottom")
+                        }
+                        .padding(BovexaTheme.Space.xl)
+                    }
+                    .onChange(of: viewModel.thread.count) {
+                        withAnimation(.snappy) { proxy.scrollTo("bottom", anchor: .bottom) }
+                    }
+                    .onChange(of: viewModel.loading) {
+                        withAnimation(.snappy) { proxy.scrollTo("bottom", anchor: .bottom) }
+                    }
+                }
+                composer
+            }
+        }
+        .navigationTitle("AI Planner")
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            if !viewModel.thread.isEmpty {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button {
+                        Haptics.selection()
+                        // Ook het getypte bericht: dat bleef staan terwijl het
+                        // gesprek eromheen verdween (4k).
+                        input = ""
+                        viewModel.reset()
+                    } label: {
+                        Image(systemName: "plus")
+                    }
+                    .accessibilityLabel("Nieuw gesprek")
+                }
+            }
+            // Gepusht sluit de omliggende stapel het scherm met een terugknop; een
+            // kruisje ernaast zou twee verschillende "weg hier"-knoppen geven.
+            if presentation == .sheet {
+                SheetCloseButton { dismiss() }
+            }
+        }
+        .alert("Dubbele boeking", isPresented: overlapPresented) {
+            Button("Aanpassen", role: .cancel) { viewModel.cancelOverlap() }
+            Button("Toch plannen") {
+                Task { await viewModel.proceedPastOverlap() }
+            }
+        } message: {
+            if let overlap = viewModel.overlapEvent {
+                Text("Je staat al \(EventHelpers.fmtTime(overlap.start))–\(EventHelpers.fmtTime(overlap.end)) op \"\(overlap.title)\". Toch plannen?")
+            }
+        }
+        .alert("Mislukt", isPresented: $viewModel.saveFailedAlert) {
+            Button("Oké", role: .cancel) {}
+        } message: {
+            Text("Kon de afspraak niet opslaan. Probeer het nog een keer.")
         }
     }
 
