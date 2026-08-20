@@ -48,7 +48,8 @@ struct AgendaListView: View {
                 }
             }
             .padding(BovexaTheme.Space.xl)
-            .padding(.bottom, 90)
+            // Gemeten balkhoogte + de plan-pill; 90 was 14pt te weinig (5c).
+            .padding(.bottom, BovexaTheme.Space.tabBarClearance)
         }
     }
 }

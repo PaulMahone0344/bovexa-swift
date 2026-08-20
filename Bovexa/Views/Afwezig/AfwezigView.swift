@@ -50,7 +50,9 @@ struct AfwezigView: View {
                         .foregroundStyle(BovexaTheme.Colors.muted)
                         .multilineTextAlignment(.center)
                         .padding(.horizontal, BovexaTheme.Space.xl)
-                        .padding(.bottom, BovexaTheme.Space.tabBarClearance)
+                        // Sheet, dus geen tabbalk eronder: tabBarClearance (104) liet hier
+                    // een gat achter (5c).
+                    .padding(.bottom, BovexaTheme.Space.xl)
                 }
                 // Naar beneden vegen sluit het toetsenbord; anders bleef het staan
                 // over de knoppen heen.
@@ -88,7 +90,9 @@ struct AfwezigView: View {
                 .foregroundStyle(BovexaTheme.Colors.accent)
                 .tracking(0.3)
 
-            HStack(spacing: BovexaTheme.Space.sm) {
+            // FlowLayout, geen HStack: vier chips zijn samen ~310pt en er is op
+            // 375pt maar 291pt — "Vakantie" brak in tweeën (5c).
+            FlowLayout(spacing: BovexaTheme.Space.sm) {
                 ForEach(AfwezigReason.allCases) { reason in
                     reasonChip(reason)
                 }

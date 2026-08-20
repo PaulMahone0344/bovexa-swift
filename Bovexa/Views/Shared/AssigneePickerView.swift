@@ -65,7 +65,11 @@ struct AssigneePickerView: View {
                 if members.count >= Self.searchFrom { searchField }
 
                 if query.isEmpty {
-                    memberRow(label: "Niemand", checked: selectedIds.isEmpty, starred: nil, onToggle: { selectedIds = [] })
+                    memberRow(label: "Niemand", checked: selectedIds.isEmpty, starred: nil, onToggle: {
+                        // De ledenrijen gaven wél terugkoppeling, deze niet (5b).
+                        Haptics.selection()
+                        selectedIds = []
+                    })
                 }
 
                 if shown.isEmpty {

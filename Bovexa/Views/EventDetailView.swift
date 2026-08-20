@@ -84,6 +84,7 @@ struct EventDetailView: View {
                     } label: {
                         Image(systemName: "trash")
                     }
+                    .accessibilityLabel("Afspraak verwijderen")
                     .disabled(isDeleting)
                 }
             }
@@ -94,6 +95,7 @@ struct EventDetailView: View {
                     } label: {
                         Image(systemName: "pencil")
                     }
+                    .accessibilityLabel("Afspraak bewerken")
                 }
             }
         }

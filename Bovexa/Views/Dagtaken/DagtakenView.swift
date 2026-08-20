@@ -129,6 +129,10 @@ struct DagtakenView: View {
                     HStack(spacing: BovexaTheme.Space.xs) {
                         Text(option == .bedrijf ? (viewModel.orgName ?? option.label) : option.label)
                             .font(BovexaTheme.TypeStyle.subheadline.weight(.bold))
+                            // "Bovexa Logistics Tiel BV" trok beide pillen hoger (5c).
+                            .lineLimit(1)
+                            .truncationMode(.tail)
+                            .minimumScaleFactor(0.85)
                         Text("\(count(for: option))")
                             .font(BovexaTheme.TypeStyle.caption.weight(.bold))
                             .padding(.horizontal, 6)

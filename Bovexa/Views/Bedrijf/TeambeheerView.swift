@@ -128,22 +128,39 @@ struct TeambeheerView: View {
                 .frame(maxWidth: .infinity)
 
                 HStack(spacing: BovexaTheme.Space.sm) {
-                    Button(viewModel.copied ? "Gekopieerd" : "Kopieer") { copyCode() }
-                        .buttonStyle(.glassSecondaryBrand)
+                    // Een vinkje in plaats van het woord "Gekopieerd": die tekst is
+                    // breder dan "Kopieer" en liet de hele rij verspringen bij elke
+                    // tik, waarna "Nieuwe code" in tweeën brak (5c).
+                    Button { copyCode() } label: {
+                        if viewModel.copied {
+                            Label("Gekopieerd", systemImage: "checkmark")
+                                .labelStyle(.iconOnly)
+                                .frame(maxWidth: .infinity)
+                        } else {
+                            Text("Kopieer").frame(maxWidth: .infinity)
+                        }
+                    }
+                    .buttonStyle(.glassSecondaryBrand)
+                    .accessibilityLabel(viewModel.copied ? "Gekopieerd" : "Code kopiëren")
                     // ShareLink in plaats van UIActivityViewController: die werd
                     // gepresenteerd zonder popoverPresentationController.sourceView
                     // en dat is op iPad een uncaught exception (de app is 1,2).
-                    ShareLink(item: shareMessage) { Text("Deel") }
-                        .buttonStyle(.glassSecondaryBrand)
+                    ShareLink(item: shareMessage) {
+                        Text("Deel").lineLimit(1).frame(maxWidth: .infinity)
+                    }
+                    .buttonStyle(.glassSecondaryBrand)
                         .simultaneousGesture(TapGesture().onEnded { Haptics.selection() })
                     Button {
                         Haptics.warning()
                         showRotateConfirm = true
                     } label: {
                         if viewModel.rotating {
-                            ProgressView().tint(BovexaTheme.Colors.accent)
+                            ProgressView().tint(BovexaTheme.Colors.accent).frame(maxWidth: .infinity)
                         } else {
                             Text("Nieuwe code")
+                                .lineLimit(1)
+                                .minimumScaleFactor(0.8)
+                                .frame(maxWidth: .infinity)
                         }
                     }
                     .buttonStyle(.glassSecondaryBrand)
@@ -167,9 +184,11 @@ struct TeambeheerView: View {
                         Task { await viewModel.sendInvite(token: token) }
                     } label: {
                         if viewModel.inviteSending {
-                            ProgressView().tint(BovexaTheme.Colors.white)
+                            ProgressView().tint(BovexaTheme.Colors.white).frame(minWidth: 56)
                         } else {
-                            Text("Mail")
+                            // minWidth: anders kromp de pil tijdens het versturen en
+                            // schoof het e-mailveld ernaast mee (5c).
+                            Text("Mail").frame(minWidth: 56)
                         }
                     }
                     .buttonStyle(.glassProminentBrand)
@@ -266,6 +285,7 @@ struct TeambeheerView: View {
                         Image(systemName: "minus")
                     }
                     .buttonStyle(.glassSecondaryBrand)
+                    .accessibilityLabel("Standaardduur korter")
 
                     Text("\(viewModel.defaultDurationMin) min")
                         .font(BovexaTheme.TypeStyle.body.weight(.bold))
@@ -278,6 +298,7 @@ struct TeambeheerView: View {
                         Image(systemName: "plus")
                     }
                     .buttonStyle(.glassSecondaryBrand)
+                    .accessibilityLabel("Standaardduur langer")
                 }
 
                 Text("OPENINGSTIJDEN")

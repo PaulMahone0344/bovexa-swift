@@ -9,6 +9,17 @@ struct PositionedEvent: Equatable {
 /// Verdeelt overlappende afspraken van één dag over kolommen zodat ze naast elkaar
 /// staan in het uurgrid, in plaats van over elkaar heen.
 enum DayViewLayout {
+    /// Duur van een blok, afgekapt op het einde van de getoonde dag (M11 5c). Een
+    /// afspraak van 23:00 tot 01:00 kreeg anders een hoogte die onder het
+    /// 24×60pt-raster uitstak; de GeometryReader heeft een vaste frame en clipt
+    /// niet, dus het blok liep onder de scrollinhoud door.
+    static func clampedDurationMinutes(startOffsetMinutes: Double, durationMinutes: Double) -> Double {
+        let minutesInDay: Double = 24 * 60
+        let remaining = minutesInDay - startOffsetMinutes
+        guard remaining > 0 else { return 0 }
+        return min(durationMinutes, remaining)
+    }
+
     static func layout(_ events: [AgendaEvent]) -> [PositionedEvent] {
         let timed = events.filter { !$0.allDay }.sorted { $0.start < $1.start }
 

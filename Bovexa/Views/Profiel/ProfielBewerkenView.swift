@@ -105,7 +105,9 @@ struct ProfielBewerkenView: View {
                         .disabled(!viewModel.canSave)
                     }
                     .padding(BovexaTheme.Space.xl)
-                    .padding(.bottom, BovexaTheme.Space.tabBarClearance)
+                    // Sheet, dus geen tabbalk eronder: tabBarClearance (104) liet hier
+                    // een gat achter (5c).
+                    .padding(.bottom, BovexaTheme.Space.xl)
                 }
                 // Naar beneden vegen sluit het toetsenbord; anders bleef het staan
                 // over de knoppen heen.

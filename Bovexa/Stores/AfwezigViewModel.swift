@@ -131,6 +131,8 @@ final class AfwezigViewModel: ObservableObject {
                 createdDays += 1
             }
             createdDays = 0
+            // Planner en Editor gaven wél een succes-haptic, dit scherm niet (5b).
+            Haptics.success()
             savedAlertMessage = successMessage(from: from, to: to)
         } catch {
             saveFailedAlert = true

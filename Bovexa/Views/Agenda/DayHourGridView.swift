@@ -169,6 +169,7 @@ struct DayHourGridView: View {
                 )
             }
             .buttonStyle(.plain)
+            .accessibilityLabel("Afwezig: \(memberColors.firstName(for: band.event.owner) ?? band.event.title)")
             .frame(width: laneWidth, height: max(hourHeight * band.durationMinutes / 60 - 2, 16))
             .offset(x: gutterWidth + CGFloat(band.column) * (laneWidth + 2), y: hourHeight * band.startMinutes / 60)
         }
@@ -181,7 +182,12 @@ struct DayHourGridView: View {
 
         return ForEach(positioned, id: \.event.id) { item in
             let startOffsetMinutes = item.event.start.timeIntervalSince(dayStart) / 60
-            let durationMinutes = max(15, Double(EventHelpers.durationMin(item.event) ?? 30))
+            let rawDuration = max(15, Double(EventHelpers.durationMin(item.event) ?? 30))
+            // Afkappen op middernacht: een afspraak van 23:00-01:00 liep anders
+            // onder het raster door (5c).
+            let durationMinutes = DayViewLayout.clampedDurationMinutes(
+                startOffsetMinutes: startOffsetMinutes, durationMinutes: rawDuration
+            )
             let columnWidth = safeWidth / CGFloat(item.columnCount)
 
             Button {

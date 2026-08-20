@@ -28,6 +28,9 @@ struct MonthDayCellView: View {
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
+        // VoiceOver las alleen "15": geen maand, geen weekdag, geen aantal (5a).
+        .accessibilityLabel("\(EventHelpers.longDay(cell.date)), \(events.count == 1 ? "1 afspraak" : "\(events.count) afspraken")")
+        .accessibilityAddTraits(cell.isToday ? .isSelected : [])
     }
 
     private var textColor: Color {

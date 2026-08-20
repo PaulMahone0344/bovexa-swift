@@ -72,7 +72,9 @@ struct WachtwoordView: View {
                         .disabled(!canSubmit)
                     }
                     .padding(BovexaTheme.Space.xl)
-                    .padding(.bottom, BovexaTheme.Space.tabBarClearance)
+                    // Sheet, dus geen tabbalk eronder: tabBarClearance (104) liet hier
+                    // een gat achter (5c).
+                    .padding(.bottom, BovexaTheme.Space.xl)
                 }
             }
             .navigationTitle("Wachtwoord")

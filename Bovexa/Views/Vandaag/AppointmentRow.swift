@@ -28,10 +28,13 @@ struct AppointmentRow: View {
 
     private var accent: Color { EventHelpers.eventColor(event, labelStore: labelStore) }
 
+    /// Meegroeiend met de tekstgrootte: op een vaste 54pt kapte "10:00" bij
+    /// accessibility-groottes af tot "10:…" (M11 5c). De kolom blijft wél een
+    /// vaste breedte per rij, anders verspringen de kleurstrepen.
+    @ScaledMetric private var timeWidth: CGFloat = 54
+
     var body: some View {
         HStack(spacing: BovexaTheme.Space.md) {
-            // Vaste breedte i.p.v. minWidth: "Hele dag" is breder dan "10:00" en
-            // zou anders de kleurstrepen per rij laten verspringen.
             Text(EventHelpers.rowTimeText(event))
                 .font(event.allDay
                       ? .system(.caption, design: .rounded, weight: .semibold)
@@ -40,7 +43,7 @@ struct AppointmentRow: View {
                 .monospacedDigit()
                 .lineLimit(1)
                 .minimumScaleFactor(0.8)
-                .frame(width: 54, alignment: .leading)
+                .frame(minWidth: timeWidth, alignment: .leading)
 
             if style == .timeline {
                 timelineMarker

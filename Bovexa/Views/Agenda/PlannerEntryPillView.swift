@@ -61,6 +61,7 @@ struct PlannerEntryPillView: View {
     private var fullPill: some View {
         HStack(spacing: BovexaTheme.Space.sm) {
             Button {
+                Haptics.selection()
                 fieldFocused = false
                 expanded = false
             } label: {

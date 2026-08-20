@@ -70,7 +70,9 @@ struct LoginView: View {
                                     .autocorrectionDisabled()
                             }
 
-                            HStack {
+                            // .bottom: de HStack centreerde de knop t.o.v. label +
+                            // veld samen, dus hij hing ±11pt boven het veld (5c).
+                            HStack(alignment: .bottom) {
                                 field(placeholder: "Wachtwoord") {
                                     Group {
                                         if showPassword {

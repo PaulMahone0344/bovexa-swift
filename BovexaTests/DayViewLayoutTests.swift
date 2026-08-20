@@ -85,4 +85,25 @@ struct DayViewLayoutTests {
         let result = DayViewLayout.layout(events)
         #expect(result.allSatisfy { $0.columnCount == 1 })
     }
+
+    // MARK: - Blok afkappen op middernacht (M11 plak 5c)
+
+    @Test func aBlockThatRunsPastMidnightIsClampedToTheEndOfTheDay() {
+        // 23:00 (1380 min) + 2 uur = 01:00 de volgende dag.
+        let result = DayViewLayout.clampedDurationMinutes(startOffsetMinutes: 1380, durationMinutes: 120)
+        #expect(result == 60)
+    }
+
+    @Test func aBlockInsideTheDayKeepsItsFullDuration() {
+        #expect(DayViewLayout.clampedDurationMinutes(startOffsetMinutes: 540, durationMinutes: 90) == 90)
+    }
+
+    @Test func aBlockThatEndsExactlyAtMidnightIsUnchanged() {
+        #expect(DayViewLayout.clampedDurationMinutes(startOffsetMinutes: 1380, durationMinutes: 60) == 60)
+    }
+
+    @Test func aBlockThatStartsAtOrAfterMidnightGetsNoHeight() {
+        #expect(DayViewLayout.clampedDurationMinutes(startOffsetMinutes: 1440, durationMinutes: 60) == 0)
+    }
+
 }

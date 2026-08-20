@@ -96,6 +96,7 @@ struct DayView: View {
     private var header: some View {
         HStack {
             Button {
+                Haptics.selection()
                 viewModel.backToMonth()
             } label: {
                 Label(monthAbbreviation, systemImage: "chevron.left")

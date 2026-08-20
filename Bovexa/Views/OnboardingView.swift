@@ -109,7 +109,8 @@ struct OnboardingView: View {
             }
 
             Button {
-                Haptics.selection()
+                // Eén haptic: submit() geeft zelf .success()/.warning(), en samen
+                // waren dat er twee per actie. Login doet het ook met één (5b).
                 Task { await submit() }
             } label: {
                 if viewModel.busy {
