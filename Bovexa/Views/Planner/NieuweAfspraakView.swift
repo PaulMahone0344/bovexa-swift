@@ -116,9 +116,13 @@ struct NieuweAfspraakView: View {
                 Button(action: openPlanner) {
                     // Opmaak ín de label-closure (M11 patroon A): buiten de Button
                     // tekent de pil wel breed, maar raakt hij alleen zijn tekst.
-                    Label("Plannen met AI", systemImage: "arrow.right")
-                        .labelStyle(.titleAndIcon)
-                        .frame(maxWidth: .infinity)
+                    // Losse HStack in plaats van Label: die zet het icoon vóór de
+                    // tekst, en een pijl vooraan leest als "terug".
+                    HStack(spacing: BovexaTheme.Space.xs) {
+                        Text("Plannen met AI")
+                        Image(systemName: "arrow.right")
+                    }
+                    .frame(maxWidth: .infinity)
                 }
                 .buttonStyle(.glassProminentBrand)
             }
