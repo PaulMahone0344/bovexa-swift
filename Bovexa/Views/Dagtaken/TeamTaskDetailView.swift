@@ -59,6 +59,13 @@ struct TeamTaskDetailView: View {
             } message: {
                 Text("\"\(task?.title ?? "")\" wordt definitief gewist.")
             }
+            // Deze alert hing op DagtakenView, ónder deze sheet: het wissen mislukte
+            // dan zichtbaar nergens en de melding kwam pas nadat je zelf sloot.
+            .alert("Mislukt", isPresented: $viewModel.deleteTeamTaskFailedAlert) {
+                Button("OK", role: .cancel) {}
+            } message: {
+                Text("Kon de team-dagtaak niet wissen.")
+            }
         }
     }
 

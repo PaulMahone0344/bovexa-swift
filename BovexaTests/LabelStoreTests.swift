@@ -71,4 +71,16 @@ struct LabelStoreTests {
         ])
         #expect(store.orderedLabels.map(\.id) == ["l1", "l2", "l3"])
     }
+
+    /// `Dictionary(uniqueKeysWithValues:)` crasht op een dubbel id. Dat kan bij een
+    /// gepagineerde getFullList terwijl een collega tussendoor een label invoegt —
+    /// zeldzaam, maar een fatale crash voor een cache die "nooit een crash" belooft.
+    @Test func primeWithDuplicateIdsKeepsTheLastOneInsteadOfCrashing() {
+        let store = LabelStore()
+        store.prime(labels: [
+            label("l1", naam: "Eerste versie", kleur: "#D6524B", volgorde: 0),
+            label("l1", naam: "Tweede versie", kleur: "#4F9E5C", volgorde: 1),
+        ])
+        #expect(store.label(for: "l1")?.naam == "Tweede versie")
+    }
 }

@@ -12,10 +12,17 @@ struct SearchView: View {
     private let orgId: String?
     private let token: String
     private let currentUserOrgId: String?
+    /// De Agenda erachter herlaadt niet vanzelf: een sheet sluiten vuurt geen
+    /// .task/.onAppear. Zonder dit bleef een verwijderde afspraak daar staan.
+    private let onAgendaChanged: () -> Void
 
     @State private var selectedEvent: AgendaEvent?
 
-    init(userId: String, orgId: String?, token: String, currentUserOrgId: String?, memberColors: MemberColors, labelStore: LabelStore) {
+    init(
+        userId: String, orgId: String?, token: String, currentUserOrgId: String?,
+        memberColors: MemberColors, labelStore: LabelStore,
+        onAgendaChanged: @escaping () -> Void = {}
+    ) {
         _viewModel = StateObject(wrappedValue: SearchViewModel())
         self.userId = userId
         self.orgId = orgId
@@ -23,6 +30,7 @@ struct SearchView: View {
         self.currentUserOrgId = currentUserOrgId
         self.memberColors = memberColors
         self.labelStore = labelStore
+        self.onAgendaChanged = onAgendaChanged
     }
 
     var body: some View {
@@ -38,7 +46,18 @@ struct SearchView: View {
             .navigationTitle("Zoeken")
             .navigationBarTitleDisplayMode(.inline)
             .navigationDestination(item: $selectedEvent) { event in
-                EventDetailView(event: event, currentUserId: userId, currentUserOrgId: currentUserOrgId, token: token, memberColors: memberColors, labelStore: labelStore)
+                EventDetailView(
+                    event: event, currentUserId: userId, currentUserOrgId: currentUserOrgId, token: token,
+                    memberColors: memberColors, labelStore: labelStore,
+                    onChanged: {
+                        Task { await viewModel.load(userId: userId, orgId: orgId, token: token) }
+                        onAgendaChanged()
+                    },
+                    onDeleted: { recordId in
+                        viewModel.removeLocally(recordId: recordId)
+                        onAgendaChanged()
+                    }
+                )
             }
         }
         .task {

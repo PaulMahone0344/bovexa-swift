@@ -62,16 +62,11 @@ struct DagtakenView: View {
         .onChange(of: viewModel.isEditing) { _, isEditing in
             if isEditing { showComposer = true }
         }
-        .alert("Mislukt", isPresented: $viewModel.createFailedAlert) {
-            Button("OK", role: .cancel) {}
-        } message: {
-            Text("Kon de dagtaak niet opslaan.")
-        }
-        .alert("Mislukt", isPresented: $viewModel.deleteTeamTaskFailedAlert) {
-            Button("OK", role: .cancel) {}
-        } message: {
-            Text("Kon de team-dagtaak niet wissen.")
-        }
+        // De twee "Mislukt"-alerts hingen hier, ónder de sheets waarin de fout
+        // ontstaat. SwiftUI presenteert een alert niet zolang er een sheet open
+        // staat: je zag niets, en createFailedAlert bleef daarna op true staan en
+        // blokkeerde ook een geslaagde poging. Ze staan nu ín de composer-sheet
+        // resp. in TeamTaskDetailView.
         .sheet(item: $openTeamTask) { task in
             if let user = currentUser {
                 TeamTaskDetailView(
@@ -80,11 +75,13 @@ struct DagtakenView: View {
                 )
             }
         }
+        // Eén laadpad (zie VandaagView): `.task` herstart al bij elke terugkeer
+        // naar deze tab.
         .task {
             scope = scopePreference.load()
             await refresh()
         }
-        .onAppear {
+        .onChange(of: authStore.foregroundTick) { _, _ in
             Task { await refresh() }
         }
     }
@@ -173,6 +170,11 @@ struct DagtakenView: View {
             }
             .navigationTitle(viewModel.isEditing ? "Dagtaak bewerken" : "Nieuwe dagtaak")
             .navigationBarTitleDisplayMode(.inline)
+            .alert("Mislukt", isPresented: $viewModel.createFailedAlert) {
+                Button("OK", role: .cancel) {}
+            } message: {
+                Text("Kon de dagtaak niet opslaan.")
+            }
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
                     Button("Annuleren") {

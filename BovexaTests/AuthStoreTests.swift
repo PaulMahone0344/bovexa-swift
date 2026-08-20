@@ -307,4 +307,179 @@ struct AuthStoreTests {
         }
         #expect(tokenStore.load() == "tok-oud")
     }
+
+    // MARK: - Offline starten (M11 plak 3a)
+
+    private func makeDefaults() -> UserDefaults {
+        let suiteName = "bovexa-tests-\(UUID().uuidString)"
+        let defaults = UserDefaults(suiteName: suiteName)!
+        defaults.removePersistentDomain(forName: suiteName)
+        return defaults
+    }
+
+    private static let loginResponse = """
+    {"token":"tok-1","record":{"id":"u1","email":"a@b.nl","naam":"Ibrahim"}}
+    """
+
+    /// Vliegtuigstand aan en de app openen mocht geen uitlogactie zijn: bootstrap
+    /// wiste het Keychain-token bij ÉLKE fout, dus ook zonder bereik.
+    @Test func bootstrapWithoutConnectionKeepsTokenAndUsesTheCachedUser() async {
+        let tokenStore = InMemoryTokenStore()
+        let userCache = CachedUserStore(defaults: makeDefaults())
+
+        URLProtocolStub.requestHandler = { _ in (200, Data(Self.loginResponse.utf8)) }
+        let online = AuthStore(client: makeClient(), tokenStore: tokenStore, userCache: userCache)
+        await online.signIn(email: "a@b.nl", password: "geheim123")
+        #expect(userCache.load()?.id == "u1")
+
+        // Geen handler = netwerkfout.
+        URLProtocolStub.requestHandler = nil
+        let offline = AuthStore(client: makeClient(), tokenStore: tokenStore, userCache: userCache)
+        await offline.bootstrap()
+
+        guard case .loggedIn(let user) = offline.phase else {
+            Issue.record("verwachtte loggedIn uit de cache, kreeg \(offline.phase)")
+            return
+        }
+        #expect(user.id == "u1")
+        #expect(tokenStore.load() == "tok-1")
+        #expect(offline.token == "tok-1")
+    }
+
+    @Test func bootstrapWithoutConnectionAndWithoutCacheKeepsTheTokenAndExplains() async {
+        let tokenStore = InMemoryTokenStore()
+        tokenStore.save("tok-1")
+        URLProtocolStub.requestHandler = nil
+
+        let store = AuthStore(client: makeClient(), tokenStore: tokenStore, userCache: CachedUserStore(defaults: makeDefaults()))
+        await store.bootstrap()
+
+        #expect(store.phase == .loggedOut(errorMessage: "Geen verbinding. Probeer het opnieuw."))
+        // Het token is niet ongeldig, alleen onbereikbaar: niet wissen.
+        #expect(tokenStore.load() == "tok-1")
+    }
+
+    @Test func bootstrapServerRejectionClearsTokenAndCache() async {
+        let tokenStore = InMemoryTokenStore()
+        let userCache = CachedUserStore(defaults: makeDefaults())
+
+        URLProtocolStub.requestHandler = { _ in (200, Data(Self.loginResponse.utf8)) }
+        let online = AuthStore(client: makeClient(), tokenStore: tokenStore, userCache: userCache)
+        await online.signIn(email: "a@b.nl", password: "geheim123")
+
+        URLProtocolStub.requestHandler = { _ in (401, Data("{}".utf8)) }
+        let store = AuthStore(client: makeClient(), tokenStore: tokenStore, userCache: userCache)
+        await store.bootstrap()
+
+        #expect(store.phase == .loggedOut(errorMessage: nil))
+        #expect(tokenStore.load() == nil)
+        #expect(userCache.load() == nil)
+    }
+
+    @Test func signOutClearsTheCachedUser() async {
+        let userCache = CachedUserStore(defaults: makeDefaults())
+        URLProtocolStub.requestHandler = { _ in (200, Data(Self.loginResponse.utf8)) }
+        let store = AuthStore(client: makeClient(), tokenStore: InMemoryTokenStore(), userCache: userCache)
+        await store.signIn(email: "a@b.nl", password: "geheim123")
+        #expect(userCache.load() != nil)
+
+        store.signOut()
+        #expect(userCache.load() == nil)
+    }
+
+    // MARK: - 401 tijdens gebruik (M11 plak 3b)
+
+    @Test func unauthorizedDuringUseSignsOutWithAnExplanation() async {
+        let tokenStore = InMemoryTokenStore()
+        URLProtocolStub.requestHandler = { _ in (200, Data(Self.loginResponse.utf8)) }
+        let store = AuthStore(
+            client: makeClient(), tokenStore: tokenStore,
+            userCache: CachedUserStore(defaults: makeDefaults()), notificationCenter: NotificationCenter()
+        )
+        await store.signIn(email: "a@b.nl", password: "geheim123")
+
+        store.handleSessionExpired()
+
+        #expect(store.phase == .loggedOut(errorMessage: "Je sessie is verlopen. Log opnieuw in."))
+        #expect(tokenStore.load() == nil)
+        #expect(store.token == nil)
+    }
+
+    /// Een 401 op de stille authRefresh tijdens app-start mag niet als "sessie
+    /// verlopen" op het scherm komen: bootstrap handelt die zelf stil af.
+    @Test func unauthorizedIsIgnoredWhileStillDeciding() {
+        let store = AuthStore(
+            client: makeClient(), tokenStore: InMemoryTokenStore(),
+            userCache: CachedUserStore(defaults: makeDefaults()), notificationCenter: NotificationCenter()
+        )
+        #expect(store.phase == .deciding)
+        store.handleSessionExpired()
+        #expect(store.phase == .deciding)
+    }
+
+    @Test func pbClientPostsUnauthorizedOnA401() async {
+        let center = NotificationCenter()
+        let counter = PostCounter()
+        let observer = center.addObserver(forName: .pbUnauthorized, object: nil, queue: nil) { _ in counter.bump() }
+        defer { center.removeObserver(observer) }
+
+        URLProtocolStub.requestHandler = { _ in (401, Data("{}".utf8)) }
+        let client = PBClient(session: URLProtocolStub.makeSession(), notificationCenter: center)
+        _ = try? await client.authRefresh(token: "dood")
+
+        #expect(counter.count == 1)
+    }
+
+    @Test func pbClientDoesNotPostUnauthorizedOnOtherErrors() async {
+        let center = NotificationCenter()
+        let counter = PostCounter()
+        let observer = center.addObserver(forName: .pbUnauthorized, object: nil, queue: nil) { _ in counter.bump() }
+        defer { center.removeObserver(observer) }
+
+        URLProtocolStub.requestHandler = { _ in (400, Data("{}".utf8)) }
+        let client = PBClient(session: URLProtocolStub.makeSession(), notificationCenter: center)
+        _ = try? await client.authRefresh(token: "tok")
+
+        #expect(counter.count == 0)
+    }
+
+    // MARK: - Wachtwoord wijzigen, netwerkhik ná de wijziging (M11 plak 3h)
+
+    /// De wijziging is dan al gelukt en PB heeft alle tokens ongeldig gemaakt.
+    /// "Wijzigen mislukt" tonen en ingelogd blijven laat de gebruiker achter met
+    /// een dood token: alles daarna geeft 401 en het oude wachtwoord werkt niet meer.
+    @Test func changePasswordSignsOutWhenTheSecondLoginFails() async throws {
+        let tokenStore = InMemoryTokenStore()
+        URLProtocolStub.requestHandler = { _ in
+            (200, Data("""
+            {"token":"tok-oud","record":{"id":"u1","email":"a@b.nl","naam":"Ibrahim"}}
+            """.utf8))
+        }
+        let store = AuthStore(
+            client: makeClient(), tokenStore: tokenStore,
+            userCache: CachedUserStore(defaults: makeDefaults())
+        )
+        await store.signIn(email: "a@b.nl", password: "oudwachtwoord")
+
+        URLProtocolStub.requestHandler = { request in
+            // De wijziging zelf lukt; het opnieuw inloggen erna niet.
+            if request.url!.absoluteString.contains("auth-with-password") { return (500, Data("{}".utf8)) }
+            return (200, Data("""
+            {"id":"u1","email":"a@b.nl","naam":"Ibrahim"}
+            """.utf8))
+        }
+        try await store.changePassword(current: "oudwachtwoord", new: "nieuwwachtwoord")
+
+        #expect(store.phase == .loggedOut(errorMessage: "Wachtwoord gewijzigd — log opnieuw in met je nieuwe wachtwoord."))
+        #expect(tokenStore.load() == nil)
+    }
+}
+
+/// Kleine teller voor NotificationCenter-observers: een `var` in de testfunctie
+/// vangen mag niet in een @Sendable closure.
+final class PostCounter: @unchecked Sendable {
+    private let lock = NSLock()
+    private var value = 0
+    func bump() { lock.lock(); value += 1; lock.unlock() }
+    var count: Int { lock.lock(); defer { lock.unlock() }; return value }
 }

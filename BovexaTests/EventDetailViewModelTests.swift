@@ -121,6 +121,22 @@ struct EventDetailViewModelTests {
         #expect(!vm.deleteFailedAlert)
     }
 
+    /// Bij een herhaling is `event.id` het synthetische bezetting-id
+    /// ("recordId:YYYY-MM-DD"), terwijl de herinnering op het échte record-id is
+    /// gepland. Annuleren op het bezetting-id liet de notificatie staan, dus die
+    /// ging af voor een afspraak die niet meer bestaat.
+    @Test func deleteCancelsTheReminderOnTheSeriesRecordId() async {
+        URLProtocolStub.requestHandler = { _ in (204, Data()) }
+        let scheduler = FakeNotificationScheduler()
+        let event = makeEvent(id: "serie1:2026-09-01", owner: "owner", seriesId: "serie1")
+        let vm = makeViewModel(event: event, currentUserId: "owner", reminderScheduler: scheduler)
+
+        let success = await vm.delete()
+
+        #expect(success)
+        #expect(scheduler.canceledIdentifiers == ["bovexaflow_reminder_serie1"])
+    }
+
     @Test func deleteFailureSetsAlertAndReturnsFalse() async {
         URLProtocolStub.requestHandler = { _ in (500, Data("{}".utf8)) }
         let vm = makeViewModel(event: makeEvent(owner: "owner"), currentUserId: "owner")

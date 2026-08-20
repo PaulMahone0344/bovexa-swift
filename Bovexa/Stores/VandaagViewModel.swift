@@ -48,13 +48,13 @@ final class VandaagViewModel: ObservableObject {
 
     /// Alleen de taken die nog te doen zijn: afgevinkt en gearchiveerd horen op
     /// Vandaag niet thuis — dit is een lijstje "nog doen", geen overzicht.
-    func reloadOpenTasks() {
-        planningStore.reload()
+    func reloadOpenTasks(userId: String) {
+        planningStore.reload(userId: userId)
         openTasks = planningStore.notes.filter { !$0.done && !$0.archived }
     }
 
     func load(userId: String, orgId: String?, token: String) async {
-        reloadOpenTasks()
+        reloadOpenTasks(userId: userId)
         isLoading = true
         defer {
             isLoading = false

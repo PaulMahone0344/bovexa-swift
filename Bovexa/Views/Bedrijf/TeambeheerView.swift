@@ -109,8 +109,12 @@ struct TeambeheerView: View {
                 HStack(spacing: BovexaTheme.Space.sm) {
                     Button(viewModel.copied ? "Gekopieerd" : "Kopieer") { copyCode() }
                         .buttonStyle(.glassSecondaryBrand)
-                    Button("Deel") { shareCode() }
+                    // ShareLink in plaats van UIActivityViewController: die werd
+                    // gepresenteerd zonder popoverPresentationController.sourceView
+                    // en dat is op iPad een uncaught exception (de app is 1,2).
+                    ShareLink(item: shareMessage) { Text("Deel") }
                         .buttonStyle(.glassSecondaryBrand)
+                        .simultaneousGesture(TapGesture().onEnded { Haptics.selection() })
                     Button {
                         Haptics.warning()
                         showRotateConfirm = true
@@ -213,14 +217,8 @@ struct TeambeheerView: View {
         }
     }
 
-    private func shareCode() {
-        Haptics.selection()
-        let message = "Doe mee met ons team in Bovexa Flow — bedrijfscode: \(viewModel.joinCode)"
-        let activity = UIActivityViewController(activityItems: [message], applicationActivities: nil)
-        UIApplication.shared.connectedScenes
-            .compactMap { $0 as? UIWindowScene }
-            .first?.keyWindow?.rootViewController?
-            .present(activity, animated: true)
+    private var shareMessage: String {
+        "Doe mee met ons team in Bovexa Flow — bedrijfscode: \(viewModel.joinCode)"
     }
 
     // MARK: - Bedrijfsprofiel

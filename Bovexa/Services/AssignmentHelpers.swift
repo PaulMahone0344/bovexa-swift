@@ -30,18 +30,31 @@ enum AssignmentHelpers {
     /// (m6, Meldingen-scherm). Sluit je eigen afspraken uit — als eigenaar sta je al
     /// op "accepted" (zie nextStatusMap).
     static func pendingEvents(_ events: [AgendaEvent], userId: String, now: Date = Date()) -> [AgendaEvent] {
-        awaitingReply(events, userId: userId)
-            .filter { !hasPassed($0, now: now) }
-            .sorted { $0.start > $1.start }
+        deduplicatedBySeries(
+            awaitingReply(events, userId: userId).filter { !hasPassed($0, now: now) }
+        )
+        .sorted { $0.start > $1.start }
     }
 
     /// Toewijzingen waar je nooit op geantwoord hebt en waarvan de afspraak al
     /// voorbij is. Accepteren of weigeren zegt daar niets meer, maar weggooien ook
     /// niet: dan weet je nooit dat er iets langs is gekomen. Meldingen zet ze apart.
     static func expiredPendingEvents(_ events: [AgendaEvent], userId: String, now: Date = Date()) -> [AgendaEvent] {
-        awaitingReply(events, userId: userId)
-            .filter { hasPassed($0, now: now) }
-            .sorted { $0.start > $1.start }
+        deduplicatedBySeries(
+            awaitingReply(events, userId: userId).filter { hasPassed($0, now: now) }
+        )
+        .sorted { $0.start > $1.start }
+    }
+
+    /// RecurrenceExpander klapt een herhaling uit tot 365 dagen vooruit. Eén
+    /// toewijzing op een wekelijkse afspraak stond daardoor als tientallen losse
+    /// kaarten in Meldingen, terwijl accepteren naar het serie-record schrijft en
+    /// dus voor de hele reeks geldt. Houdt de eerstvolgende bezetting.
+    private static func deduplicatedBySeries(_ events: [AgendaEvent]) -> [AgendaEvent] {
+        var seen: Set<String> = []
+        return events
+            .sorted { $0.start < $1.start }
+            .filter { seen.insert(EventHelpers.eventRecordId($0)).inserted }
     }
 
     private static func awaitingReply(_ events: [AgendaEvent], userId: String) -> [AgendaEvent] {

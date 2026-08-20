@@ -77,11 +77,14 @@ final class MeldingenViewModel: ObservableObject {
 
         if let items = try? await noticeRepository.fetchNotices(orgId: orgId, token: token) {
             notices = items
+            // Alleen na een geslaagde fetch: anders gaat de ongelezen-stip op
+            // Profiel uit terwijl de gebruiker de mededeling nooit gezien heeft,
+            // en komt hij pas terug bij een nieuwere.
+            seenStore.markSeen(userId: userId)
         } else {
             notices = []
         }
         loaded = true
-        seenStore.markSeen(userId: userId)
 
         if let membership = try? await companyRepository.listMembers(token: token) {
             role = membership.items.first { $0.userId == userId }?.role
@@ -122,7 +125,12 @@ final class MeldingenViewModel: ObservableObject {
     func respond(_ event: AgendaEvent, status: String) async {
         guard answeringId == nil else { return }
         answeringId = event.id
-        let rest = pending.filter { $0.id != event.id }
+        // Bij een herhaling schrijft het antwoord naar het serie-record, dus élke
+        // uitgeklapte bezetting van diezelfde serie is hiermee beantwoord. Alleen
+        // de aangetikte kaart weghalen liet de zusters staan met knoppen die niets
+        // meer doen.
+        let recordId = EventHelpers.eventRecordId(event)
+        let rest = pending.filter { EventHelpers.eventRecordId($0) != recordId }
         pending = rest
         do {
             _ = try await eventRepository.respondToAssignment(event: event, userId: userId, status: status, token: token)

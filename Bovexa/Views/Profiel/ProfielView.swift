@@ -145,14 +145,21 @@ struct ProfielView: View {
             .navigationTitle("Profiel")
             .navigationBarTitleDisplayMode(.large)
         }
+        // Eén laadpad: `.task` draait al bij elke (her)verschijning.
         .task { await refresh() }
-        .onAppear { Task { await refresh() } }
-        .sheet(isPresented: $showAfwezig) {
+        .onChange(of: authStore.foregroundTick) { _, _ in
+            Task { await refresh() }
+        }
+        // Beide sheets veranderen wat dit scherm toont — de meldingenteller met
+        // stip, en de begroeting met het aantal afspraken van vandaag. Een sheet
+        // sluiten vuurt geen .task/.onAppear, dus zonder onDismiss bleven die
+        // staan tot een tabwissel.
+        .sheet(isPresented: $showAfwezig, onDismiss: { Task { await refresh() } }) {
             if let user = currentUser {
                 AfwezigView(userId: user.id, org: user.defaultOrg, token: authStore.token ?? "")
             }
         }
-        .sheet(isPresented: $showMeldingen) {
+        .sheet(isPresented: $showMeldingen, onDismiss: { Task { await refresh() } }) {
             if let user = currentUser {
                 MeldingenView(userId: user.id, orgId: user.defaultOrg, token: authStore.token ?? "")
             }

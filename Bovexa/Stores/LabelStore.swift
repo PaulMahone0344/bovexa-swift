@@ -10,7 +10,9 @@ final class LabelStore: ObservableObject {
 
     func prime(labels: [AgendaLabel]) {
         orderedLabels = labels.sorted { $0.volgorde < $1.volgorde }
-        labelMap = Dictionary(uniqueKeysWithValues: labels.map { ($0.id, $0) })
+        // `uniqueKeysWithValues` crasht op een dubbel id — mogelijk bij een
+        // gepagineerde getFullList terwijl een collega tussendoor invoegt.
+        labelMap = Dictionary(labels.map { ($0.id, $0) }, uniquingKeysWith: { _, new in new })
     }
 
     /// Voegt een nieuw label toe zonder opnieuw te laden — voor "Nieuw label"

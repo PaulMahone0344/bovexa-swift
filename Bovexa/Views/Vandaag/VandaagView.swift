@@ -77,6 +77,10 @@ struct VandaagView: View {
             // niet boven zich toe. De kop is nu een eigen blok, zoals de mockup.
             .toolbar(.hidden, for: .navigationBar)
         }
+        // Eén laadpad: `.task` draait al bij elke terugkeer naar deze tab. Met
+        // `.onAppear { Task { refresh() } }` erbij liepen er twee load()'s
+        // parallel — elk 3-4 verzoeken, en de eerste `defer` zette de spinner uit
+        // terwijl de tweede nog liep.
         .task {
             await refresh()
         }
@@ -84,7 +88,9 @@ struct VandaagView: View {
             // Dagtaken staan lokaal en kunnen op de andere tab veranderd zijn;
             // dit is goedkoop (UserDefaults) en hoeft niet op het netwerk te
             // wachten, dus los van refresh().
-            viewModel.reloadOpenTasks()
+            if let userId = currentUser?.id { viewModel.reloadOpenTasks(userId: userId) }
+        }
+        .onChange(of: authStore.foregroundTick) { _, _ in
             Task { await refresh() }
         }
     }

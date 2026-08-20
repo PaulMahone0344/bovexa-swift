@@ -5,8 +5,6 @@ import SwiftUI
 /// het afspraak-detail. Lege lijst is een geldige uitkomst, ook bij maskering (valkuil G).
 struct KlantenView: View {
     @StateObject private var viewModel: KlantenViewModel
-    @StateObject private var memberColors = MemberColors()
-    @StateObject private var labelStore = LabelStore()
     @Environment(\.dismiss) private var dismiss
     @State private var openKey: String?
     @State private var selectedEvent: AgendaEvent?
@@ -49,7 +47,14 @@ struct KlantenView: View {
             .navigationTitle("Klanten")
             .navigationBarTitleDisplayMode(.large)
             .navigationDestination(item: $selectedEvent) { event in
-                EventDetailView(event: event, currentUserId: userId, currentUserOrgId: currentUserOrgId, token: token, memberColors: memberColors, labelStore: labelStore)
+                // Zonder deze twee bleef een gewijzigde of verwijderde afspraak in
+                // de klantenlijst staan; nogmaals tikken gaf dan een 404.
+                EventDetailView(
+                    event: event, currentUserId: userId, currentUserOrgId: currentUserOrgId, token: token,
+                    memberColors: viewModel.memberColors, labelStore: viewModel.labelStore,
+                    onChanged: { Task { await viewModel.load() } },
+                    onDeleted: { _ in Task { await viewModel.load() } }
+                )
             }
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {

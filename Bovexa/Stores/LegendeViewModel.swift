@@ -7,6 +7,10 @@ import Foundation
 final class LegendeViewModel: ObservableObject {
     @Published private(set) var isAdmin = false
     @Published var actionFailedAlert = false
+    /// Aan zolang er een label wordt aangemaakt (M11 plak 3h). Zonder deze guard
+    /// bleef de knop actief tijdens de netwerkronde en maakte een tweede tik een
+    /// tweede label met dezelfde naam.
+    @Published private(set) var busy = false
 
     let labelStore: LabelStore
 
@@ -56,16 +60,24 @@ final class LegendeViewModel: ObservableObject {
         }
     }
 
-    func create(naam: String, kleur: String) async {
+    /// Geeft terug of het gelukt is: de view wiste de naam en sloot het formulier
+    /// óók bij een fout, dus je zag "Mislukt" en was je invoer kwijt. De busy-guard
+    /// voorkomt dat een dubbele tik twee labels met dezelfde naam aanmaakt.
+    @discardableResult
+    func create(naam: String, kleur: String) async -> Bool {
         let trimmed = naam.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !trimmed.isEmpty else { return }
+        guard !trimmed.isEmpty, !busy else { return false }
+        busy = true
+        defer { busy = false }
         do {
             let created = try await labelRepository.createLabel(
                 org: org, naam: trimmed, kleur: kleur, volgorde: labelStore.orderedLabels.count, token: token
             )
             labelStore.add(created)
+            return true
         } catch {
             actionFailedAlert = true
+            return false
         }
     }
 

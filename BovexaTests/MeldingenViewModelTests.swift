@@ -175,4 +175,60 @@ struct MeldingenViewModelTests {
         await vm.submit()
         #expect(vm.notices.isEmpty)
     }
+
+    // MARK: - Herhalende toewijzing (M11 plak 3g)
+
+    /// Vijf uitgeklapte bezettingen van dezelfde serie zijn samen één toewijzing:
+    /// accepteren schrijft naar het serie-record, dus de zusterkaarten horen ook weg.
+    private static let herhalendeSerie = """
+    {"items":[
+      {"id":"s1","owner":"collega","title":"Overleg","start":"2026-07-24 09:00:00.000Z","all_day":false,"recurrence":"FREQ=WEEKLY","assignee":["me"],"assignee_status":{}}
+     ],"page":1,"perPage":200,"totalItems":1,"totalPages":1}
+    """
+
+    @Test func recurringAssignmentShowsAsOneCard() async {
+        URLProtocolStub.requestHandler = routedHandler(events: Self.herhalendeSerie)
+        let vm = makeViewModel()
+        await vm.load()
+        // RecurrenceExpander maakt er meerdere bezettingen van; er hoort één kaart
+        // over te blijven.
+        #expect(vm.pending.count == 1)
+    }
+
+    @Test func respondRemovesEveryOccurrenceOfTheSameSeries() async {
+        URLProtocolStub.requestHandler = routedHandler(events: Self.herhalendeSerie)
+        let vm = makeViewModel()
+        await vm.load()
+        let target = vm.pending.first
+        #expect(target != nil)
+
+        URLProtocolStub.requestHandler = { _ in
+            (200, Data("""
+            {"id":"s1","owner":"collega","title":"Overleg","start":"2026-07-24 09:00:00.000Z","all_day":false}
+            """.utf8))
+        }
+        await vm.respond(target!, status: "accepted")
+
+        #expect(vm.pending.isEmpty)
+        #expect(!vm.respondFailedAlert)
+    }
+
+    // MARK: - markSeen alleen bij een geslaagde fetch (M11 plak 3g)
+
+    /// De ongelezen-stip ging uit terwijl de mededelingen niet geladen konden
+    /// worden: de gebruiker heeft ze dan nooit gezien.
+    @Test func markSeenIsSkippedWhenNoticesCouldNotBeLoaded() async {
+        let seenStore = NoticesSeenStore(defaults: makeDefaults())
+        URLProtocolStub.requestHandler = { request in
+            if request.url!.path.contains("agenda_notices") { return (500, Data("{}".utf8)) }
+            return (200, Data("""
+            {"items":[],"page":1,"perPage":200,"totalItems":0,"totalPages":0}
+            """.utf8))
+        }
+        let vm = makeViewModel(seenStore: seenStore)
+        await vm.load()
+
+        #expect(seenStore.lastSeen(userId: "me") == nil)
+        #expect(vm.loaded)
+    }
 }

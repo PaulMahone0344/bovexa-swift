@@ -44,6 +44,10 @@ struct ProfielBewerkenView: View {
                                         Haptics.selection()
                                         viewModel.markRemovePhoto()
                                         previewImage = nil
+                                        // Zonder dit blijft de PhotosPickerItem staan
+                                        // en vuurt onChange niet als je dezelfde foto
+                                        // opnieuw kiest.
+                                        selection = nil
                                     } label: {
                                         Text("Foto verwijderen")
                                             .font(BovexaTheme.TypeStyle.footnote.weight(.semibold))

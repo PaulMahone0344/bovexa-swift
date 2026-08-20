@@ -16,9 +16,17 @@ struct VandaagOpenTasksTests {
         VandaagViewModel(planningStore: PlanningNoteStore(defaults: defaults), defaults: defaults)
     }
 
+    /// Sinds M11 plak 3c hangt de sleutel aan de userId: een store zonder
+    /// `reload(userId:)` toont niets en schrijft niets.
+    private func makeStore(defaults: UserDefaults, userId: String = "u1") -> PlanningNoteStore {
+        let store = PlanningNoteStore(defaults: defaults)
+        store.reload(userId: userId)
+        return store
+    }
+
     @Test func openTasksSkipDoneAndArchived() {
         let defaults = makeDefaults()
-        let store = PlanningNoteStore(defaults: defaults)
+        let store = makeStore(defaults: defaults)
         store.add(text: "Bonnen inleveren")
         let done = store.add(text: "Banden checken")!
         let archived = store.add(text: "Oude klus")!
@@ -26,7 +34,7 @@ struct VandaagOpenTasksTests {
         store.setArchived(id: archived.id, archived: true)
 
         let viewModel = makeViewModel(defaults: defaults)
-        viewModel.reloadOpenTasks()
+        viewModel.reloadOpenTasks(userId: "u1")
 
         #expect(viewModel.openTasks.map(\.title) == ["Bonnen inleveren"])
     }
@@ -37,28 +45,28 @@ struct VandaagOpenTasksTests {
     @Test func reloadPicksUpChangesFromAnotherStore() {
         let defaults = makeDefaults()
         let viewModel = makeViewModel(defaults: defaults)
-        viewModel.reloadOpenTasks()
+        viewModel.reloadOpenTasks(userId: "u1")
         #expect(viewModel.openTasks.isEmpty)
 
-        let otherStore = PlanningNoteStore(defaults: defaults)
+        let otherStore = makeStore(defaults: defaults)
         otherStore.add(text: "Later toegevoegd")
 
-        viewModel.reloadOpenTasks()
+        viewModel.reloadOpenTasks(userId: "u1")
 
         #expect(viewModel.openTasks.map(\.title) == ["Later toegevoegd"])
     }
 
     @Test func storeReloadReflectsAToggleFromElsewhere() {
         let defaults = makeDefaults()
-        let store = PlanningNoteStore(defaults: defaults)
+        let store = makeStore(defaults: defaults)
         let note = store.add(text: "Afvinken")!
 
         let viewModel = makeViewModel(defaults: defaults)
-        viewModel.reloadOpenTasks()
+        viewModel.reloadOpenTasks(userId: "u1")
         #expect(viewModel.openTasks.count == 1)
 
         store.toggle(id: note.id)
-        viewModel.reloadOpenTasks()
+        viewModel.reloadOpenTasks(userId: "u1")
 
         #expect(viewModel.openTasks.isEmpty)
     }

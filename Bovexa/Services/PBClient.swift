@@ -5,17 +5,28 @@ enum PBEndpoint {
     static let base = URL(string: "https://api.qawayahbase.com")!
 }
 
+extension Notification.Name {
+    /// Vuurt bij élke 401 van de server. AuthStore luistert en zet de gebruiker
+    /// terug op login; zonder dit werd een verlopen token nergens herkend en
+    /// toonde de app lege lijsten met "Mislukt" tot je hem handmatig herstartte.
+    /// Een notificatie in plaats van een closure op de client, omdat elke
+    /// repository zijn eigen PBClient maakt.
+    static let pbUnauthorized = Notification.Name("bovexaflow.pbUnauthorized")
+}
+
 /// Dunne PocketBase-client op URLSession — alleen wat deze milestone nodig heeft:
 /// authWithPassword, authRefresh, getFullList (filter/sort) en custom POST-routes.
 final class PBClient {
     private let baseURL: URL
     private let session: URLSession
     private let decoder: JSONDecoder
+    private let notificationCenter: NotificationCenter
 
-    init(baseURL: URL = PBEndpoint.base, session: URLSession = .shared) {
+    init(baseURL: URL = PBEndpoint.base, session: URLSession = .shared, notificationCenter: NotificationCenter = .default) {
         self.baseURL = baseURL
         self.session = session
         self.decoder = JSONDecoder()
+        self.notificationCenter = notificationCenter
     }
 
     func authWithPassword(email: String, password: String) async throws -> AuthResponse {
@@ -210,6 +221,9 @@ final class PBClient {
 
         guard let http = response as? HTTPURLResponse else { throw PBError.network }
         guard (200..<300).contains(http.statusCode) else {
+            if http.statusCode == 401 {
+                notificationCenter.post(name: .pbUnauthorized, object: nil)
+            }
             let message = (try? decoder.decode(PBErrorBody.self, from: data))?.message ?? "Er ging iets mis."
             throw PBError.server(status: http.statusCode, message: message)
         }

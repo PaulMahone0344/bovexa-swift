@@ -125,7 +125,10 @@ struct RootTabView: View {
             get: { joinCoordinator.outcome == .alreadyMember },
             set: { if !$0 { joinCoordinator.reset() } }
         )) {
-            Button("Naar de agenda") { joinCoordinator.reset() }
+            Button("Naar de agenda") {
+                router.open(.agenda)
+                joinCoordinator.reset()
+            }
         }
         .alert("Toetreden mislukt", isPresented: Binding(
             get: { if case .failed = joinCoordinator.outcome { return true }; return false },

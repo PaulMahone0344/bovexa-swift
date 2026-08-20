@@ -53,6 +53,15 @@ final class SFSpeechRecognitionEngine: SpeechRecognizing {
         request.requiresOnDeviceRecognition = true
         self.request = request
 
+        // ZEKERHEID LAAG (M11 plak 3i) — alleen op een echt toestel te zien.
+        // Zonder een expliciete categorie draait de sessie op de standaard
+        // (soloAmbient) en kan het inputformaat 0 kanalen hebben; installTap gooit
+        // dan een NSException of start() faalt. Apple's SpokenWord-voorbeeld zet
+        // dit altijd vóór de tap.
+        let session = AVAudioSession.sharedInstance()
+        try session.setCategory(.record, mode: .measurement, options: .duckOthers)
+        try session.setActive(true, options: .notifyOthersOnDeactivation)
+
         let inputNode = audioEngine.inputNode
         let format = inputNode.outputFormat(forBus: 0)
         inputNode.installTap(onBus: 0, bufferSize: 1024, format: format) { buffer, _ in
@@ -65,10 +74,15 @@ final class SFSpeechRecognitionEngine: SpeechRecognizing {
             if let result {
                 onPartialTranscript(result.bestTranscription.formattedString)
             }
-            if error != nil {
-                onError(error?.localizedDescription ?? "Spraakherkenning mislukt.")
-                self?.teardown()
-            }
+            guard error != nil else { return }
+            // Een geannuleerde SFSpeechRecognitionTask roept deze handler aan mét
+            // een fout ("Recognition request was canceled"). Die kwam als
+            // "Spraak"-alert met Engelse systeemtekst op het scherm na élke stop.
+            // `task` is in teardown al op nil gezet, dus dat is het signaal dat wij
+            // zelf gestopt zijn.
+            guard self?.task != nil else { return }
+            onError(error?.localizedDescription ?? "Spraakherkenning mislukt.")
+            self?.teardown()
         }
     }
 
@@ -81,7 +95,11 @@ final class SFSpeechRecognitionEngine: SpeechRecognizing {
         audioEngine.inputNode.removeTap(onBus: 0)
         request?.endAudio()
         request = nil
-        task?.cancel()
+        // Eerst nil, dán cancel: de handler hierboven gebruikt `task == nil` om te
+        // zien dat het stoppen van ons kwam en niet van de herkenner.
+        let running = task
         task = nil
+        running?.cancel()
+        try? AVAudioSession.sharedInstance().setActive(false, options: .notifyOthersOnDeactivation)
     }
 }

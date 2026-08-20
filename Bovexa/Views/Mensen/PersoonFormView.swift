@@ -11,6 +11,10 @@ struct PersoonFormView: View {
     let mode: Mode
     let onSave: (String, String, String) async -> Bool
     var onDelete: (() async -> Void)?
+    /// De foutmelding stond als `.alert` op MensenView, ónder deze sheet — SwiftUI
+    /// presenteert die dan niet: de spinner flitste en er gebeurde niets. De tekst
+    /// hoort hier, bij de knop die faalde.
+    var errorText: String?
 
     @Environment(\.dismiss) private var dismiss
     @State private var naam: String
@@ -19,10 +23,16 @@ struct PersoonFormView: View {
     @State private var saving = false
     @State private var showDeleteConfirm = false
 
-    init(mode: Mode, onSave: @escaping (String, String, String) async -> Bool, onDelete: (() async -> Void)? = nil) {
+    init(
+        mode: Mode,
+        onSave: @escaping (String, String, String) async -> Bool,
+        onDelete: (() async -> Void)? = nil,
+        errorText: String? = nil
+    ) {
         self.mode = mode
         self.onSave = onSave
         self.onDelete = onDelete
+        self.errorText = errorText
         switch mode {
         case .add:
             _naam = State(initialValue: "")
@@ -57,6 +67,13 @@ struct PersoonFormView: View {
                             }
                         }
 
+                        if let errorText {
+                            Text(errorText)
+                                .font(BovexaTheme.TypeStyle.footnote.weight(.semibold))
+                                .foregroundStyle(BovexaTheme.Colors.danger)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                        }
+
                         if case .edit = mode {
                             // Frame ín het label, kleur uit de stijl: buiten de
                             // Button deden breedte, font en kleur niets (M11 1c).
@@ -84,8 +101,11 @@ struct PersoonFormView: View {
                     if saving {
                         ProgressView()
                     } else {
-                        Button("Bewaar") { Task { await save() } }
+                        // "Opslaan" zoals overal elders in de app; uit zolang er
+                        // geen naam staat, in plaats van stil falen op de server.
+                        Button("Opslaan") { Task { await save() } }
                             .font(BovexaTheme.TypeStyle.subheadline.weight(.bold))
+                            .disabled(naam.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
                     }
                 }
             }

@@ -301,16 +301,24 @@ struct LegendeView: View {
                     }
             }
 
-            Button("Toevoegen") {
+            Button {
                 Task {
-                    await viewModel.create(naam: newLabelName, kleur: newLabelColor)
+                    // Alleen wissen en sluiten als het écht gelukt is; anders zag je
+                    // "Mislukt" en was je invoer weg.
+                    guard await viewModel.create(naam: newLabelName, kleur: newLabelColor) else { return }
                     newLabelName = ""
                     withAnimation(.snappy) { showNewLabelForm = false }
                 }
+            } label: {
+                // Frame ín het label, ook in de ProgressView-tak (M11 patroon A).
+                if viewModel.busy {
+                    ProgressView().tint(BovexaTheme.Colors.white).frame(maxWidth: .infinity)
+                } else {
+                    Text("Toevoegen").frame(maxWidth: .infinity)
+                }
             }
             .buttonStyle(.glassProminentBrand)
-            .frame(maxWidth: .infinity, minHeight: 42)
-            .disabled(newLabelName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+            .disabled(viewModel.busy || newLabelName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
         }
         .padding(BovexaTheme.Space.md)
         .background(BovexaTheme.Colors.glassSoft)

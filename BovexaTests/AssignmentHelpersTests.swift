@@ -117,4 +117,55 @@ struct AssignmentHelpersTests {
         ]
         #expect(AssignmentHelpers.pendingEvents(events, userId: "me", now: .distantPast).map(\.id) == ["new", "old"])
     }
+
+    // MARK: - Herhalingen ontdubbelen (M11 plak 3g)
+
+    private func occurrence(id: String, seriesId: String, start: Date) -> AgendaEvent {
+        AgendaEvent(
+            id: id, owner: "collega", calendar: nil, category: nil, title: "Wekelijks overleg",
+            start: start, end: nil, allDay: false, recurrence: "FREQ=WEEKLY", location: nil, notes: nil,
+            klantNaam: nil, assigneeStatus: [:], seriesId: seriesId, occurrenceDate: nil,
+            assignee: ["me"]
+        )
+    }
+
+    /// RecurrenceExpander klapt een herhaling uit tot 365 dagen. Eén toewijzing op
+    /// een wekelijkse afspraak stond daardoor als tientallen losse kaarten onder
+    /// WACHT OP JOUW AKKOORD, terwijl er maar één antwoord te geven is.
+    @Test func pendingEventsKeepsOneCardPerSeries() {
+        let events = (0..<5).map { week in
+            occurrence(id: "serie1:2026-09-0\(week + 1)", seriesId: "serie1", start: Date(timeIntervalSince1970: 5000 + Double(week) * 1000))
+        }
+        let result = AssignmentHelpers.pendingEvents(events, userId: "me", now: .distantPast)
+        #expect(result.count == 1)
+        // De eerstvolgende bezetting blijft staan, niet een willekeurige.
+        #expect(result.first?.id == "serie1:2026-09-01")
+    }
+
+    @Test func expiredPendingEventsKeepsOneCardPerSeries() {
+        let events = (0..<4).map { week in
+            occurrence(id: "serie1:2026-01-0\(week + 1)", seriesId: "serie1", start: Date(timeIntervalSince1970: 1000 + Double(week) * 1000))
+        }
+        let result = AssignmentHelpers.expiredPendingEvents(events, userId: "me", now: .distantFuture)
+        #expect(result.count == 1)
+    }
+
+    @Test func twoDifferentSeriesStayTwoCards() {
+        let events = [
+            occurrence(id: "serie1:2026-09-01", seriesId: "serie1", start: Date(timeIntervalSince1970: 5000)),
+            occurrence(id: "serie1:2026-09-08", seriesId: "serie1", start: Date(timeIntervalSince1970: 6000)),
+            occurrence(id: "serie2:2026-09-02", seriesId: "serie2", start: Date(timeIntervalSince1970: 7000)),
+        ]
+        let result = AssignmentHelpers.pendingEvents(events, userId: "me", now: .distantPast)
+        #expect(Set(result.map { EventHelpers.eventRecordId($0) }) == ["serie1", "serie2"])
+        #expect(result.count == 2)
+    }
+
+    @Test func losseAfsprakenWordenNietOntdubbeld() {
+        let events = [
+            event(id: "a", owner: "collega", start: Date(timeIntervalSince1970: 1000), assignee: ["me"], status: [:]),
+            event(id: "b", owner: "collega", start: Date(timeIntervalSince1970: 2000), assignee: ["me"], status: [:]),
+        ]
+        #expect(AssignmentHelpers.pendingEvents(events, userId: "me", now: .distantPast).count == 2)
+    }
 }

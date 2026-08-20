@@ -138,6 +138,9 @@ final class PlannerViewModel: ObservableObject {
         reminderMin = 0
         assignee = []
         label = nil
+        // Zonder dit lift het contact van het vorige gesprek mee naar de volgende
+        // afspraak; onzichtbaar, want "Details" staat standaard dicht.
+        selectContact(nil)
         overlapEvent = nil
         overlapCheckIndex = 0
         ownEvents = []

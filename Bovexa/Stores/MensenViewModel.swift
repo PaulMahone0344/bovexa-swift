@@ -12,6 +12,12 @@ final class MensenViewModel: ObservableObject {
     @Published private(set) var loading = false
     @Published var errorMessage: String?
 
+    /// Bij het sluiten van de PersoonFormView-sheet: anders staat de fout van de
+    /// vorige poging er nog zodra je hem opnieuw opent.
+    func clearError() {
+        errorMessage = nil
+    }
+
     /// Dezelfde persoonskleuren als bij Bedrijf. Zonder dit kreeg iedere collega
     /// hier één en dezelfde blauwe badge, terwijl dezelfde persoon in de ledenlijst
     /// zijn eigen kleur had — twee schermen die elkaar tegenspraken.

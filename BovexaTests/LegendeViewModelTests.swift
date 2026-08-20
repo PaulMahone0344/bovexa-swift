@@ -92,8 +92,49 @@ struct LegendeViewModelTests {
             """.utf8))
         }
         let vm = makeViewModel(labelStore: store)
-        await vm.create(naam: "Kimberley", kleur: "#D45AA4")
+        let created = await vm.create(naam: "Kimberley", kleur: "#D45AA4")
+        #expect(created)
         #expect(store.label(for: "l2")?.naam == "Kimberley")
+    }
+
+    /// De view wiste de naam en sloot het formulier ook als het aanmaken faalde:
+    /// je zag "Mislukt" en was je invoer kwijt. Daarom geeft create nu terug of
+    /// het gelukt is.
+    @Test func createReturnsFalseWhenTheServerRefuses() async {
+        let store = LabelStore()
+        URLProtocolStub.requestHandler = { _ in (400, Data("{}".utf8)) }
+        let vm = makeViewModel(labelStore: store)
+
+        let created = await vm.create(naam: "Kimberley", kleur: "#D45AA4")
+
+        #expect(!created)
+        #expect(vm.actionFailedAlert)
+        #expect(store.orderedLabels.isEmpty)
+    }
+
+    @Test func createReturnsFalseOnAnEmptyName() async {
+        let vm = makeViewModel()
+        #expect(await vm.create(naam: "   ", kleur: "#D45AA4") == false)
+    }
+
+    /// Zonder busy-guard maakte een dubbele tik twee labels met dezelfde naam aan.
+    @Test func createIsBlockedWhileAnotherCreateIsRunning() async {
+        let store = LabelStore()
+        URLProtocolStub.requestHandler = { _ in
+            (200, Data("""
+            {"id":"l2","org":"org1","naam":"Kimberley","kleur":"#D45AA4","volgorde":0}
+            """.utf8))
+        }
+        let vm = makeViewModel(labelStore: store)
+
+        async let first = vm.create(naam: "Kimberley", kleur: "#D45AA4")
+        async let second = vm.create(naam: "Kimberley", kleur: "#D45AA4")
+        let results = await [first, second]
+
+        // Precies één van de twee mag doorgaan.
+        #expect(results.filter { $0 }.count == 1)
+        #expect(store.orderedLabels.count == 1)
+        #expect(!vm.busy)
     }
 
     // MARK: - delete (valkuil G: alleen admin)

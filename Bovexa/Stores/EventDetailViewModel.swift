@@ -56,7 +56,10 @@ final class EventDetailViewModel: ObservableObject {
         guard canDelete else { return false }
         do {
             try await repository.deleteEvent(recordId: EventHelpers.eventRecordId(event), token: token)
-            reminderService.cancel(eventId: event.id)
+            // Bij een herhaling is `event.id` het bezetting-id ("recordId:datum"),
+            // terwijl de herinnering op het record-id gepland is. Op het bezetting-id
+            // annuleren liet de notificatie staan voor een verwijderde afspraak.
+            reminderService.cancel(eventId: EventHelpers.eventRecordId(event))
             return true
         } catch {
             deleteFailedAlert = true

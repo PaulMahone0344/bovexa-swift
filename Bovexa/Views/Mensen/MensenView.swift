@@ -53,25 +53,28 @@ struct MensenView: View {
             }
         }
         .task { await viewModel.load(userId: userId, token: token) }
-        .sheet(isPresented: $showAddContact) {
-            PersoonFormView(mode: .add) { naam, telefoon, notitie in
-                await viewModel.addContact(userId: userId, naam: naam, telefoon: telefoon, notitie: notitie, token: token)
-            }
+        // De fout wordt in de sheet zelf getoond (PersoonFormView.errorText): een
+        // alert op dit scherm werd niet gepresenteerd zolang de sheet openstond.
+        .sheet(isPresented: $showAddContact, onDismiss: { viewModel.clearError() }) {
+            PersoonFormView(
+                mode: .add,
+                onSave: { naam, telefoon, notitie in
+                    await viewModel.addContact(userId: userId, naam: naam, telefoon: telefoon, notitie: notitie, token: token)
+                },
+                errorText: viewModel.errorMessage
+            )
         }
-        .sheet(item: $editingContact) { contact in
-            PersoonFormView(mode: .edit(contact)) { naam, telefoon, notitie in
-                await viewModel.updateContact(id: contact.id, naam: naam, telefoon: telefoon, notitie: notitie, token: token)
-            } onDelete: {
-                await viewModel.deleteContact(id: contact.id, token: token)
-            }
-        }
-        .alert("Mislukt", isPresented: Binding(
-            get: { viewModel.errorMessage != nil },
-            set: { if !$0 { viewModel.errorMessage = nil } }
-        )) {
-            Button("OK", role: .cancel) {}
-        } message: {
-            Text(viewModel.errorMessage ?? "")
+        .sheet(item: $editingContact, onDismiss: { viewModel.clearError() }) { contact in
+            PersoonFormView(
+                mode: .edit(contact),
+                onSave: { naam, telefoon, notitie in
+                    await viewModel.updateContact(id: contact.id, naam: naam, telefoon: telefoon, notitie: notitie, token: token)
+                },
+                onDelete: {
+                    await viewModel.deleteContact(id: contact.id, token: token)
+                },
+                errorText: viewModel.errorMessage
+            )
         }
     }
 

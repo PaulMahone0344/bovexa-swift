@@ -19,4 +19,10 @@ final class SearchViewModel: ObservableObject {
     func load(userId: String, orgId: String?, token: String) async {
         allEvents = (try? await repository.fetchAllEvents(userId: userId, orgId: orgId, token: token)) ?? []
     }
+
+    /// Na verwijderen vanuit het detail: bij een herhaling verdwijnen alle
+    /// bezettingen van dezelfde serie, want die zijn samen één record.
+    func removeLocally(recordId: String) {
+        allEvents.removeAll { EventHelpers.eventRecordId($0) == recordId }
+    }
 }

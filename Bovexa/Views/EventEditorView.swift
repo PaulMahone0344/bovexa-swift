@@ -87,7 +87,10 @@ struct EventEditorView: View {
                     fieldLabel("Herinnering")
                     ReminderChipsView(minutesBefore: $viewModel.reminderMin)
 
-                    if viewModel.originalEvent.org != nil {
+                    // `org != nil` is in de praktijk altijd waar: PocketBase geeft
+                    // een lege relatie terug als "". Zelfde conditie als de
+                    // labelkiezer hierboven.
+                    if let org = viewModel.originalEvent.org, !org.isEmpty {
                         fieldLabel("Toegewezen aan")
                         AssigneePickerView(members: members, currentUserId: currentUserId, selectedIds: $viewModel.assignee)
                     }

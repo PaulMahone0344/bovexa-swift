@@ -30,6 +30,7 @@ final class DagtakenViewModel: ObservableObject {
     private let eventRepository: EventRepository
     private let confirmDeleteTimeout: Duration
     private var confirmDeleteTask: Task<Void, Never>?
+    private var boundUserId: String?
 
     init(
         planningStore: PlanningNoteStore = PlanningNoteStore(),
@@ -41,7 +42,6 @@ final class DagtakenViewModel: ObservableObject {
         self.taskRepository = taskRepository
         self.eventRepository = eventRepository
         self.confirmDeleteTimeout = confirmDeleteTimeout
-        syncNotes()
     }
 
     private func syncNotes() { notes = planningStore.notes }
@@ -59,10 +59,23 @@ final class DagtakenViewModel: ObservableObject {
         orgName = memberColors.orgName
     }
 
+    /// De lokale dagtaken hangen sinds M11 plak 3c aan de userId. Elk pad dat de
+    /// gebruiker kent bindt de store, want een mutatie op een ongebonden store doet
+    /// stil niets — en dat is precies het soort fout dat pas op een toestel opvalt.
+    private func bindStore(to userId: String) {
+        guard boundUserId != userId else { return }
+        boundUserId = userId
+        planningStore.reload(userId: userId)
+        syncNotes()
+    }
+
     /// Herlaadt bedrijfsinfo + team-taken samen — aanroeper roept dit zowel bij het
     /// eerste tonen van het scherm als bij terugkeer ernaartoe (RN gebruikt hiervoor
     /// useFocusEffect; realtime bestaat hier niet, dus geen abonnement).
     func load(userId: String, org: String?, token: String) async {
+        // Synchroon en als eerste: de lijst moet er staan vóór het scherm tekent.
+        bindStore(to: userId)
+
         async let orgInfo: Void = loadOrgInfo(token: token)
         async let team: Void = loadTeamTasks(org: org, token: token)
         _ = await (orgInfo, team)
@@ -161,6 +174,7 @@ final class DagtakenViewModel: ObservableObject {
 
     func submit(userId: String, org: String?, token: String) async {
         guard canSubmit else { return }
+        bindStore(to: userId)
 
         if let editingId {
             planningStore.update(id: editingId, text: draft)

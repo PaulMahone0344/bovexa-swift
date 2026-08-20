@@ -37,10 +37,12 @@ struct AgendaView: View {
                 onSubmit: openPlannerFromPill, onOpenPlanner: openPlannerFromPill
             )
         }
+        // Eén laadpad (zie VandaagView): `.task` herstart al bij elke terugkeer
+        // naar deze tab.
         .task {
             await refresh()
         }
-        .onAppear {
+        .onChange(of: authStore.foregroundTick) { _, _ in
             Task { await refresh() }
         }
         // Het venster van de externe agenda loopt één maand vóór en ná de getoonde
@@ -158,12 +160,13 @@ struct AgendaView: View {
                     )
                 }
             }
-            .sheet(isPresented: $showSearch) {
+            .sheet(isPresented: $showSearch, onDismiss: { Task { await viewModel.reload() } }) {
                 if let userId = currentUser?.id {
                     SearchView(
                         userId: userId, orgId: currentUser?.defaultOrg, token: authStore.token ?? "",
                         currentUserOrgId: currentUser?.defaultOrg, memberColors: viewModel.memberColors,
-                        labelStore: viewModel.labelStore
+                        labelStore: viewModel.labelStore,
+                        onAgendaChanged: { Task { await viewModel.reload() } }
                     )
                 }
             }

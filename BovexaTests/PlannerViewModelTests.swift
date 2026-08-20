@@ -124,6 +124,21 @@ struct PlannerViewModelTests {
         #expect(store.load(userId: "u1") == nil)
     }
 
+    /// reset() wiste zichtbaarheid, toewijzing, label en herinnering, maar niet het
+    /// contact. Een nieuw gesprek in dezelfde sheet kreeg daardoor stil de klant van
+    /// het vorige mee — onzichtbaar, want "Details" staat standaard dicht.
+    @Test func resetAlsoClearsTheChosenContact() {
+        let vm = makeViewModel(store: makeStore())
+        vm.selectContact(AgendaContact(id: "c1", eigenaar: "u1", naam: "Jansen", telefoon: "0612345678", notitie: ""))
+        #expect(vm.contactId == "c1")
+
+        vm.reset()
+
+        #expect(vm.contactId == nil)
+        #expect(vm.contactNaam == nil)
+        #expect(vm.contactTelefoon == nil)
+    }
+
     @Test func persistsConversationAfterDebounceAndHydratesInNewViewModel() async {
         respond("""
         {"status":"ready","message":"Klaar!","question":null,"options":[],
