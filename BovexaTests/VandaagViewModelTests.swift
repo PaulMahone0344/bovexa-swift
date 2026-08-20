@@ -195,4 +195,54 @@ struct VandaagViewModelTests {
 
         #expect(viewModel.todayEvents.map(\.id) == ["a"])
     }
+
+    // MARK: - Voeding voor de tab-badge (M11 plak 6b)
+
+    /// Zonder deze telling verscheen de badge pas nadat je Profiel een keer had
+    /// geopend; Vandaag haalt bij het starten alle events toch al op.
+    @Test func loadCountsTheAssignmentsWaitingForYou() async {
+        URLProtocolStub.requestHandler = { request in
+            if request.url!.path.contains("company/members") {
+                return (200, Data("""
+                {"items":[],"org":null}
+                """.utf8))
+            }
+            return (200, Data("""
+            {"items":[
+              {"id":"a","owner":"collega","title":"Klus","start":"2126-07-24 09:00:00.000Z","all_day":false,"assignee":["me"],"assignee_status":{}},
+              {"id":"b","owner":"collega","title":"Andere klus","start":"2126-07-25 09:00:00.000Z","all_day":false,"assignee":["me"],"assignee_status":{}},
+              {"id":"c","owner":"me","title":"Van mij","start":"2126-07-26 09:00:00.000Z","all_day":false}
+            ],"page":1,"perPage":200,"totalItems":3,"totalPages":1}
+            """.utf8))
+        }
+        let vm = VandaagViewModel(
+            repository: EventRepository(client: PBClient(session: URLProtocolStub.makeSession())),
+            memberColors: MemberColors(),
+            planningStore: PlanningNoteStore(defaults: UserDefaults(suiteName: "badge.\(UUID().uuidString)")!),
+            now: { self.utcNow("2026-07-24 11:30:00.000Z") },
+            defaults: UserDefaults(suiteName: "badge-cal.\(UUID().uuidString)")!
+        )
+        await vm.load(userId: "me", orgId: nil, token: "tok")
+
+        // Alleen wat op jouw akkoord wacht; je eigen afspraak telt niet mee.
+        #expect(vm.pendingAssignmentCount == 2)
+    }
+
+    @Test func withoutAssignmentsTheCountIsZero() async {
+        URLProtocolStub.requestHandler = { _ in
+            (200, Data("""
+            {"items":[],"page":1,"perPage":200,"totalItems":0,"totalPages":0}
+            """.utf8))
+        }
+        let vm = VandaagViewModel(
+            repository: EventRepository(client: PBClient(session: URLProtocolStub.makeSession())),
+            memberColors: MemberColors(),
+            planningStore: PlanningNoteStore(defaults: UserDefaults(suiteName: "badge.\(UUID().uuidString)")!),
+            now: { self.utcNow("2026-07-24 11:30:00.000Z") },
+            defaults: UserDefaults(suiteName: "badge-cal.\(UUID().uuidString)")!
+        )
+        await vm.load(userId: "me", orgId: nil, token: "tok")
+        #expect(vm.pendingAssignmentCount == 0)
+    }
+
 }

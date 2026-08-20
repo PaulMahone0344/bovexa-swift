@@ -4,6 +4,7 @@ import SwiftUI
 /// (valkuil D). Geport uit meldingen.tsx. Plus-knop alleen admin/manager (valkuil E),
 /// lang indrukken op je eigen mededeling verwijdert 'm.
 struct MeldingenView: View {
+    @EnvironmentObject private var badgeStore: BadgeStore
     @FocusState private var composeFocused: Bool
     @StateObject private var viewModel: MeldingenViewModel
     @Environment(\.dismiss) private var dismiss
@@ -65,10 +66,6 @@ struct MeldingenView: View {
             .navigationTitle("Meldingen")
             .navigationBarTitleDisplayMode(.large)
             .toolbar {
-                ToolbarItem(placement: .topBarLeading) {
-                    Button { dismiss() } label: { Image(systemName: "chevron.left") }
-                        .accessibilityLabel("Sluiten")
-                }
                 if viewModel.canPost {
                     ToolbarItem(placement: .topBarTrailing) {
                         Button {
@@ -80,9 +77,18 @@ struct MeldingenView: View {
                         .accessibilityLabel(viewModel.composeOpen ? "Invoer sluiten" : "Nieuwe mededeling")
                     }
                 }
+                SheetCloseButton { dismiss() }
             }
         }
         .task { await viewModel.load() }
+        // De sheet markeert de mededelingen als gezien en handelt toewijzingen af;
+        // zonder dit bleef het cijfer op de tab staan tot de volgende load (6b).
+        .onChange(of: viewModel.pending.count, initial: true) { _, count in
+            badgeStore.setPendingAssignments(count)
+        }
+        .onChange(of: viewModel.loaded) { _, loaded in
+            if loaded { badgeStore.clearNotices() }
+        }
         .alert("Mislukt", isPresented: Binding(get: { viewModel.postFailedMessage != nil }, set: { if !$0 { viewModel.postFailedMessage = nil } })) {
             Button("Oké", role: .cancel) {}
         } message: {

@@ -45,6 +45,10 @@ struct SearchView: View {
             }
             .navigationTitle("Zoeken")
             .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                // Zoeken had als enige sheet geen sluitknop (6a).
+                SheetCloseButton { dismiss() }
+            }
             .navigationDestination(item: $selectedEvent) { event in
                 EventDetailView(
                     event: event, currentUserId: userId, currentUserOrgId: currentUserOrgId, token: token,

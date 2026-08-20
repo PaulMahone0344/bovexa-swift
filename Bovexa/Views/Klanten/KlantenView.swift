@@ -61,10 +61,7 @@ struct KlantenView: View {
                 )
             }
             .toolbar {
-                ToolbarItem(placement: .topBarLeading) {
-                    Button { dismiss() } label: { Image(systemName: "chevron.left") }
-                        .accessibilityLabel("Sluiten")
-                }
+                SheetCloseButton { dismiss() }
             }
         }
         .task { await viewModel.load() }

@@ -3,6 +3,7 @@ import SwiftUI
 struct VandaagView: View {
     @EnvironmentObject private var authStore: AuthStore
     @EnvironmentObject private var router: TabRouter
+    @EnvironmentObject private var badgeStore: BadgeStore
     @StateObject private var viewModel = VandaagViewModel()
     @State private var selectedEvent: AgendaEvent?
 
@@ -92,6 +93,11 @@ struct VandaagView: View {
         }
         .onChange(of: authStore.foregroundTick) { _, _ in
             Task { await refresh() }
+        }
+        // Voedt de tab-badge; geen extra netwerkverzoek, dit komt uit de load die
+        // dit scherm toch al doet (6b).
+        .onChange(of: viewModel.pendingAssignmentCount, initial: true) { _, count in
+            badgeStore.setPendingAssignments(count)
         }
     }
 

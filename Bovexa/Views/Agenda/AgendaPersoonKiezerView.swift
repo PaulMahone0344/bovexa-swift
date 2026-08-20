@@ -79,10 +79,7 @@ struct AgendaPersoonKiezerView: View {
             .navigationTitle("Wie zie je")
             .navigationBarTitleDisplayMode(.large)
             .toolbar {
-                ToolbarItem(placement: .topBarLeading) {
-                    Button { dismiss() } label: { Image(systemName: "chevron.left") }
-                        .accessibilityLabel("Sluiten")
-                }
+                SheetCloseButton { dismiss() }
             }
         }
     }

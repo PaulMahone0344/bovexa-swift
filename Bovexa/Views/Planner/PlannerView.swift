@@ -87,14 +87,6 @@ struct PlannerView: View {
             .navigationTitle("AI Planner")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .topBarLeading) {
-                    Button {
-                        dismiss()
-                    } label: {
-                        Image(systemName: "chevron.left")
-                    }
-                    .accessibilityLabel("Sluiten")
-                }
                 if !viewModel.thread.isEmpty {
                     ToolbarItem(placement: .topBarTrailing) {
                         Button {
@@ -109,6 +101,8 @@ struct PlannerView: View {
                         .accessibilityLabel("Nieuw gesprek")
                     }
                 }
+                SheetCloseButton { dismiss() }
+
             }
             .alert("Dubbele boeking", isPresented: overlapPresented) {
                 Button("Aanpassen", role: .cancel) { viewModel.cancelOverlap() }

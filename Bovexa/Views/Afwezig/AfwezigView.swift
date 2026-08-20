@@ -61,14 +61,7 @@ struct AfwezigView: View {
             .navigationTitle("Beschikbaarheid")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .topBarLeading) {
-                    Button {
-                        dismiss()
-                    } label: {
-                        Image(systemName: "chevron.left")
-                    }
-                    .accessibilityLabel("Sluiten")
-                }
+                SheetCloseButton { dismiss() }
             }
             .alert("Gelukt", isPresented: Binding(get: { viewModel.savedAlertMessage != nil }, set: { if !$0 { viewModel.savedAlertMessage = nil } })) {
                 Button("Oké") { dismiss() }

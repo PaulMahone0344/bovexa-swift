@@ -51,12 +51,16 @@ struct DayPanelView: View {
                 .buttonStyle(.glassSecondaryBrand)
             }
 
+            // Boven de lijst (6d, besluit Ibrahim 19 aug): onderaan viel hij bij
+            // vier of meer afspraken onder de vouw van de .medium-detent, terwijl
+            // dit juist de actie is waarvoor je de dagsheet opent. "Open dag"
+            // blijft secundair. NB: in M12 gaat deze knop naar de keuzesheet
+            // "Nieuwe afspraak" (AI of handmatig) — de plek klopt dan al.
+            planButton
+
             GlassCard {
                 if sorted.isEmpty {
-                    VStack(spacing: BovexaTheme.Space.md) {
-                        EmptyStateView(systemImage: "calendar", text: "Geen afspraken.")
-                        planButton
-                    }
+                    EmptyStateView(systemImage: "calendar", text: "Geen afspraken.")
                 } else {
                     VStack(spacing: 0) {
                         ForEach(sorted) { event in
@@ -76,8 +80,6 @@ struct DayPanelView: View {
                             }
                         }
 
-                        planButton
-                            .padding(.top, BovexaTheme.Space.md)
                     }
                 }
             }
@@ -90,8 +92,8 @@ struct DayPanelView: View {
             onPlanAppointment()
         } label: {
             Label("Afspraak plannen", systemImage: "plus")
+                .frame(maxWidth: .infinity)
         }
         .buttonStyle(.glassProminentBrand)
-        .frame(maxWidth: .infinity)
     }
 }

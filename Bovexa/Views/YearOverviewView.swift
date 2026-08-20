@@ -51,10 +51,7 @@ struct YearOverviewView: View {
             .navigationTitle("Jaaroverzicht")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .topBarLeading) {
-                    Button { dismiss() } label: { Image(systemName: "chevron.left") }
-                        .accessibilityLabel("Sluiten")
-                }
+                SheetCloseButton { dismiss() }
             }
         }
         .task(id: viewModel.year) {

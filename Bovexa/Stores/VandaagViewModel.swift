@@ -18,6 +18,9 @@ final class VandaagViewModel: ObservableObject {
     /// opgeslagen (UserDefaults), dus geen netwerkverzoek — wel opnieuw inlezen
     /// bij elke focus, want op de Dagtaken-tab kan er intussen iets afgevinkt zijn.
     @Published private(set) var openTasks: [PlanningNote] = []
+    /// Toewijzingen die op jouw akkoord wachten. Voedt de badge op de Profiel-tab
+    /// (6b) — zonder dit verscheen die pas nadat je Profiel een keer opende.
+    @Published private(set) var pendingAssignmentCount = 0
     /// Aan als de laatste fetch mislukte. De vorige gegevens blijven dan staan —
     /// een agenda die net nog vol stond hoort na een tabwissel zonder bereik niet
     /// leeg te zijn. De view zet er één regel bij (LoadFailedNote).
@@ -106,6 +109,7 @@ final class VandaagViewModel: ObservableObject {
         // weekstaafjes. Die cijfers gaan over hoe vol je dag is, en een vergadering
         // uit een andere agenda vult die net zo goed — anders zie je drie dingen
         // staan terwijl de teller er twee meldt.
+        pendingAssignmentCount = AssignmentHelpers.pendingCount(events, userId: userId, now: now())
         appointmentCount = VandaagStats.timedCount(today)
         plannedHoursText = VandaagStats.formatHours(VandaagStats.plannedHours(today))
         weekBusyCounts = VandaagStats.weekBusyCounts(combined, referenceDate: now())

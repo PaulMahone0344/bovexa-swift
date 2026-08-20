@@ -6,6 +6,7 @@ import UIKit
 /// Profiel bewerken, wachtwoord wijzigen en account verwijderen.
 struct ProfielView: View {
     @EnvironmentObject private var authStore: AuthStore
+    @EnvironmentObject private var badgeStore: BadgeStore
     @StateObject private var viewModel = ProfielViewModel()
     @State private var showAfwezig = false
     @State private var showMeldingen = false
@@ -149,6 +150,12 @@ struct ProfielView: View {
         .task { await refresh() }
         .onChange(of: authStore.foregroundTick) { _, _ in
             Task { await refresh() }
+        }
+        .onChange(of: viewModel.pendingCount, initial: true) { _, count in
+            badgeStore.setPendingAssignments(count)
+        }
+        .onChange(of: viewModel.unreadNoticeCount, initial: true) { _, count in
+            badgeStore.setUnreadNotices(count)
         }
         // Beide sheets veranderen wat dit scherm toont — de meldingenteller met
         // stip, en de begroeting met het aantal afspraken van vandaag. Een sheet

@@ -46,6 +46,7 @@ struct RootTabView: View {
     @EnvironmentObject private var router: TabRouter
     @EnvironmentObject private var authStore: AuthStore
     @EnvironmentObject private var joinCoordinator: JoinCoordinator
+    @EnvironmentObject private var badgeStore: BadgeStore
 
     private func outlineLabel(_ tab: BovexaTab) -> some View {
         Label {
@@ -110,6 +111,9 @@ struct RootTabView: View {
             } label: {
                 outlineLabel(BovexaTab.profiel)
             }
+            // Open toewijzingen + ongelezen mededelingen. 0 verbergt de badge
+            // vanzelf (6b): vanuit Vandaag of Agenda zag je hier eerder niets van.
+            .badge(badgeStore.total)
         }
         .tint(BovexaTheme.Colors.blue)
         .tabBarMinimizeBehavior(.onScrollDown)

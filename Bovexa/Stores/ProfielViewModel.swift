@@ -46,6 +46,10 @@ final class ProfielViewModel: ObservableObject {
     /// || pendingCount > 0}` als profiel.tsx.
     var showUnreadDot: Bool { pendingCount > 0 || unreadNotice }
 
+    /// Voor de tab-badge (6b): één ongelezen mededeling telt als één, want
+    /// NoticeHelpers weet alleen óf er iets nieuws is, niet hoeveel.
+    var unreadNoticeCount: Int { unreadNotice ? 1 : 0 }
+
     var greetingSubtitle: String {
         guard let todayCount else { return "Fijn dat je er weer bent." }
         if todayCount == 0 { return "Geen afspraken vandaag — rustige dag." }

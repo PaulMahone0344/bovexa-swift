@@ -43,10 +43,6 @@ struct MensenView: View {
             .navigationTitle("Mensen")
             .navigationBarTitleDisplayMode(.large)
             .toolbar {
-                ToolbarItem(placement: .topBarLeading) {
-                    Button { dismiss() } label: { Image(systemName: "chevron.left") }
-                        .accessibilityLabel("Sluiten")
-                }
                 ToolbarItem(placement: .topBarTrailing) {
                     Button("Persoon toevoegen") {
                         Haptics.selection()
@@ -54,6 +50,7 @@ struct MensenView: View {
                     }
                     .font(BovexaTheme.TypeStyle.subheadline.weight(.semibold))
                 }
+                SheetCloseButton { dismiss() }
             }
         }
         .task { await viewModel.load(userId: userId, token: token) }

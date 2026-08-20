@@ -5,6 +5,7 @@ struct RootRouterView: View {
     @StateObject private var authStore = AuthStore()
     @StateObject private var joinCoordinator = JoinCoordinator()
     @StateObject private var tabRouter = TabRouter()
+    @StateObject private var badgeStore = BadgeStore()
     @Environment(\.scenePhase) private var scenePhase
 
     var body: some View {
@@ -31,6 +32,7 @@ struct RootRouterView: View {
         .environmentObject(authStore)
         .environmentObject(joinCoordinator)
         .environmentObject(tabRouter)
+        .environmentObject(badgeStore)
         .task {
             await authStore.bootstrap()
         }
