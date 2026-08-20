@@ -24,6 +24,10 @@ final class MemberColors: ObservableObject {
     private var colorMap: [String: String] = [:]
     private var nameMap: [String: String] = [:]
     private(set) var orgName: String?
+    /// Standaardduur van het bedrijf in minuten (M12), voor een nieuwe handmatige
+    /// afspraak. Komt mee in dezelfde ledenlijst; nil zolang het bedrijf er geen
+    /// heeft ingesteld.
+    private(set) var orgDefaultDurationMin: Int?
     private(set) var members: [Member] = []
 
     func prime(members: [Member], org: CompanyOrgInfo? = nil) {
@@ -36,6 +40,9 @@ final class MemberColors: ObservableObject {
             nameMap[member.userId] = member.naam.isEmpty ? fallback : member.naam
         }
         if let org, !org.name.isEmpty { orgName = org.name }
+        // Zelfde voorzichtigheid als bij de naam: alleen overschrijven met iets
+        // bruikbaars. 0 betekent op de server "niet ingesteld".
+        if let duration = org?.defaultDurationMin, duration > 0 { orgDefaultDurationMin = duration }
         self.members = members
     }
 

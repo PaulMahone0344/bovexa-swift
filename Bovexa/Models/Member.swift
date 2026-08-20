@@ -53,6 +53,34 @@ struct CompanyOrgInfo: Decodable, Equatable {
     let id: String
     let name: String
     let logo: String
+    /// Standaardduur van een afspraak in minuten (M12): dezelfde route stuurt dit
+    /// al mee in het volledige `CompanyOrgProfile`, dus het handmatige formulier
+    /// hoeft er geen tweede verzoek voor te doen. Ontbreekt of 0 ⇒ nil, en dan
+    /// gebruikt het formulier zijn eigen terugval.
+    let defaultDurationMin: Int?
+
+    enum CodingKeys: String, CodingKey {
+        case id, name, logo
+        case defaultDurationMin = "default_duration_min"
+    }
+
+    init(id: String, name: String, logo: String, defaultDurationMin: Int? = nil) {
+        self.id = id
+        self.name = name
+        self.logo = logo
+        self.defaultDurationMin = defaultDurationMin
+    }
+
+    /// Defensief, zelfde lijn als Member/AgendaEvent: een ontbrekende of anders
+    /// getypeerde duur mag de hele ledenlijst niet laten omvallen — daar hangen de
+    /// persoonskleuren en de bedrijfsnaam aan.
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        id = try c.decode(String.self, forKey: .id)
+        name = (try? c.decode(String.self, forKey: .name)) ?? ""
+        logo = (try? c.decode(String.self, forKey: .logo)) ?? ""
+        defaultDurationMin = ((try? c.decodeIfPresent(Int.self, forKey: .defaultDurationMin)) ?? nil)
+    }
 }
 
 struct MembersResponse: Decodable {

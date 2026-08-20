@@ -12,7 +12,16 @@ struct AgendaView: View {
     @State private var pillText = ""
     @State private var plannerSeed: String?
     @State private var showPlanner = false
+    @State private var nieuweAfspraak: NieuweAfspraakTarget?
     @State private var speechAlertMessage: String?
+
+    /// `.sheet(item:)` in plaats van een losse bool: de voorzet en het openen komen
+    /// dan als één waarde binnen, en niet als twee @State-wijzigingen waarvan de
+    /// tweede te laat kan zijn.
+    private struct NieuweAfspraakTarget: Identifiable {
+        let id = UUID()
+        let seed: NieuweAfspraakSeed
+    }
 
     private var currentUser: AgendaUser? {
         if case .loggedIn(let user) = authStore.phase { return user }
@@ -24,7 +33,9 @@ struct AgendaView: View {
             if viewModel.viewKind == .dag, let userId = currentUser?.id {
                 DayView(
                     viewModel: viewModel, currentUserId: userId,
-                    onPlanAtHour: { hour, day in openPlanner(seed: PlannerSlotSeed.forHour(hour, on: day)) }
+                    // Long-press op een leeg uur: dag én uur staan vast, dus juist
+                    // hier is handmatig invullen de korte route (M12).
+                    onPlanAtHour: { hour, day in openNieuweAfspraak(seed: .forHour(hour, on: day)) }
                 )
             } else {
                 monthOrListContent
@@ -78,8 +89,10 @@ struct AgendaView: View {
                         selectedEvent = event
                     },
                     onPlanAppointment: {
+                        // Valkuil C: de dagsheet moet eerst dicht in dezelfde tick,
+                        // anders blijft hij onder de keuzesheet hangen.
                         viewModel.closeDaySheet()
-                        openPlanner(seed: PlannerSlotSeed.forDay(target.day))
+                        openNieuweAfspraak(seed: .forDay(target.day))
                     }
                 )
             }
@@ -99,17 +112,44 @@ struct AgendaView: View {
                 )
             }
         }
+        .sheet(item: $nieuweAfspraak) { target in
+            if let userId = currentUser?.id {
+                NieuweAfspraakView(
+                    seed: target.seed, userId: userId, token: authStore.token ?? "",
+                    org: currentUser?.defaultOrg, memberColors: viewModel.memberColors,
+                    labelStore: viewModel.labelStore,
+                    defaultDurationMin: viewModel.memberColors.orgDefaultDurationMin ?? EventEditorViewModel.fallbackDurationMin,
+                    // Zelfde pad als de planner: naar die dag springen én herladen.
+                    onConfirmed: { date in
+                        viewModel.openDayView(date)
+                        Task { await viewModel.reload() }
+                    }
+                )
+            }
+        }
     }
 
+    /// De plan-pill: mét tekst ga je meteen naar de planner — die keuze is dan al
+    /// gemaakt en een keuzesheet ertussen zou een extra tik zijn. Zonder tekst opent
+    /// de keuzesheet, want dan is nog niet gezegd of het met AI of handmatig moet.
     private func openPlannerFromPill() {
         if speech.listening { speech.stop() }
-        openPlanner(seed: pillText.trimmingCharacters(in: .whitespacesAndNewlines))
+        let typed = pillText.trimmingCharacters(in: .whitespacesAndNewlines)
         pillText = ""
+        if typed.isEmpty {
+            openNieuweAfspraak(seed: .empty)
+        } else {
+            openPlanner(seed: typed)
+        }
     }
 
     private func openPlanner(seed: String) {
         plannerSeed = seed.isEmpty ? nil : seed
         showPlanner = true
+    }
+
+    private func openNieuweAfspraak(seed: NieuweAfspraakSeed) {
+        nieuweAfspraak = NieuweAfspraakTarget(seed: seed)
     }
 
     @ViewBuilder

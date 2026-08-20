@@ -1,4 +1,5 @@
 import Testing
+import Foundation
 @testable import Bovexa
 
 struct MemberColorsTests {
@@ -58,6 +59,58 @@ struct MemberColorsTests {
         let colors = MemberColors()
         colors.prime(members: [member("u1")])
         #expect(colors.orgName == nil)
+    }
+
+    // MARK: - standaardduur (M12): komt mee in dezelfde ledenlijst
+
+    @Test func primeStoresCompanyDefaultDuration() {
+        let colors = MemberColors()
+        colors.prime(members: [member("u1")], org: CompanyOrgInfo(id: "org1", name: "Bovexa", logo: "", defaultDurationMin: 45))
+        #expect(colors.orgDefaultDurationMin == 45)
+    }
+
+    /// 0 betekent op de server "niet ingesteld" (zie TeambeheerViewModel) — dan moet
+    /// het formulier zijn eigen terugval gebruiken, niet een afspraak van nul minuten.
+    @Test func zeroOrMissingDefaultDurationStaysNil() {
+        let zero = MemberColors()
+        zero.prime(members: [member("u1")], org: CompanyOrgInfo(id: "org1", name: "Bovexa", logo: "", defaultDurationMin: 0))
+        #expect(zero.orgDefaultDurationMin == nil)
+
+        let none = MemberColors()
+        none.prime(members: [member("u1")], org: CompanyOrgInfo(id: "org1", name: "Bovexa", logo: ""))
+        #expect(none.orgDefaultDurationMin == nil)
+    }
+
+    /// De ledenlijst wordt bij elke tabwissel opnieuw geprimed; een respons zonder
+    /// duur mag een eerder gevonden waarde niet wissen (dan zou de duur heen en weer
+    /// springen tussen 45 en de terugval).
+    @Test func primeWithoutDurationKeepsAPreviouslyFoundOne() {
+        let colors = MemberColors()
+        colors.prime(members: [member("u1")], org: CompanyOrgInfo(id: "org1", name: "Bovexa", logo: "", defaultDurationMin: 45))
+        colors.prime(members: [member("u1")], org: CompanyOrgInfo(id: "org1", name: "Bovexa", logo: ""))
+        #expect(colors.orgDefaultDurationMin == 45)
+    }
+
+    @Test func orgInfoDecodesDefaultDurationFromTheMembersResponse() throws {
+        let json = Data("""
+        {"items":[],"org":{"id":"org1","name":"Bovexa","logo":"","default_duration_min":45}}
+        """.utf8)
+        let response = try JSONDecoder().decode(MembersResponse.self, from: json)
+        #expect(response.org?.defaultDurationMin == 45)
+    }
+
+    /// Ontbreekt het veld of komt het als tekst binnen, dan mag de hele ledenlijst
+    /// niet omvallen — zelfde defensieve lijn als AgendaEvent/Member.
+    @Test func orgInfoSurvivesAMissingOrWronglyTypedDuration() throws {
+        let missing = Data("""
+        {"items":[],"org":{"id":"org1","name":"Bovexa","logo":""}}
+        """.utf8)
+        #expect(try JSONDecoder().decode(MembersResponse.self, from: missing).org?.defaultDurationMin == nil)
+
+        let wrongType = Data("""
+        {"items":[],"org":{"id":"org1","name":"Bovexa","logo":"","default_duration_min":"45"}}
+        """.utf8)
+        #expect(try JSONDecoder().decode(MembersResponse.self, from: wrongType).org?.defaultDurationMin == nil)
     }
 
     @Test func borderColorOnlyForOthersEvents() {

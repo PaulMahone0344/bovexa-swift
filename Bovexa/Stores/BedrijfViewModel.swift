@@ -135,7 +135,7 @@ final class BedrijfViewModel: ObservableObject {
             membersResponse = response
             memberColors.prime(
                 members: response.items.map { Member(id: $0.id, userId: $0.userId, naam: $0.naam, email: $0.email, avatar: $0.avatar) },
-                org: response.org.map { CompanyOrgInfo(id: $0.id, name: $0.name, logo: $0.logo) }
+                org: response.org.map { CompanyOrgInfo(id: $0.id, name: $0.name, logo: $0.logo, defaultDurationMin: $0.defaultDurationMin) }
             )
             loadFailed = false
         } catch {
