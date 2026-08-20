@@ -50,9 +50,12 @@ struct ThemeTests {
         #expect(BovexaTheme.Category.allCases.count == 5)
     }
 
-    @Test func labelPaletteHasBetweenTenAndTwelveOptions() {
+    /// Bovengrens meegegroeid met het iPhone-agendapalet (commit 04ce32b): elf
+    /// eigen tinten werden dertien systeemkleuren. De ondergrens blijft: minder
+    /// dan tien kleuren maakt een legenda met veel labels onleesbaar.
+    @Test func labelPaletteHasBetweenTenAndThirteenOptions() {
         #expect(BovexaTheme.LabelPalette.options.count >= 10)
-        #expect(BovexaTheme.LabelPalette.options.count <= 12)
+        #expect(BovexaTheme.LabelPalette.options.count <= 13)
     }
 
     @Test func labelPaletteHexesAreAllDistinct() {

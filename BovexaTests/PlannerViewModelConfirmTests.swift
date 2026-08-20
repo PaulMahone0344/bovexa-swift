@@ -135,6 +135,9 @@ struct PlannerViewModelConfirmTests {
         #expect(postBody["label"] == nil)
     }
 
+    /// De starttijd moet ná `now` liggen: ReminderScheduling.fireDate plant bewust
+    /// geen herinnering voor een moment dat al voorbij is. Met een vaste datum in
+    /// de fixture ging deze test daarom vanzelf rood zodra die dag verstreken was.
     @Test func confirmSchedulesReminderOnlyWhenNonZero() async {
         stubReadyPlan()
         let scheduler = FakeNotificationScheduler()
@@ -142,6 +145,7 @@ struct PlannerViewModelConfirmTests {
         await vm.sendText("Tandarts morgen 9 uur")
         vm.reminderMin = 15
 
+        let futureStart = PBDate.format(Date().addingTimeInterval(3600))
         URLProtocolStub.requestHandler = { request in
             if request.httpMethod == "GET" {
                 return (200, Data("""
@@ -149,7 +153,7 @@ struct PlannerViewModelConfirmTests {
                 """.utf8))
             }
             return (200, Data("""
-            {"id":"ev1","owner":"u1","title":"Tandarts","start":"2026-08-03 09:00:00.000Z","all_day":false}
+            {"id":"ev1","owner":"u1","title":"Tandarts","start":"\(futureStart)","all_day":false}
             """.utf8))
         }
         await vm.confirm()

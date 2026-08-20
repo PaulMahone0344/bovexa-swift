@@ -131,11 +131,15 @@ struct EventEditorViewModelTests {
 
     // MARK: - opslaan + herinnering
 
+    /// De starttijd moet ná `now` liggen: ReminderScheduling.fireDate plant bewust
+    /// geen herinnering voor een moment dat al voorbij is. Met een vaste datum in
+    /// de fixture ging deze test daarom vanzelf rood zodra die dag verstreken was.
     @Test func successfulSaveSchedulesReminderForReturnedEvent() async {
+        let futureStart = Date().addingTimeInterval(3600)
         URLProtocolStub.requestHandler = { request in
             if request.httpMethod == "PATCH" {
                 let json = """
-                {"id":"ev1","owner":"owner","title":"Origineel","start":"2026-08-03 09:00:00.000Z","end":"2026-08-03 10:00:00.000Z","all_day":false}
+                {"id":"ev1","owner":"owner","title":"Origineel","start":"\(PBDate.format(futureStart))","end":"\(PBDate.format(futureStart.addingTimeInterval(3600)))","all_day":false}
                 """.data(using: .utf8)!
                 return (200, json)
             }
