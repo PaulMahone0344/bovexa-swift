@@ -524,4 +524,35 @@ struct DagtakenViewModelTests {
         #expect(vm.deleteTeamTaskFailedAlert == true)
         #expect(vm.teamTasks.count == 1)
     }
+
+    // MARK: - Vorige bedrijfslijst behouden (M11 plak 4a + 4l)
+
+    /// "Nog geen gedeelde dagtaken" is iets anders dan "ik kon ze niet ophalen".
+    @Test func aFailedTeamFetchKeepsThePreviousListAndFlagsIt() async {
+        let vm = makeViewModel()
+        URLProtocolStub.requestHandler = { _ in
+            (200, Data("""
+            {"items":[{"id":"t1","owner":"u1","org":"org1","title":"Bandenwissel","status":"open","visibility":"company"}],
+             "page":1,"perPage":200,"totalItems":1,"totalPages":1}
+            """.utf8))
+        }
+        await vm.loadTeamTasks(org: "org1", token: "tok")
+        #expect(vm.teamTasks.count == 1)
+        #expect(!vm.loadFailed)
+
+        URLProtocolStub.requestHandler = { _ in (500, Data("{}".utf8)) }
+        await vm.loadTeamTasks(org: "org1", token: "tok")
+
+        #expect(vm.teamTasks.count == 1)
+        #expect(vm.loadFailed)
+        #expect(!vm.teamLoading)
+    }
+
+    @Test func withoutACompanyThereIsNoTeamListAndNoFailure() async {
+        let vm = makeViewModel()
+        await vm.loadTeamTasks(org: nil, token: "tok")
+        #expect(vm.teamTasks.isEmpty)
+        #expect(!vm.loadFailed)
+    }
+
 }

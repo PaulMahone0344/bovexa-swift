@@ -166,6 +166,10 @@ struct VandaagView: View {
         VStack(alignment: .leading, spacing: BovexaTheme.Space.sm) {
             SectionHeading(title: "Tijdlijn", systemImage: "clock.fill")
 
+            if viewModel.loadFailed {
+                LoadFailedNote(surface: .background)
+            }
+
             GlassCard {
                 if !viewModel.hasLoadedOnce {
                     ProgressView()

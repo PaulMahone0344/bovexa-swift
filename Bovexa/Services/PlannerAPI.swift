@@ -13,7 +13,7 @@ enum PlannerAPIError: Error, Equatable {
         case .timeout:
             return "De planner reageert nu traag. Probeer het zo nog een keer."
         case .network:
-            return "Geen verbinding met de planner. Check je internet en probeer opnieuw."
+            return "Geen verbinding met de planner. Controleer je internet en probeer opnieuw."
         case .server(let message):
             return message
         case .invalidResponse:

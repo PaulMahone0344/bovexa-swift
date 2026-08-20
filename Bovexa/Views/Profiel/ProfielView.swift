@@ -214,7 +214,9 @@ struct ProfielView: View {
                             .foregroundStyle(BovexaTheme.Colors.muted)
                     }
                     Spacer()
-                    Toggle("", isOn: Binding(
+                    // Naam ín de Toggle, .labelsHidden() verbergt hem alleen
+                    // visueel: VoiceOver zei anders "schakelaar, aan" zonder waarvan (4j).
+                    Toggle("iPhone Agenda-sync", isOn: Binding(
                         get: { viewModel.deviceSyncEnabled },
                         set: { viewModel.setDeviceSync($0) }
                     ))
@@ -260,6 +262,9 @@ struct ProfielView: View {
                     Image(systemName: "link")
                 }
                 .buttonStyle(.glassSecondaryBrand)
+                // Stond aan bij een leeg veld; een tik deed dan stil niets (4d).
+                .disabled(externalCalendarLink.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                .accessibilityLabel("Agenda-link openen in iPhone Agenda")
             }
 
             externalCalendarsPickerRow
@@ -278,10 +283,19 @@ struct ProfielView: View {
     @ViewBuilder
     private var externalCalendarsPickerRow: some View {
         if viewModel.externalCalendarAccessDenied {
-            Text("Geef Bovexa Flow toegang tot je agenda's in Instellingen om afspraken uit een andere agenda hier te zien.")
-                .font(BovexaTheme.TypeStyle.caption)
-                .foregroundStyle(BovexaTheme.Colors.muted)
-                .padding(.top, BovexaTheme.Space.xs)
+            VStack(alignment: .leading, spacing: BovexaTheme.Space.xs) {
+                Text("Geef Bovexa Flow toegang tot je agenda's in Instellingen om afspraken uit een andere agenda hier te zien.")
+                    .font(BovexaTheme.TypeStyle.caption)
+                    .foregroundStyle(BovexaTheme.Colors.muted)
+                // De tekst verwees naar Instellingen zonder een weg ernaartoe (4j).
+                Button("Open Instellingen") {
+                    Haptics.selection()
+                    guard let url = URL(string: UIApplication.openSettingsURLString) else { return }
+                    UIApplication.shared.open(url)
+                }
+                .buttonStyle(.glassSecondaryBrand)
+            }
+            .padding(.top, BovexaTheme.Space.xs)
         } else if !viewModel.externalCalendarAccessGranted {
             Button {
                 Haptics.selection()
@@ -309,7 +323,7 @@ struct ProfielView: View {
                             .font(BovexaTheme.TypeStyle.footnote)
                             .foregroundStyle(BovexaTheme.Colors.ink)
                         Spacer()
-                        Toggle("", isOn: Binding(
+                        Toggle(calendar.title, isOn: Binding(
                             get: { viewModel.selectedExternalCalendarIds.contains(calendar.id) },
                             set: { _ in viewModel.toggleExternalCalendar(calendar.id) }
                         ))
@@ -350,6 +364,9 @@ struct ProfielView: View {
                     Spacer()
                     if dot {
                         Circle().fill(BovexaTheme.Colors.blueDeep).frame(width: 8, height: 8)
+                            // De stip is puur visueel; VoiceOver hoorde alleen
+                            // "Meldingen", zonder dat er iets ongelezen was (4j).
+                            .accessibilityHidden(true)
                     }
                     Image(systemName: "chevron.right")
                         .font(.system(size: 13, weight: .semibold))
@@ -359,6 +376,7 @@ struct ProfielView: View {
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
+        .accessibilityLabel(dot ? "\(label), ongelezen" : label)
     }
 
     private func refresh() async {

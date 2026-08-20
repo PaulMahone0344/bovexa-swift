@@ -24,18 +24,21 @@ final class AuthStore: ObservableObject {
     private let tokenStore: TokenStore
     private let userCache: CachedUserStore
     private let notificationCenter: NotificationCenter
+    private let reminderScheduler: NotificationScheduling
     private var unauthorizedObserver: NSObjectProtocol?
 
     init(
         client: PBClient = PBClient(),
         tokenStore: TokenStore = KeychainTokenStore(),
         userCache: CachedUserStore = CachedUserStore(),
-        notificationCenter: NotificationCenter = .default
+        notificationCenter: NotificationCenter = .default,
+        reminderScheduler: NotificationScheduling = UNNotificationScheduler()
     ) {
         self.client = client
         self.tokenStore = tokenStore
         self.userCache = userCache
         self.notificationCenter = notificationCenter
+        self.reminderScheduler = reminderScheduler
 
         unauthorizedObserver = notificationCenter.addObserver(
             forName: .pbUnauthorized, object: nil, queue: nil
@@ -62,9 +65,7 @@ final class AuthStore: ObservableObject {
     /// en handelt die de 401 zelf stil af, en uitgelogd is er niets te doen.
     func handleSessionExpired() {
         guard case .loggedIn = phase else { return }
-        tokenStore.clear()
-        userCache.clear()
-        token = nil
+        clearSession()
         phase = .loggedOut(errorMessage: "Je sessie is verlopen. Log opnieuw in.")
     }
 
@@ -136,10 +137,18 @@ final class AuthStore: ObservableObject {
     }
 
     func signOut() {
+        clearSession()
+        phase = .loggedOut(errorMessage: nil)
+    }
+
+    /// Alles wat aan dít account hangt en op het toestel achterblijft. De geplande
+    /// herinneringen zijn het belangrijkst: die gingen anders af bij de volgende
+    /// gebruiker op dit toestel — "Tandarts, begint over 15 min" van je voorganger.
+    private func clearSession() {
         tokenStore.clear()
         userCache.clear()
+        reminderScheduler.cancelAll()
         token = nil
-        phase = .loggedOut(errorMessage: nil)
     }
 
     /// Registratie (valkuil A): create op agenda_users, dan direct inloggen —
@@ -154,7 +163,9 @@ final class AuthStore: ObservableObject {
             justRegistered = true
             setLoggedIn(response.record)
         } catch {
-            phase = .loggedOut(errorMessage: "Registreren mislukt — bestaat het account al?")
+            // De PB-melding is preciezer dan onze gok: een te kort wachtwoord of
+            // een ongeldig e-mailadres las anders als "bestaat het account al?".
+            phase = .loggedOut(errorMessage: Self.signUpMessage(for: error))
         }
     }
 
@@ -199,9 +210,7 @@ final class AuthStore: ObservableObject {
             tokenStore.save(response.token)
             setLoggedIn(response.record)
         } catch {
-            tokenStore.clear()
-            userCache.clear()
-            self.token = nil
+            clearSession()
             phase = .loggedOut(errorMessage: "Wachtwoord gewijzigd — log opnieuw in met je nieuwe wachtwoord.")
         }
     }
@@ -211,6 +220,19 @@ final class AuthStore: ObservableObject {
         guard case .loggedIn(let user) = phase, let token else { return }
         try await client.deleteAccount(id: user.id, token: token)
         signOut()
+    }
+
+    private static func signUpMessage(for error: Error) -> String {
+        guard let pbError = error as? PBError else { return "Registreren mislukt. Probeer het opnieuw." }
+        switch pbError {
+        case .network:
+            return "Geen verbinding. Controleer je internet en probeer opnieuw."
+        case .server(let status, let message):
+            guard status == 400 else { return "Registreren mislukt. Probeer het opnieuw." }
+            return message.isEmpty ? "Registreren mislukt — bestaat het account al?" : message
+        case .decoding:
+            return "Registreren mislukt. Probeer het opnieuw."
+        }
     }
 
     private static func dutchMessage(for error: Error) -> String {

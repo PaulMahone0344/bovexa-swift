@@ -65,7 +65,21 @@ struct OpenTasksCard: View {
         }
     }
 
+    /// De rij begint met een rondje dat als afvinkvakje leest, maar deed niets
+    /// (4i). Afvinken blijft bewust op Dagtaken; de tik gaat daarheen.
     private func row(_ task: PlanningNote) -> some View {
+        Button {
+            Haptics.selection()
+            onOpenDagtaken()
+        } label: {
+            rowContent(task)
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityHint("Opent Dagtaken")
+    }
+
+    private func rowContent(_ task: PlanningNote) -> some View {
         HStack(alignment: .top, spacing: BovexaTheme.Space.sm) {
             Image(systemName: "circle")
                 .font(.system(size: 15, weight: .medium))

@@ -32,6 +32,8 @@ final class BedrijfViewModel: ObservableObject {
     @Published var expandedMemberId: String?
     @Published private(set) var busyMemberId: String?
     @Published var memberActionErrorMessage: String?
+    /// Aan als de laatste ledenlijst-fetch mislukte; de vorige blijft staan.
+    @Published private(set) var loadFailed = false
 
     let memberColors = MemberColors()
 
@@ -135,8 +137,12 @@ final class BedrijfViewModel: ObservableObject {
                 members: response.items.map { Member(id: $0.id, userId: $0.userId, naam: $0.naam, email: $0.email, avatar: $0.avatar) },
                 org: response.org.map { CompanyOrgInfo(id: $0.id, name: $0.name, logo: $0.logo) }
             )
+            loadFailed = false
         } catch {
-            membersResponse = nil
+            // Vorige response laten staan: na een geslaagde rolwissel roept die
+            // load() aan, en faalde díe, dan "verdween" het hele bedrijf tot je
+            // pull-to-refresh deed.
+            loadFailed = true
         }
         loading = false
         refreshing = false

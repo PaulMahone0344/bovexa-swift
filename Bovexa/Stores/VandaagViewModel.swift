@@ -18,6 +18,11 @@ final class VandaagViewModel: ObservableObject {
     /// opgeslagen (UserDefaults), dus geen netwerkverzoek — wel opnieuw inlezen
     /// bij elke focus, want op de Dagtaken-tab kan er intussen iets afgevinkt zijn.
     @Published private(set) var openTasks: [PlanningNote] = []
+    /// Aan als de laatste fetch mislukte. De vorige gegevens blijven dan staan —
+    /// een agenda die net nog vol stond hoort na een tabwissel zonder bereik niet
+    /// leeg te zijn. De view zet er één regel bij (LoadFailedNote).
+    @Published private(set) var loadFailed = false
+
 
     let memberColors: MemberColors
     let labelStore: LabelStore
@@ -28,6 +33,8 @@ final class VandaagViewModel: ObservableObject {
     private let planningStore: PlanningNoteStore
     private let defaults: UserDefaults
     private let now: () -> Date
+    /// Laatst geladen set, om bij een mislukte fetch niet terug te vallen op leeg.
+    private var lastEvents: [AgendaEvent] = []
 
     init(
         repository: EventRepository = EventRepository(), memberColors: MemberColors = MemberColors(),
@@ -68,7 +75,16 @@ final class VandaagViewModel: ObservableObject {
             calendarIds: ExternalCalendarSelectionPreference.selectedIds(defaults: defaults)
         )
 
-        let events = await eventsResult ?? []
+        let events: [AgendaEvent]
+        if let fetched = await eventsResult {
+            events = fetched
+            lastEvents = fetched
+            loadFailed = false
+        } else {
+            // Vorige set laten staan in plaats van een lege dag tonen.
+            events = lastEvents
+            loadFailed = true
+        }
         if let members = await membersResult {
             memberColors.prime(members: members.items, org: members.org)
             orgLogoURL = Self.logoURL(for: members.org)

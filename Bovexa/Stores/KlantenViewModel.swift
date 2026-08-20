@@ -6,6 +6,9 @@ import Foundation
 final class KlantenViewModel: ObservableObject {
     @Published private(set) var groups: [KlantGroup] = []
     @Published private(set) var loading = true
+    /// Aan als de laatste fetch mislukte; de lege-staat-tekst zou anders zeggen
+    /// dat je geen klanten hebt (4l).
+    @Published private(set) var loadFailed = false
 
     /// Sinds M11 plak 3e eigendom van de viewmodel in plaats van verse @StateObjects
     /// in de view: het afspraak-detail vanuit Klanten kreeg nooit-geprimede stores,
@@ -40,8 +43,9 @@ final class KlantenViewModel: ObservableObject {
 
         if let events = await eventsResult {
             groups = KlantGrouping.group(events)
+            loadFailed = false
         } else {
-            groups = []
+            loadFailed = true
         }
         if let members = await membersResult {
             memberColors.prime(members: members.items, org: members.org)

@@ -176,4 +176,31 @@ struct EventEditorViewModelTests {
         #expect(result == nil)
         #expect(vm.saveFailedAlert)
     }
+
+    // MARK: - Dubbele tik op Opslaan (M11 plak 4d)
+
+    /// isSaving ging pas in performSave aan; tijdens de dubbele-boeking-check
+    /// (netwerk) bleef "Opslaan" actief en startte een tweede tik een tweede ronde.
+    @Test func aSecondSaveIsBlockedWhileTheFirstIsStillRunning() async {
+        URLProtocolStub.requestHandler = { request in
+            if request.httpMethod == "PATCH" {
+                return (200, Data("""
+                {"id":"ev1","owner":"owner","title":"Origineel","start":"2026-08-03 09:00:00.000Z","all_day":false}
+                """.utf8))
+            }
+            return (200, Data("""
+            {"items":[],"page":1,"perPage":200,"totalItems":0,"totalPages":0}
+            """.utf8))
+        }
+        let vm = makeViewModel(event: makeEvent(id: "ev1"))
+
+        async let first = vm.save()
+        async let second = vm.save()
+        let results = await [first, second]
+
+        // Precies één van de twee mag doorgaan.
+        #expect(results.compactMap { $0 }.count == 1)
+        #expect(!vm.isSaving)
+    }
+
 }

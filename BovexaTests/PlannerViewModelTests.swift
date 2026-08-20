@@ -90,7 +90,7 @@ struct PlannerViewModelTests {
         let vm = makeViewModel()
         await vm.sendText("Tandarts")
         #expect(vm.thread.last?.kind == .error)
-        #expect(vm.thread.last?.text == "Geen verbinding met de planner. Check je internet en probeer opnieuw.")
+        #expect(vm.thread.last?.text == "Geen verbinding met de planner. Controleer je internet en probeer opnieuw.")
 
         URLProtocolStub.errorHandler = nil
         respond("""

@@ -22,6 +22,9 @@ final class MeldingenViewModel: ObservableObject {
     @Published private(set) var answeringId: String?
     @Published var respondFailedAlert = false
     @Published var deleteFailedMessage: String?
+    /// Aan als de laatste fetch mislukte; de vorige gegevens blijven staan.
+    @Published private(set) var loadFailed = false
+
 
     private let userId: String
     private let orgId: String?
@@ -64,9 +67,10 @@ final class MeldingenViewModel: ObservableObject {
             let moment = now()
             pending = AssignmentHelpers.pendingEvents(events, userId: userId, now: moment)
             expired = AssignmentHelpers.expiredPendingEvents(events, userId: userId, now: moment)
+            loadFailed = false
         } else {
-            pending = []
-            expired = []
+            // Vorige kaarten laten staan (4a).
+            loadFailed = true
         }
 
         guard let orgId else {
@@ -77,12 +81,13 @@ final class MeldingenViewModel: ObservableObject {
 
         if let items = try? await noticeRepository.fetchNotices(orgId: orgId, token: token) {
             notices = items
+            loadFailed = false
             // Alleen na een geslaagde fetch: anders gaat de ongelezen-stip op
             // Profiel uit terwijl de gebruiker de mededeling nooit gezien heeft,
             // en komt hij pas terug bij een nieuwere.
             seenStore.markSeen(userId: userId)
         } else {
-            notices = []
+            loadFailed = true
         }
         loaded = true
 

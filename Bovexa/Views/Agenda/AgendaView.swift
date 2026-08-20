@@ -119,6 +119,11 @@ struct AgendaView: View {
                 AppBackground()
 
                 VStack(spacing: 0) {
+                    if viewModel.loadFailed {
+                        LoadFailedNote(surface: .background)
+                            .padding(.horizontal, BovexaTheme.Space.xl)
+                            .padding(.bottom, BovexaTheme.Space.xs)
+                    }
                     if viewModel.viewKind == .lijst, let userId = currentUser?.id {
                         agendaHeader
                             .padding(.horizontal, BovexaTheme.Space.xl)

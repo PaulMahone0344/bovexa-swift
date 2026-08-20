@@ -143,11 +143,28 @@ struct AssignmentHelpersTests {
     }
 
     @Test func expiredPendingEventsKeepsOneCardPerSeries() {
+        // Binnen het venster van 30 dagen (4h), anders vallen ze er sowieso uit.
+        let nu = Date(timeIntervalSince1970: 1_800_000_000)
         let events = (0..<4).map { week in
-            occurrence(id: "serie1:2026-01-0\(week + 1)", seriesId: "serie1", start: Date(timeIntervalSince1970: 1000 + Double(week) * 1000))
+            occurrence(
+                id: "serie1:2026-01-0\(week + 1)", seriesId: "serie1",
+                start: nu.addingTimeInterval(-Double(week + 1) * 24 * 60 * 60)
+            )
         }
-        let result = AssignmentHelpers.expiredPendingEvents(events, userId: "me", now: .distantFuture)
+        let result = AssignmentHelpers.expiredPendingEvents(events, userId: "me", now: nu)
         #expect(result.count == 1)
+    }
+
+    /// 4h: een toewijzing die maanden geleden verliep hoort niet eeuwig in
+    /// VERLOPEN te blijven staan.
+    @Test func expiredPendingEventsDropsAnythingOlderThanThirtyDays() {
+        let nu = Date(timeIntervalSince1970: 1_800_000_000)
+        let recent = occurrence(id: "a", seriesId: "a", start: nu.addingTimeInterval(-5 * 24 * 60 * 60))
+        let oud = occurrence(id: "b", seriesId: "b", start: nu.addingTimeInterval(-60 * 24 * 60 * 60))
+
+        let result = AssignmentHelpers.expiredPendingEvents([recent, oud], userId: "me", now: nu)
+
+        #expect(result.map(\.id) == ["a"])
     }
 
     @Test func twoDifferentSeriesStayTwoCards() {

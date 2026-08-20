@@ -11,6 +11,9 @@ final class MensenViewModel: ObservableObject {
     @Published var query: String = ""
     @Published private(set) var loading = false
     @Published var errorMessage: String?
+    /// Aan als de laatste fetch mislukte; de vorige gegevens blijven staan.
+    @Published private(set) var loadFailed = false
+
 
     /// Bij het sluiten van de PersoonFormView-sheet: anders staat de fout van de
     /// vorige poging er nog zodra je hem opnieuw opent.
@@ -42,6 +45,9 @@ final class MensenViewModel: ObservableObject {
 
         if let fetched = try? await contactsResult {
             contacts = fetched
+            loadFailed = false
+        } else {
+            loadFailed = true
         }
         if let response = try? await membersResult {
             members = response.items

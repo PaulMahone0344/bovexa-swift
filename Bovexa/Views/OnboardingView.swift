@@ -121,7 +121,8 @@ struct OnboardingView: View {
                 }
             }
             .buttonStyle(.glassProminentBrand)
-            .disabled(viewModel.busy)
+            // Stond aan bij een leeg veld; de fout kwam dan pas ná de tik (4d).
+            .disabled(viewModel.busy || text.wrappedValue.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
 
             Button {
                 Haptics.selection()

@@ -23,6 +23,8 @@ struct ContactPickerView: View {
     @State private var newNaam = ""
     @State private var newTelefoon = ""
     @State private var isCreating = false
+    @State private var createError: String?
+    @State private var loadFailed = false
 
     private var noneLabel: String {
         existingKlantNaam.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? "Geen contact" : existingKlantNaam
@@ -44,6 +46,9 @@ struct ContactPickerView: View {
                 }
                 newContactChip
             }
+            if loadFailed {
+                LoadFailedNote(text: "Contacten konden niet worden geladen.")
+            }
             if showNewForm {
                 newContactForm
             }
@@ -52,7 +57,13 @@ struct ContactPickerView: View {
     }
 
     private func loadContacts() async {
-        contacts = (try? await contactRepository.fetchContacts(userId: userId, token: token)) ?? []
+        if let fetched = try? await contactRepository.fetchContacts(userId: userId, token: token) {
+            contacts = fetched
+            loadFailed = false
+        } else {
+            // Was stil leeg: je dacht dat je geen contacten hád (4l).
+            loadFailed = true
+        }
     }
 
     private var newContactChip: some View {
@@ -138,6 +149,12 @@ struct ContactPickerView: View {
             }
             .buttonStyle(.glassProminentBrand)
             .disabled(isCreating || newNaam.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+
+            if let createError {
+                Text(createError)
+                    .font(BovexaTheme.TypeStyle.footnote.weight(.semibold))
+                    .foregroundStyle(BovexaTheme.Colors.danger)
+            }
         }
         .padding(BovexaTheme.Space.md)
         .background(BovexaTheme.Colors.glassSoft)
@@ -148,6 +165,7 @@ struct ContactPickerView: View {
         let naam = newNaam.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !naam.isEmpty else { return }
         isCreating = true
+        createError = nil
         defer { isCreating = false }
         do {
             let created = try await contactRepository.createContact(
@@ -157,11 +175,13 @@ struct ContactPickerView: View {
             contacts.sort { $0.naam.localizedCaseInsensitiveCompare($1.naam) == .orderedAscending }
             selectedContactId = created.id
             onSelect(created)
+            Haptics.success()
             newNaam = ""
             newTelefoon = ""
             withAnimation(.snappy) { showNewForm = false }
         } catch {
-            // Stil falen, zelfde patroon als LabelPickerView.createLabel.
+            Haptics.warning()
+            createError = "Kon het contact niet aanmaken. Probeer het opnieuw."
         }
     }
 }

@@ -114,10 +114,12 @@ enum SelectableCompanyRole: String, CaseIterable {
         }
     }
 
+    /// Eén set termen door de hele app (4m): Bedrijf zei "Medewerker"/"Admin",
+    /// Mensen zei "Lid"/"Beheerder" — voor dezelfde persoon.
     var label: String {
         switch self {
         case .member: return "Medewerker"
-        case .admin: return "Admin"
+        case .admin: return "Beheerder"
         }
     }
 }

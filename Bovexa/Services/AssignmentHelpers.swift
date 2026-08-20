@@ -39,9 +39,16 @@ enum AssignmentHelpers {
     /// Toewijzingen waar je nooit op geantwoord hebt en waarvan de afspraak al
     /// voorbij is. Accepteren of weigeren zegt daar niets meer, maar weggooien ook
     /// niet: dan weet je nooit dat er iets langs is gekomen. Meldingen zet ze apart.
+    /// Vensters van 30 dagen: `expired` was onbegrensd, dus elke ooit-onbeantwoorde
+    /// toewijzing bleef eeuwig in VERLOPEN staan en na maanden werd dat een staart
+    /// die niemand meer leest (4h).
+    static let expiredWindowDays = 30
+
     static func expiredPendingEvents(_ events: [AgendaEvent], userId: String, now: Date = Date()) -> [AgendaEvent] {
-        deduplicatedBySeries(
-            awaitingReply(events, userId: userId).filter { hasPassed($0, now: now) }
+        let cutoff = now.addingTimeInterval(-Double(expiredWindowDays) * 24 * 60 * 60)
+        return deduplicatedBySeries(
+            awaitingReply(events, userId: userId)
+                .filter { hasPassed($0, now: now) && ($0.end ?? $0.start) >= cutoff }
         )
         .sorted { $0.start > $1.start }
     }

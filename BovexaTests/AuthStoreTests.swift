@@ -152,7 +152,9 @@ struct AuthStoreTests {
             Issue.record("verwachtte loggedOut, kreeg \(store.phase)")
             return
         }
-        #expect(message == "Registreren mislukt — bestaat het account al?")
+        // Sinds M11 plak 4e wint de PB-melding bij een 400: die is preciezer dan
+        // onze gok (te kort wachtwoord vs. bestaand account).
+        #expect(message == "Failed to create record.")
         #expect(!store.justRegistered)
     }
 
@@ -385,6 +387,39 @@ struct AuthStoreTests {
 
         store.signOut()
         #expect(userCache.load() == nil)
+    }
+
+    // MARK: - Uitloggen ruimt het toestel op (M11 plak 4b)
+
+    /// Geplande herinneringen bleven staan: de volgende gebruiker op dit toestel
+    /// kreeg "Tandarts — begint over 15 min" van zijn voorganger.
+    @Test func signOutCancelsEveryPendingReminder() async {
+        let scheduler = FakeNotificationScheduler()
+        URLProtocolStub.requestHandler = { _ in (200, Data(Self.loginResponse.utf8)) }
+        let store = AuthStore(
+            client: makeClient(), tokenStore: InMemoryTokenStore(),
+            userCache: CachedUserStore(defaults: makeDefaults()), reminderScheduler: scheduler
+        )
+        await store.signIn(email: "a@b.nl", password: "geheim123")
+
+        store.signOut()
+
+        #expect(scheduler.cancelAllCount == 1)
+    }
+
+    @Test func anExpiredSessionAlsoCancelsPendingReminders() async {
+        let scheduler = FakeNotificationScheduler()
+        URLProtocolStub.requestHandler = { _ in (200, Data(Self.loginResponse.utf8)) }
+        let store = AuthStore(
+            client: makeClient(), tokenStore: InMemoryTokenStore(),
+            userCache: CachedUserStore(defaults: makeDefaults()),
+            notificationCenter: NotificationCenter(), reminderScheduler: scheduler
+        )
+        await store.signIn(email: "a@b.nl", password: "geheim123")
+
+        store.handleSessionExpired()
+
+        #expect(scheduler.cancelAllCount == 1)
     }
 
     // MARK: - 401 tijdens gebruik (M11 plak 3b)

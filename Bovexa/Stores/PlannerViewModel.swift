@@ -53,6 +53,10 @@ final class PlannerViewModel: ObservableObject {
     private var rawInput = ""
     private var idCounter = 0
     private var saveTask: Task<Void, Never>?
+    /// Hoeveel van de voorgestelde afspraken al op de server staan. Nodig omdat
+    /// "Zet in agenda" er meerdere in één keer aanmaakt: bij een fout halverwege
+    /// hervat de volgende poging hier (4c). Reset zet 'm op 0.
+    private var createdCount = 0
     private var hydrated = false
 
     private var ownEvents: [AgendaEvent] = []
@@ -144,6 +148,7 @@ final class PlannerViewModel: ObservableObject {
         overlapEvent = nil
         overlapCheckIndex = 0
         ownEvents = []
+        createdCount = 0
     }
 
     private func callPlanner() async {
@@ -239,7 +244,9 @@ final class PlannerViewModel: ObservableObject {
     private func createAll(_ appointments: [ProposedAppointment]) async {
         let effectiveAssignees = org != nil ? assignee : []
         do {
-            for appointment in appointments {
+            // Hervatten waar het misging: faalde item 2 van 3, dan stond item 1 al
+            // op de server en maakte "opnieuw" hem een tweede keer aan.
+            for appointment in appointments.dropFirst(createdCount) {
                 let payload = AppointmentPayloadBuilder.build(
                     appointment: appointment, ownerId: userId, rawInput: rawInput.isEmpty ? appointment.title : rawInput,
                     org: org, visibility: visibility, viewers: viewers, assignees: effectiveAssignees, reminderMin: reminderMin,
@@ -251,6 +258,7 @@ final class PlannerViewModel: ObservableObject {
                     await reminderService.schedule(eventId: created.id, title: created.title, start: created.start, minutesBefore: reminderMin)
                 }
                 await deviceCalendarService.sync(appointment)
+                createdCount += 1
             }
             let firstDate = AppointmentRange.composeDate(date: appointments[0].date, time: appointments[0].start)
             reset()

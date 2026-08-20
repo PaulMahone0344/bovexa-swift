@@ -17,6 +17,7 @@ struct LabelPickerView: View {
     @State private var newLabelName = ""
     @State private var newLabelColor = BovexaTheme.LabelPalette.options[0].hex
     @State private var isCreating = false
+    @State private var createError: String?
     /// Vrije kleur (systeem-ColorPicker) naast de vaste swatches — commit pas
     /// bij "Toevoegen", dus geen debounce nodig.
     @State private var newCustomColor = Color(hex: BovexaTheme.LabelPalette.options[0].hex)
@@ -158,6 +159,12 @@ struct LabelPickerView: View {
             }
             .buttonStyle(.glassProminentBrand)
             .disabled(isCreating || newLabelName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+
+            if let createError {
+                Text(createError)
+                    .font(BovexaTheme.TypeStyle.footnote.weight(.semibold))
+                    .foregroundStyle(BovexaTheme.Colors.danger)
+            }
         }
         .padding(BovexaTheme.Space.md)
         .background(BovexaTheme.Colors.glassSoft)
@@ -168,18 +175,22 @@ struct LabelPickerView: View {
         let naam = newLabelName.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !naam.isEmpty else { return }
         isCreating = true
+        createError = nil
         defer { isCreating = false }
         do {
             let created = try await labelRepository.createLabel(
                 org: org, naam: naam, kleur: newLabelColor, volgorde: labelStore.orderedLabels.count, token: token
             )
             labelStore.add(created)
+            Haptics.success()
             selectedLabelId = created.id
             newLabelName = ""
             withAnimation(.snappy) { showNewLabelForm = false }
         } catch {
-            // Stil falen: gebruiker ziet de nieuwe chip niet verschijnen en kan
-            // het opnieuw proberen. Geen apart alert-kanaal voor dit kleine formulier.
+            // Was stil falen: spinner weg, formulier bleef staan, geen tekst — je
+            // wist niet of je nog eens moest tikken (4l).
+            Haptics.warning()
+            createError = "Kon het label niet aanmaken. Probeer het opnieuw."
         }
     }
 }

@@ -7,6 +7,7 @@ struct LoginView: View {
     @State private var email = ""
     @State private var password = ""
     @State private var showPassword = false
+    @State private var isResetting = false
     @State private var isSubmitting = false
     @State private var resetAlert: ResetAlert?
 
@@ -78,7 +79,14 @@ struct LoginView: View {
                                             SecureField("", text: $password)
                                         }
                                     }
-                                    .textContentType(.password)
+                                    // .newPassword in registratiemodus: dan biedt
+                                    // iOS een sterk wachtwoord aan.
+                                    .textContentType(isSignIn ? .password : .newPassword)
+                                    .submitLabel(.go)
+                                    .onSubmit {
+                                        guard canSubmit, !isSubmitting else { return }
+                                        Task { await submit() }
+                                    }
                                 }
 
                                 Button {
@@ -96,6 +104,13 @@ struct LoginView: View {
                                 .buttonStyle(.plain)
                             }
 
+                            if !isSignIn {
+                                Text("Minimaal 8 tekens")
+                                    .font(BovexaTheme.TypeStyle.caption)
+                                    .foregroundStyle(BovexaTheme.Colors.muted)
+                                    .frame(maxWidth: .infinity, alignment: .leading)
+                            }
+
                             if isSignIn {
                                 Button {
                                     Task { await forgotPassword() }
@@ -107,6 +122,7 @@ struct LoginView: View {
                                         .contentShape(Rectangle())
                                 }
                                 .buttonStyle(.plain)
+                                .disabled(isResetting)
                             }
 
                             if let errorMessage {
@@ -133,8 +149,10 @@ struct LoginView: View {
                                 .padding(.vertical, BovexaTheme.Space.xs)
                             }
                             .buttonStyle(.glassProminentBrand)
+                            // Geen extra .opacity: GlassProminentButtonStyle dimt
+                            // zelf al (capsule 0.45), en samen werd dat ±0.27 —
+                            // precies de grijs-op-grijs die de stijl moest oplossen.
                             .disabled(isSubmitting || !canSubmit)
-                            .opacity(isSubmitting || !canSubmit ? 0.6 : 1)
                         }
                     }
 
@@ -169,9 +187,15 @@ struct LoginView: View {
         }
     }
 
+    /// PocketBase eist minimaal 8 tekens bij registreren. Zonder client-check kwam
+    /// dat terug als "Registreren mislukt — bestaat het account al?", en dat is
+    /// misleidend. Trimmen op e-mail: een enkele spatie telde als ingevuld.
     private var canSubmit: Bool {
-        guard !email.isEmpty, !password.isEmpty else { return false }
-        return isSignIn || !naam.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+        guard !email.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty, !password.isEmpty else { return false }
+        guard isSignIn else {
+            return password.count >= 8 && !naam.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+        }
+        return true
     }
 
     @ViewBuilder
@@ -209,12 +233,17 @@ struct LoginView: View {
         }
     }
 
+    /// Busy-guard: zonder dit stuurden meerdere tikken tijdens de netwerkronde
+    /// evenzoveel herstelmails.
     private func forgotPassword() async {
+        guard !isResetting else { return }
         let target = email.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !target.isEmpty else {
             resetAlert = .missingEmail
             return
         }
+        isResetting = true
+        defer { isResetting = false }
         let success = await authStore.requestPasswordReset(email: target)
         resetAlert = success ? .sent(target) : .failed
     }

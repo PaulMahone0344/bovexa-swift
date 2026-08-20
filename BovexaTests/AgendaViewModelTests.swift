@@ -328,4 +328,35 @@ struct AgendaViewModelTests {
         #expect(!viewModel.events.contains { $0.id == "mine" })
         #expect(viewModel.events.contains { $0.id == "his" })
     }
+
+    // MARK: - Vorige gegevens behouden bij een mislukte fetch (M11 plak 4a)
+
+    /// Een agenda die net nog vol stond hoort na een tabwissel zonder bereik niet
+    /// leeg te zijn; `?? []` maakte er stil een lege maand van.
+    @Test func aFailedRefreshKeepsThePreviouslyLoadedEvents() async {
+        stubMembers()
+        let viewModel = makeViewModel()
+        await viewModel.load(userId: "me", orgId: "org1", token: "tok")
+        let geladen = viewModel.events.count
+        #expect(geladen > 0)
+        #expect(!viewModel.loadFailed)
+
+        URLProtocolStub.requestHandler = nil // netwerkfout
+        await viewModel.load(userId: "me", orgId: "org1", token: "tok")
+
+        #expect(viewModel.events.count == geladen)
+        #expect(viewModel.loadFailed)
+    }
+
+    @Test func aSuccessfulRefreshClearsTheFailureFlag() async {
+        URLProtocolStub.requestHandler = nil
+        let viewModel = makeViewModel()
+        await viewModel.load(userId: "me", orgId: "org1", token: "tok")
+        #expect(viewModel.loadFailed)
+
+        stubMembers()
+        await viewModel.load(userId: "me", orgId: "org1", token: "tok")
+
+        #expect(!viewModel.loadFailed)
+    }
 }

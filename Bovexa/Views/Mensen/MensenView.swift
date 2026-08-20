@@ -27,6 +27,10 @@ struct MensenView: View {
 
                 ScrollView {
                     VStack(alignment: .leading, spacing: BovexaTheme.Space.lg) {
+                        if viewModel.loadFailed {
+                            LoadFailedNote(surface: .background)
+                        }
+
                         if showSearch { searchField }
 
                         privateSection

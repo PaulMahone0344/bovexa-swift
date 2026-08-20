@@ -19,6 +19,19 @@ struct MeldingenView: View {
                 AppBackground()
                 ScrollView {
                     VStack(alignment: .leading, spacing: BovexaTheme.Space.lg) {
+                        if !viewModel.loaded {
+                            // Was leeg tot alles binnen was; de plus-knop verscheen
+                            // met vertraging en het scherm leek kapot (4h).
+                            ProgressView()
+                                .tint(BovexaTheme.Colors.blue)
+                                .frame(maxWidth: .infinity)
+                                .padding(.top, BovexaTheme.Space.xl)
+                        }
+
+                        if viewModel.loadFailed {
+                            LoadFailedNote(surface: .background)
+                        }
+
                         if viewModel.canPost {
                             composeSection
                         }
@@ -31,7 +44,7 @@ struct MeldingenView: View {
                             expiredSection
                         }
 
-                        if viewModel.isEmpty {
+                        if viewModel.isEmpty, !viewModel.loadFailed {
                             EmptyStateView(systemImage: "bell", text: "Hier verschijnen mededelingen van je team en toewijzingen die op je akkoord wachten.", surface: .background)
                         }
 
@@ -45,6 +58,7 @@ struct MeldingenView: View {
                 // Naar beneden vegen sluit het toetsenbord; anders bleef het staan
                 // over de knoppen heen.
                 .scrollDismissesKeyboard(.interactively)
+                .refreshable { await viewModel.load() }
             }
             .navigationTitle("Meldingen")
             .navigationBarTitleDisplayMode(.large)
@@ -186,7 +200,11 @@ struct MeldingenView: View {
 
                 HStack(spacing: BovexaTheme.Space.sm) {
                     Button {
-                        Task { await viewModel.respond(event, status: "declined") }
+                        Task {
+                            await viewModel.respond(event, status: "declined")
+                            // Accepteren gaf wel terugkoppeling, weigeren niet (4h).
+                            if !viewModel.respondFailedAlert { Haptics.selection() }
+                        }
                     } label: {
                         Text("Weigeren").frame(maxWidth: .infinity, minHeight: 42)
                     }
@@ -229,6 +247,15 @@ struct MeldingenView: View {
                         Text("\(notice.authorNaam.isEmpty ? "Team" : notice.authorNaam) · \(NoticeHelpers.relativeTime(notice.created))")
                             .font(BovexaTheme.TypeStyle.caption)
                             .foregroundStyle(BovexaTheme.Colors.muted)
+                    }
+                }
+                // Long-press blijft, maar niemand vindt 'm: een contextMenu geeft
+                // dezelfde actie mét preview en ontdekbaarheid (4h).
+                .contextMenu {
+                    if viewModel.canDelete(notice) {
+                        Button("Verwijder", systemImage: "trash", role: .destructive) {
+                            deleteTarget = notice
+                        }
                     }
                 }
                 .onLongPressGesture(minimumDuration: 0.45) {

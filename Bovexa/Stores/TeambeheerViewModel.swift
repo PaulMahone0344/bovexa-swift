@@ -40,6 +40,9 @@ final class TeambeheerViewModel: ObservableObject {
     }
 
     var full: Bool { seatsMax > 0 && activeMemberCount >= seatsMax }
+    /// Moment van de laatste geslaagde profielopslag; de view toont daar kort
+    /// "Opgeslagen" op (4d).
+    @Published private(set) var profileSavedAt: Date?
 
     func load(token: String) async {
         loading = true
@@ -112,6 +115,9 @@ final class TeambeheerViewModel: ObservableObject {
             timezone = response.timezone.isEmpty ? "Europe/Amsterdam" : response.timezone
             defaultDurationMin = response.defaultDurationMin > 0 ? response.defaultDurationMin : defaultDurationMin
             openingHours = response.openingHours ?? .empty
+            // Na succes gebeurde er zichtbaar niets: geen haptic, geen tekst (4d).
+            Haptics.success()
+            profileSavedAt = Date()
         } catch {
             errorMessage = (error as? CompanyError)?.message ?? "Bedrijfsprofiel opslaan mislukt."
         }

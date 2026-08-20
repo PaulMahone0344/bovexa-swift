@@ -14,6 +14,10 @@ final class AfwezigViewModel: ObservableObject {
     @Published private(set) var saving = false
     @Published var savedAlertMessage: String?
     @Published var saveFailedAlert = false
+    /// Hoeveel dagen er al op de server staan; bij een fout halverwege hervat de
+    /// volgende poging daar (4c). Gaat op 0 zodra de hele reeks staat, en zodra de
+    /// gebruiker een andere periode kiest.
+    private var createdDays = 0
     /// Schakelaar "Hele dag" (m7 plak 5), standaard aan. Alleen relevant bij één
     /// geselecteerde dag — zie `effectiveHeleDag`.
     @Published var heleDag = true
@@ -77,6 +81,9 @@ final class AfwezigViewModel: ObservableObject {
 
     func pickDay(_ day: Date) {
         let day = calendar.startOfDay(for: day)
+        // Andere periode = een nieuwe reeks; het hervat-punt van de vorige poging
+        // hoort daar niet meer bij (4c).
+        createdDays = 0
         if from == nil || to != nil {
             from = day
             to = nil
@@ -109,7 +116,9 @@ final class AfwezigViewModel: ObservableObject {
         let days = AfwezigRange.days(from: from, to: to ?? from, calendar: calendar)
         let partial = !effectiveHeleDag
         do {
-            for day in days {
+            // Hervatten waar het misging (4c): faalde dag 3 van 5, dan stonden 1 en
+            // 2 al op de server en maakte "opnieuw" ze dubbel aan.
+            for day in days.dropFirst(createdDays) {
                 let payload = AfwezigCreatePayload(
                     owner: userId, org: org ?? "", title: effectiveTitle,
                     calendar: org != nil ? "work" : "private",
@@ -119,7 +128,9 @@ final class AfwezigViewModel: ObservableObject {
                     rawInput: "afwezig: \(reason.label.lowercased())"
                 )
                 _ = try await repository.createEvent(body: payload.requestBody, token: token)
+                createdDays += 1
             }
+            createdDays = 0
             savedAlertMessage = successMessage(from: from, to: to)
         } catch {
             saveFailedAlert = true
@@ -137,11 +148,14 @@ final class AfwezigViewModel: ObservableObject {
         return "\(comps.day ?? 0) \(month.prefix(3))"
     }
 
+    /// `effectiveTitle`, niet `reason.label`: bij "Anders" zei de bevestiging
+    /// letterlijk "Anders ingepland op 19 aug", terwijl de afspraak de ingevulde
+    /// toelichting als titel krijgt (4m).
     private func successMessage(from: Date, to: Date?) -> String {
         let end = to ?? from
         if to != nil, !calendar.isDate(from, inSameDayAs: end) {
-            return "\(reason.label) ingepland van \(shortDate(from)) t/m \(shortDate(end))."
+            return "\(effectiveTitle) ingepland van \(shortDate(from)) t/m \(shortDate(end))."
         }
-        return "\(reason.label) ingepland op \(shortDate(from))."
+        return "\(effectiveTitle) ingepland op \(shortDate(from))."
     }
 }

@@ -12,6 +12,12 @@ final class DagtakenViewModel: ObservableObject {
     @Published var createFailedAlert = false
     @Published private(set) var orgName: String?
     @Published private(set) var teamTasks: [AgendaTask] = []
+    /// Aan als de laatste fetch mislukte; de vorige gegevens blijven staan.
+    @Published private(set) var loadFailed = false
+    /// Aan tijdens de eerste fetch van de bedrijfslijst: zonder dit stond er
+    /// "Nog geen gedeelde dagtaken" terwijl er nog geladen werd (4l).
+    @Published private(set) var teamLoading = false
+
     @Published var deleteTeamTaskFailedAlert = false
     /// Wissen uit het lokale archief vraagt een tweede tik binnen dit venster
     /// (valkuil G); die vervalt vanzelf.
@@ -85,12 +91,18 @@ final class DagtakenViewModel: ObservableObject {
     func loadTeamTasks(org: String?, token: String) async {
         guard org != nil else {
             teamTasks = []
+            loadFailed = false
             return
         }
+        teamLoading = teamTasks.isEmpty
+        defer { teamLoading = false }
         do {
             teamTasks = try await taskRepository.fetchTasks(token: token)
+            loadFailed = false
         } catch {
-            teamTasks = []
+            // Vorige lijst laten staan: leeg maken leest als "er zijn geen
+            // bedrijfstaken", en dat is iets anders dan "ik kon ze niet ophalen".
+            loadFailed = true
         }
     }
 

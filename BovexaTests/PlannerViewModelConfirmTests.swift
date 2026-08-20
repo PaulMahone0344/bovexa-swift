@@ -307,4 +307,76 @@ struct PlannerViewModelConfirmTests {
         #expect(capturedBody["visibility"] as? String == "private")
         #expect((capturedBody["assignee"] as? [String])?.isEmpty == true)
     }
+
+    // MARK: - Hervatten na een half gelukte reeks (M11 plak 4c)
+
+    /// Faalde het tweede voorstel, dan stond het eerste al op de server en maakte
+    /// "opnieuw" hem dubbel aan.
+    @Test func retryAfterAPartialFailureDoesNotDuplicateTheAppointmentThatSucceeded() async {
+        URLProtocolStub.requestHandler = { _ in
+            (200, Data("""
+            {"status":"ready","message":"Klaar!","question":null,"options":[],
+             "appointments":[
+               {"title":"Tandarts","date":"2026-08-03","start":"09:00","end":"09:30","category":"body"},
+               {"title":"Kapper","date":"2026-08-04","start":"09:00","end":"09:30","category":"body"}
+             ]}
+            """.utf8))
+        }
+        let vm = makeReadyViewModel()
+        await vm.sendText("Twee afspraken")
+
+        let counter = PlannerCreateCounter()
+        URLProtocolStub.requestHandler = { request in
+            if request.httpMethod == "GET" {
+                return (200, Data("""
+                {"items":[],"page":1,"perPage":200,"totalItems":0,"totalPages":0}
+                """.utf8))
+            }
+            let n = counter.bump()
+            if n == 1 {
+                return (200, Data("""
+                {"id":"ev1","owner":"u1","title":"Tandarts","start":"2026-08-03 09:00:00.000Z","all_day":false}
+                """.utf8))
+            }
+            return (500, Data("{}".utf8))
+        }
+        await vm.confirm()
+        #expect(vm.saveFailedAlert)
+        #expect(counter.count == 2)
+
+        // Tweede poging: alleen de tweede afspraak hoort nog aangemaakt te worden.
+        vm.saveFailedAlert = false
+        counter.reset()
+        URLProtocolStub.requestHandler = { request in
+            if request.httpMethod == "GET" {
+                return (200, Data("""
+                {"items":[],"page":1,"perPage":200,"totalItems":0,"totalPages":0}
+                """.utf8))
+            }
+            _ = counter.bump()
+            return (200, Data("""
+            {"id":"ev2","owner":"u1","title":"Kapper","start":"2026-08-04 09:00:00.000Z","all_day":false}
+            """.utf8))
+        }
+        await vm.confirm()
+
+        #expect(counter.count == 1)
+    }
+
+}
+
+/// Thread-safe teller voor de @Sendable request-handler van URLProtocolStub.
+final class PlannerCreateCounter: @unchecked Sendable {
+    private let lock = NSLock()
+    private var value = 0
+
+    @discardableResult
+    func bump() -> Int {
+        lock.lock(); defer { lock.unlock() }
+        value += 1
+        return value
+    }
+
+    func reset() { lock.lock(); value = 0; lock.unlock() }
+    var count: Int { lock.lock(); defer { lock.unlock() }; return value }
 }

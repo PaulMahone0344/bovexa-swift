@@ -262,7 +262,7 @@ struct LedenLijstView: View {
         switch role {
         case .member: label = "Medewerker"
         case .manager: label = "Manager"
-        case .admin: label = "Admin"
+        case .admin: label = "Beheerder"
         }
         return Text(label)
             .font(.system(size: 11, weight: .bold))

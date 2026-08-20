@@ -15,7 +15,7 @@ struct MemberSubtitleTests {
     }
 
     @Test func plainMemberShowsRole() {
-        #expect(MemberSubtitle.text(for: member(), currentUserId: "u1") == "Lid")
+        #expect(MemberSubtitle.text(for: member(), currentUserId: "u1") == "Medewerker")
     }
 
     @Test func adminShowsBeheerder() {
@@ -28,7 +28,7 @@ struct MemberSubtitleTests {
     }
 
     @Test func yourselfIsMarked() {
-        #expect(MemberSubtitle.text(for: member(userId: "u1"), currentUserId: "u1") == "Lid · jij")
+        #expect(MemberSubtitle.text(for: member(userId: "u1"), currentUserId: "u1") == "Medewerker · jij")
     }
 
     @Test func invitedBeatsEverythingElse() {

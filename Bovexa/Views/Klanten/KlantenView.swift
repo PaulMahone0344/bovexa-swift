@@ -29,6 +29,9 @@ struct KlantenView: View {
 
                 if viewModel.loading {
                     ProgressView().tint(BovexaTheme.Colors.accent)
+                } else if viewModel.groups.isEmpty, viewModel.loadFailed {
+                    LoadFailedNote(text: "Kon je klanten niet laden.", surface: .background)
+                        .padding(.horizontal, BovexaTheme.Space.xl)
                 } else if viewModel.groups.isEmpty {
                     EmptyStateView(systemImage: "person.2", text: "Klanten verschijnen hier zodra afspraken een klantnaam hebben.", surface: .background)
                         .padding(.horizontal, BovexaTheme.Space.xl)
@@ -42,6 +45,7 @@ struct KlantenView: View {
                         .padding(BovexaTheme.Space.xl)
                         .padding(.bottom, BovexaTheme.Space.tabBarClearance)
                     }
+                    .refreshable { await viewModel.load() }
                 }
             }
             .navigationTitle("Klanten")

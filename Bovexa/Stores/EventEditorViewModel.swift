@@ -75,10 +75,16 @@ final class EventEditorViewModel: ObservableObject {
     /// Titel-check + dubbele-boeking-check. Bij overlap zet dit `overlapEvent` in
     /// plaats van meteen op te slaan — de caller toont de alert.
     func save() async -> AgendaEvent? {
+        // isSaving stond pas in performSave aan; tijdens de dubbele-boeking-check
+        // (netwerk) bleef "Opslaan" actief en startte een tweede tik een tweede
+        // ronde — twee PATCHes en twee overlap-alerts.
+        guard !isSaving else { return nil }
         guard !title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
             titleMissingAlert = true
             return nil
         }
+        isSaving = true
+        defer { isSaving = false }
         let end = start.addingTimeInterval(Double(durationMin) * 60)
         do {
             let own = try await repository.fetchOwnEvents(userId: originalEvent.owner, token: token)

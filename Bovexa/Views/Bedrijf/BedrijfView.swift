@@ -42,10 +42,11 @@ struct BedrijfView: View {
                 if let user = currentUser, hasCompany, viewModel.isAdmin(user.id) {
                     ToolbarItem(placement: .topBarTrailing) {
                         NavigationLink {
-                            TeambeheerView()
+                            TeambeheerView(onChanged: refreshAfterChange)
                         } label: {
                             Image(systemName: "person.2.fill")
                         }
+                        .accessibilityLabel("Teambeheer")
                     }
                 }
             }
@@ -62,6 +63,12 @@ struct BedrijfView: View {
         await viewModel.load(userId: user.id, token: authStore.token ?? "")
     }
 
+    /// Terug uit Beheer (logo/naam gewijzigd) of uit de achtergrond: zonder dit
+    /// bleef de kaart het oude logo en aantal leden tonen tot je trok of herstartte.
+    private func refreshAfterChange() {
+        Task { await loadIfNeeded() }
+    }
+
     @ViewBuilder
     private func companyContent(for user: AgendaUser) -> some View {
         if viewModel.loading {
@@ -69,6 +76,10 @@ struct BedrijfView: View {
         } else {
             ScrollView {
                 VStack(alignment: .leading, spacing: BovexaTheme.Space.lg) {
+                    if viewModel.loadFailed {
+                        LoadFailedNote(surface: .background)
+                    }
+
                     BedrijfCardView(viewModel: viewModel)
 
                     if !viewModel.members.isEmpty {

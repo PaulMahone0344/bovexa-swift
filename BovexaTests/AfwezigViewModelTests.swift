@@ -332,4 +332,97 @@ struct AfwezigViewModelTests {
         }
         return data
     }
+
+    // MARK: - Hervatten na een half gelukte reeks (M11 plak 4c)
+
+    /// Faalde dag 3 van 5, dan stonden 1 en 2 al op de server: "opnieuw" maakte ze
+    /// een tweede keer aan.
+    @Test func retryAfterAPartialFailureDoesNotDuplicateTheDaysThatSucceeded() async {
+        let vm = makeViewModel()
+        let start = Date(timeIntervalSince1970: 1_800_000_000)
+        vm.pickDay(start)
+        vm.pickDay(start.addingTimeInterval(2 * 24 * 60 * 60)) // drie dagen
+
+        let counter = CreateCounter()
+        URLProtocolStub.requestHandler = { _ in
+            let n = counter.bump()
+            // Eerste twee lukken, de derde faalt.
+            if n <= 2 {
+                return (200, Data("""
+                {"id":"e\(n)","owner":"u1","title":"Vakantie","start":"2026-08-20 00:00:00.000Z","all_day":true}
+                """.utf8))
+            }
+            return (500, Data("{}".utf8))
+        }
+        await vm.save()
+        #expect(vm.saveFailedAlert)
+        #expect(counter.count == 3)
+
+        // Tweede poging: alleen de derde dag hoort nog aangemaakt te worden.
+        vm.saveFailedAlert = false
+        counter.reset()
+        URLProtocolStub.requestHandler = { _ in
+            _ = counter.bump()
+            return (200, Data("""
+            {"id":"e3","owner":"u1","title":"Vakantie","start":"2026-08-22 00:00:00.000Z","all_day":true}
+            """.utf8))
+        }
+        await vm.save()
+
+        #expect(counter.count == 1)
+        #expect(vm.savedAlertMessage != nil)
+    }
+
+    /// Een andere periode kiezen is een nieuwe reeks; het hervat-punt hoort dan weg.
+    @Test func pickingAnotherPeriodResetsTheResumePoint() async {
+        let vm = makeViewModel()
+        let start = Date(timeIntervalSince1970: 1_800_000_000)
+        vm.pickDay(start)
+        vm.pickDay(start.addingTimeInterval(24 * 60 * 60))
+
+        let counter = CreateCounter()
+        URLProtocolStub.requestHandler = { _ in
+            let n = counter.bump()
+            if n == 1 {
+                return (200, Data("""
+                {"id":"e1","owner":"u1","title":"Vakantie","start":"2026-08-20 00:00:00.000Z","all_day":true}
+                """.utf8))
+            }
+            return (500, Data("{}".utf8))
+        }
+        await vm.save()
+        #expect(vm.saveFailedAlert)
+
+        // Nieuwe periode van twee dagen: beide moeten opnieuw aangemaakt worden.
+        vm.pickDay(start.addingTimeInterval(10 * 24 * 60 * 60))
+        vm.pickDay(start.addingTimeInterval(11 * 24 * 60 * 60))
+        vm.saveFailedAlert = false
+        counter.reset()
+        URLProtocolStub.requestHandler = { _ in
+            _ = counter.bump()
+            return (200, Data("""
+            {"id":"x","owner":"u1","title":"Vakantie","start":"2026-08-30 00:00:00.000Z","all_day":true}
+            """.utf8))
+        }
+        await vm.save()
+
+        #expect(counter.count == 2)
+    }
+
+}
+
+/// Thread-safe teller voor de @Sendable request-handler van URLProtocolStub.
+final class CreateCounter: @unchecked Sendable {
+    private let lock = NSLock()
+    private var value = 0
+
+    @discardableResult
+    func bump() -> Int {
+        lock.lock(); defer { lock.unlock() }
+        value += 1
+        return value
+    }
+
+    func reset() { lock.lock(); value = 0; lock.unlock() }
+    var count: Int { lock.lock(); defer { lock.unlock() }; return value }
 }

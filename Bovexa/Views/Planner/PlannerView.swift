@@ -44,8 +44,11 @@ struct PlannerView: View {
         self.onConfirmed = onConfirmed
     }
 
+    /// Setter bewust leeg: hij liep óók vóór "Toch plannen" en maakte `ownEvents`
+    /// leeg, waardoor een tweede overlap bij de overige voorstellen niet meer
+    /// gemeld werd (4k). De knoppen roepen de viewmodel zelf aan.
     private var overlapPresented: Binding<Bool> {
-        Binding(get: { viewModel.overlapEvent != nil }, set: { if !$0 { viewModel.cancelOverlap() } })
+        Binding(get: { viewModel.overlapEvent != nil }, set: { _ in })
     }
 
     var body: some View {
@@ -63,6 +66,11 @@ struct PlannerView: View {
                                 if viewModel.ready != nil {
                                     confirmBlock
                                 }
+                                // Anker ná het bevestig-blok: stond het erboven,
+                                // dan scrolde het scherm tot net onder de
+                                // conceptkaart en viel "Zet in agenda" onder de
+                                // vouw — juist de volgende handeling (4k).
+                                Color.clear.frame(height: 1).id("bottom")
                             }
                             .padding(BovexaTheme.Space.xl)
                         }
@@ -91,10 +99,14 @@ struct PlannerView: View {
                     ToolbarItem(placement: .topBarTrailing) {
                         Button {
                             Haptics.selection()
+                            // Ook het getypte bericht: dat bleef staan terwijl het
+                            // gesprek eromheen verdween (4k).
+                            input = ""
                             viewModel.reset()
                         } label: {
                             Image(systemName: "plus")
                         }
+                        .accessibilityLabel("Nieuw gesprek")
                     }
                 }
             }
@@ -213,7 +225,6 @@ struct PlannerView: View {
                 .padding(.leading, BovexaTheme.Space.xs)
             }
         }
-        Color.clear.frame(height: 1).id("bottom")
     }
 
     @ViewBuilder
@@ -396,8 +407,10 @@ struct PlannerView: View {
                 .keyboardDone(focused: $inputFocused)
                 .lineLimit(1...5)
                 .font(BovexaTheme.TypeStyle.subheadline)
-                .submitLabel(.send)
-                .onSubmit(submit)
+                // Geen .submitLabel(.send)/.onSubmit: in een meerregelig veld maakt
+                // Return een nieuwe regel en vuurt onSubmit niet. De toets heette
+                // dan wel "Verstuur" maar deed iets anders (4k) — de pijlknop is de
+                // enige verstuurder.
 
             if speech.available {
                 MicButtonView(listening: speech.listening, size: 34) {

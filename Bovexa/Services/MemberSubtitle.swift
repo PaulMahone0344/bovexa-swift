@@ -19,7 +19,7 @@ enum MemberSubtitle {
         // voorkomen; als hij tóch in de data staat, benoemen we hem eerlijk in
         // plaats van hem als gewoon lid te tonen.
         case .manager: return "Manager"
-        case .member: return "Lid"
+        case .member: return "Medewerker"
         }
     }
 }

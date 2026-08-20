@@ -16,6 +16,11 @@ final class AgendaViewModel: ObservableObject {
     private var ownEvents: [AgendaEvent] = []
     @Published private(set) var isLoading = false
     @Published private(set) var hasLoadedOnce = false
+    /// Aan als de laatste fetch mislukte. De vorige gegevens blijven dan staan —
+    /// een agenda die net nog vol stond hoort na een tabwissel zonder bereik niet
+    /// leeg te zijn. De view zet er één regel bij (LoadFailedNote).
+    @Published private(set) var loadFailed = false
+
     @Published var displayedMonth: Date
     /// Wiens agenda's het raster laat zien. Je eigen agenda zit er altijd in en is
     /// niet uit te vinken (besluit 26 juli): de Agenda begint bij jouw dag, en
@@ -92,7 +97,12 @@ final class AgendaViewModel: ObservableObject {
             calendarIds: ExternalCalendarSelectionPreference.selectedIds(defaults: defaults)
         )
 
-        ownEvents = await eventsResult ?? []
+        if let fetched = await eventsResult {
+            ownEvents = fetched
+            loadFailed = false
+        } else {
+            loadFailed = true
+        }
         events = ExternalCalendarMerge.merge(ownEvents, external: await externalResult)
         if let members = await membersResult {
             memberColors.prime(members: members.items, org: members.org)

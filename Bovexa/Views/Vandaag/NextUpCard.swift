@@ -38,15 +38,19 @@ struct NextUpCard: View {
 
                     Spacer()
 
-                    if let relative = relativeStart(event.start) {
-                        Text(relative)
-                            .font(.system(.caption, design: .rounded, weight: .semibold))
-                            .foregroundStyle(BovexaTheme.Colors.accent)
-                            .padding(.horizontal, BovexaTheme.Space.sm)
-                            .padding(.vertical, 3)
-                            .background(
-                                Capsule().fill(BovexaTheme.Colors.blue.opacity(0.18))
-                            )
+                    // In een TimelineView, anders bleef "over 25 min" staan zolang
+                    // je op het scherm bleef kijken (4i).
+                    TimelineView(.everyMinute) { context in
+                        if let relative = relativeStart(event.start, now: context.date) {
+                            Text(relative)
+                                .font(.system(.caption, design: .rounded, weight: .semibold))
+                                .foregroundStyle(BovexaTheme.Colors.accent)
+                                .padding(.horizontal, BovexaTheme.Space.sm)
+                                .padding(.vertical, 3)
+                                .background(
+                                    Capsule().fill(BovexaTheme.Colors.blue.opacity(0.18))
+                                )
+                        }
                     }
                 }
 
@@ -100,20 +104,18 @@ struct NextUpCard: View {
 
                 Spacer()
 
-                // Chevron zoals de mockup: de kaart is aantikbaar zodra er een
-                // volgende afspraak is, en dan zit hij er ook. Zonder teken lijkt
-                // de kaart een mededeling in plaats van een ingang.
-                Image(systemName: "chevron.right")
-                    .font(.system(size: 15, weight: .semibold))
-                    .foregroundStyle(BovexaTheme.Colors.muted)
+                // Geen chevron in deze staat: "Dag is rond" is géén knop, en een
+                // chevron belooft een ingang die er niet is (4i). Zodra er wél een
+                // volgende afspraak staat, is de kaart een Button mét chevron —
+                // dat is de andere tak hierboven.
             }
         }
     }
 
     /// "over 25 min" / "over 2 uur" — alleen binnen 8 uur, daarbuiten voegt
     /// het niets toe boven de kloktijd die er al staat.
-    private func relativeStart(_ start: Date) -> String? {
-        let minutes = Int(start.timeIntervalSinceNow / 60)
+    private func relativeStart(_ start: Date, now: Date = Date()) -> String? {
+        let minutes = Int(start.timeIntervalSince(now) / 60)
         guard minutes > 0, minutes <= 8 * 60 else { return nil }
         if minutes < 60 { return "over \(minutes) min" }
         let hours = minutes / 60

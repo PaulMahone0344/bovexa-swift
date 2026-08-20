@@ -152,7 +152,11 @@ struct DagtakenView: View {
     /// Het getal in de pil telt wat er nog te doen is, niet hoeveel er ooit is
     /// aangemaakt: een lijst die alleen maar oploopt zegt niets.
     private func count(for scope: DagtakenScope) -> Int {
-        scope == .mijn ? viewModel.openNotes.count : TeamTaskGrouping.split(viewModel.teamTasks).open.count
+        // Alleen open taken, net als de Bedrijf-pil: `openNotes` is "niet
+        // gearchiveerd" en telde afgevinkte gewoon mee (4l).
+        scope == .mijn
+            ? viewModel.openNotes.filter { !$0.done }.count
+            : TeamTaskGrouping.split(viewModel.teamTasks).open.count
     }
 
     /// De composer zit sinds 27 juli achter de +-knop: als vaste kaart bovenaan
@@ -168,6 +172,7 @@ struct DagtakenView: View {
                 }
                 .scrollDismissesKeyboard(.interactively)
             }
+            .onAppear { draftFocused = true }
             .navigationTitle(viewModel.isEditing ? "Dagtaak bewerken" : "Nieuwe dagtaak")
             .navigationBarTitleDisplayMode(.inline)
             .alert("Mislukt", isPresented: $viewModel.createFailedAlert) {
@@ -329,7 +334,15 @@ struct DagtakenView: View {
                             .foregroundStyle(BovexaTheme.Colors.inkSoft)
                     }
 
-                    if viewModel.teamTasks.isEmpty {
+                    if viewModel.teamLoading {
+                        // Stond hier "Nog geen gedeelde dagtaken" terwijl de eerste
+                        // fetch nog liep: misleidend (4l).
+                        ProgressView()
+                            .tint(BovexaTheme.Colors.accent)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                    } else if viewModel.teamTasks.isEmpty, viewModel.loadFailed {
+                        LoadFailedNote(text: "Kon de bedrijfslijst niet laden.")
+                    } else if viewModel.teamTasks.isEmpty {
                         Text("Nog geen gedeelde dagtaken. Kies “\(viewModel.orgName ?? "Bedrijf")” bij het toevoegen.")
                             .font(BovexaTheme.TypeStyle.footnote)
                             .foregroundStyle(BovexaTheme.Colors.inkSoft)

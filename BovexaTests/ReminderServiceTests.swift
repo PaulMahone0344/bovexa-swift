@@ -17,6 +17,13 @@ final class FakeNotificationScheduler: NotificationScheduling, @unchecked Sendab
     func cancel(identifier: String) {
         canceledIdentifiers.append(identifier)
     }
+
+    private(set) var cancelAllCount = 0
+
+    func cancelAll() {
+        cancelAllCount += 1
+        scheduledIdentifiers.removeAll()
+    }
 }
 
 struct ReminderServiceTests {

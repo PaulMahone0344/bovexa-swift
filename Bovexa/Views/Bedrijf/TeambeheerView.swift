@@ -4,9 +4,14 @@ import PhotosUI
 /// Beheer-scherm voor admins: uitnodigen (code/deel/mail/nieuwe code), logo, en
 /// bedrijfsprofiel — één plek, bereikbaar via het team-icoon op de Bedrijf-tab.
 struct TeambeheerView: View {
+    /// Wordt geroepen als hier iets verandert wat de Bedrijf-kaart toont (naam,
+    /// logo, code). Die kaart ververst zichzelf niet als dit scherm terugklapt.
+    var onChanged: () -> Void = {}
+
     @EnvironmentObject private var authStore: AuthStore
     @StateObject private var viewModel = TeambeheerViewModel()
     @State private var showRotateConfirm = false
+    @State private var showRemoveLogoConfirm = false
     @State private var logoPickerItem: PhotosPickerItem?
 
     private var token: String { authStore.token ?? "" }
@@ -48,11 +53,27 @@ struct TeambeheerView: View {
         } message: {
             Text(viewModel.inviteSentMessage ?? "")
         }
+        .confirmationDialog("Logo verwijderen?", isPresented: $showRemoveLogoConfirm, titleVisibility: .visible) {
+            Button("Verwijderen", role: .destructive) {
+                Task {
+                    await viewModel.removeLogo(token: token)
+                    onChanged()
+                }
+            }
+            Button("Annuleren", role: .cancel) {}
+        }
         .onChange(of: logoPickerItem) { _, item in
             guard let item else { return }
             Task {
-                if let data = try? await item.loadTransferable(type: Data.self) {
-                    await viewModel.uploadLogo(fileName: "logo.jpg", mimeType: "image/jpeg", fileData: data, token: token)
+                // Verkleinen en écht naar jpeg omzetten (4f): HEIC van 3-8 MB ging
+                // eerder ongewijzigd omhoog als "logo.jpg", en een mislukte
+                // loadTransferable gaf helemaal geen melding.
+                if let raw = try? await item.loadTransferable(type: Data.self),
+                   let jpeg = ImageUploadPreparation.jpegData(from: raw) {
+                    await viewModel.uploadLogo(fileName: "logo.jpg", mimeType: "image/jpeg", fileData: jpeg, token: token)
+                    onChanged()
+                } else {
+                    viewModel.errorMessage = "Kon de foto niet lezen. Probeer een andere."
                 }
                 logoPickerItem = nil
             }
@@ -152,7 +173,9 @@ struct TeambeheerView: View {
                         }
                     }
                     .buttonStyle(.glassProminentBrand)
-                    .disabled(viewModel.inviteSending || viewModel.inviteEmail.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                    // Bij een vol bedrijf weigert de server toch: dan liever een
+                    // uitgeschakelde knop dan "Mislukt" na de tik (4d).
+                    .disabled(viewModel.inviteSending || viewModel.full || viewModel.inviteEmail.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
                 }
 
                 logoRow
@@ -182,11 +205,11 @@ struct TeambeheerView: View {
             .disabled(viewModel.logoBusy)
 
             if let logo = viewModel.org?.logo, !logo.isEmpty {
-                Button("Verwijder") {
-                    Haptics.selection()
-                    Task { await viewModel.removeLogo(token: token) }
+                Button("Verwijder", role: .destructive) {
+                    Haptics.warning()
+                    showRemoveLogoConfirm = true
                 }
-                .buttonStyle(.glassSecondaryBrand)
+                .buttonStyle(.glassSecondaryDanger)
                 .disabled(viewModel.logoBusy)
             }
         }
@@ -278,9 +301,19 @@ struct TeambeheerView: View {
                     }
                 }
                 .buttonStyle(.glassProminentBrand)
+                .disabled(viewModel.savingProfile)
                 .padding(.top, BovexaTheme.Space.xs)
+
+                if viewModel.profileSavedAt != nil {
+                    Text("Opgeslagen")
+                        .font(BovexaTheme.TypeStyle.footnote.weight(.semibold))
+                        .foregroundStyle(BovexaTheme.Colors.categoryGreen)
+                        .frame(maxWidth: .infinity, alignment: .center)
+                        .transition(.opacity)
+                }
             }
         }
+        .animation(.snappy, value: viewModel.profileSavedAt)
     }
 
     private func labeledField(_ label: String, text: Binding<String>, keyboard: UIKeyboardType = .default) -> some View {

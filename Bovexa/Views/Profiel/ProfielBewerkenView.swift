@@ -12,6 +12,7 @@ struct ProfielBewerkenView: View {
     @StateObject private var viewModel: ProfielBewerkenViewModel
     @State private var selection: PhotosPickerItem?
     @State private var previewImage: Image?
+    @State private var photoError: String?
 
     private let existingAvatarURL: URL?
 
@@ -42,6 +43,7 @@ struct ProfielBewerkenView: View {
                                 if viewModel.hasPhoto {
                                     Button {
                                         Haptics.selection()
+                                        photoError = nil
                                         viewModel.markRemovePhoto()
                                         previewImage = nil
                                         // Zonder dit blijft de PhotosPickerItem staan
@@ -58,6 +60,12 @@ struct ProfielBewerkenView: View {
                                     }
                                     .buttonStyle(.plain)
                                 }
+                            }
+
+                            if let photoError {
+                                Text(photoError)
+                                    .font(BovexaTheme.TypeStyle.footnote.weight(.semibold))
+                                    .foregroundStyle(BovexaTheme.Colors.danger)
                             }
                         }
                         .padding(.top, BovexaTheme.Space.lg)
@@ -136,9 +144,20 @@ struct ProfielBewerkenView: View {
     }
 
     private func loadPicked(_ item: PhotosPickerItem?) async {
-        guard let item, let data = try? await item.loadTransferable(type: Data.self) else { return }
-        viewModel.selectPhoto(.init(fileName: "avatar.jpg", mimeType: "image/jpeg", data: data))
-        if let uiImage = UIImage(data: data) {
+        guard let item, let raw = try? await item.loadTransferable(type: Data.self) else {
+            // Faalde stil: de picker sloot en er gebeurde niets (4f).
+            photoError = "Kon de foto niet lezen. Probeer een andere."
+            return
+        }
+        // De picker levert HEIC of PNG van 3-8 MB, maar we kondigden het aan als
+        // "avatar.jpg"/image/jpeg. Nu écht jpeg, en ten hoogste 512px.
+        guard let jpeg = ImageUploadPreparation.jpegData(from: raw) else {
+            photoError = "Kon de foto niet lezen. Probeer een andere."
+            return
+        }
+        photoError = nil
+        viewModel.selectPhoto(.init(fileName: "avatar.jpg", mimeType: "image/jpeg", data: jpeg))
+        if let uiImage = UIImage(data: jpeg) {
             previewImage = Image(uiImage: uiImage)
         }
     }

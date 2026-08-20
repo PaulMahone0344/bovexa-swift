@@ -129,7 +129,7 @@ struct PlannerAPITests {
             Issue.record("had moeten falen")
         } catch let error as PlannerAPIError {
             #expect(error == .network)
-            #expect(error.message == "Geen verbinding met de planner. Check je internet en probeer opnieuw.")
+            #expect(error.message == "Geen verbinding met de planner. Controleer je internet en probeer opnieuw.")
         } catch {
             Issue.record("verkeerd fouttype: \(error)")
         }

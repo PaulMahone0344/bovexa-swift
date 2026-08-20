@@ -6,6 +6,9 @@ import SwiftUI
 /// "collega ziet het logo niet"-symptoom.
 struct RemoteLogoView: View {
     let url: URL
+    /// Wat er staat zolang het logo laadt of niet komt. `Color.clear` liet een
+    /// gat van 44x44 achter (4g); een koffertje leest als "hier hoort een logo".
+    var placeholderSystemImage: String? = "briefcase.fill"
 
     @State private var image: UIImage?
 
@@ -13,6 +16,12 @@ struct RemoteLogoView: View {
         Group {
             if let image {
                 Image(uiImage: image).resizable().scaledToFit()
+            } else if let placeholderSystemImage {
+                Image(systemName: placeholderSystemImage)
+                    .resizable()
+                    .scaledToFit()
+                    .padding(6)
+                    .foregroundStyle(BovexaTheme.Colors.muted)
             } else {
                 Color.clear
             }

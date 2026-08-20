@@ -231,4 +231,25 @@ struct MeldingenViewModelTests {
         #expect(seenStore.lastSeen(userId: "me") == nil)
         #expect(vm.loaded)
     }
+
+    // MARK: - Vorige kaarten behouden (M11 plak 4a)
+
+    @Test func aFailedRefreshKeepsThePreviousCards() async {
+        let events = """
+        {"items":[{"id":"a","owner":"collega","title":"Klus","start":"2026-07-24 09:00:00.000Z","all_day":false,"assignee":["me"],"assignee_status":{}}],
+         "page":1,"perPage":200,"totalItems":1,"totalPages":1}
+        """
+        URLProtocolStub.requestHandler = routedHandler(events: events)
+        let vm = makeViewModel()
+        await vm.load()
+        #expect(vm.pending.count == 1)
+        #expect(!vm.loadFailed)
+
+        URLProtocolStub.requestHandler = { _ in (500, Data("{}".utf8)) }
+        await vm.load()
+
+        #expect(vm.pending.count == 1)
+        #expect(vm.loadFailed)
+    }
+
 }
