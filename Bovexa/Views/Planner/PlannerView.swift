@@ -265,14 +265,16 @@ struct PlannerView: View {
             Button {
                 Task { await viewModel.confirm() }
             } label: {
+                // Frame ín het label, ook in de ProgressView-tak: buiten de Button
+                // is de pil zo breed als zijn tekst en raakt alleen de pil, en
+                // tijdens opslaan kromp hij naar spinner-breedte.
                 if viewModel.saving {
-                    ProgressView().tint(BovexaTheme.Colors.white)
+                    ProgressView().tint(BovexaTheme.Colors.white).frame(maxWidth: .infinity)
                 } else {
-                    Text("Zet in agenda")
+                    Text("Zet in agenda").frame(maxWidth: .infinity)
                 }
             }
             .buttonStyle(.glassProminentBrand)
-            .frame(maxWidth: .infinity)
             .disabled(viewModel.saving)
         }
     }

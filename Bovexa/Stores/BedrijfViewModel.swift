@@ -155,8 +155,10 @@ final class BedrijfViewModel: ObservableObject {
 
     func changeRole(_ member: CompanyMember, to role: CompanyRole, actingUserId: String, token: String) async {
         guard member.canBeManaged(by: actingUserId), busyMemberId == nil else { return }
-        expandedMemberId = nil
+        // Guard vóór het dichtklappen: tikken op de rol die het lid al heeft deed
+        // anders niets behalve de rij sluiten, en dat leest als een fout.
         guard role != member.role else { return }
+        expandedMemberId = nil
 
         let previous = membersResponse
         busyMemberId = member.id

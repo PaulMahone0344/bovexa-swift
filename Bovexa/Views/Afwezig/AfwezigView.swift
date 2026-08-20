@@ -259,14 +259,14 @@ struct AfwezigView: View {
         Button {
             Task { await viewModel.save() }
         } label: {
+            // Frame ín het label, ook in de ProgressView-tak (M11 patroon A).
             if viewModel.saving {
-                ProgressView().tint(BovexaTheme.Colors.white)
+                ProgressView().tint(BovexaTheme.Colors.white).frame(maxWidth: .infinity)
             } else {
-                Text("Beschikbaarheid doorgeven")
+                Text("Beschikbaarheid doorgeven").frame(maxWidth: .infinity)
             }
         }
         .buttonStyle(.glassProminentBrand)
-        .frame(maxWidth: .infinity)
         .disabled(!viewModel.canSave)
     }
 }

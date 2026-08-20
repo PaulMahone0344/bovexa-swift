@@ -141,6 +141,9 @@ struct AssigneePickerView: View {
                         .lineLimit(1)
                     Spacer()
                 }
+                // minHeight ín het label: de verticale padding stond buiten de
+                // Button, dus die 18pt tussen twee rijen was dode ruimte.
+                .frame(minHeight: 44)
                 .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
@@ -150,11 +153,12 @@ struct AssigneePickerView: View {
                 Button(action: onStar) {
                     Image(systemName: starred ? "star.fill" : "star")
                         .foregroundStyle(starred ? BovexaTheme.Colors.categoryAmber : BovexaTheme.Colors.muted)
+                        .minTapTarget()
                 }
                 .buttonStyle(.plain)
                 .disabled(disabled)
+                .accessibilityLabel(starred ? "Verwijder uit favorieten" : "Markeer als favoriet")
             }
         }
-        .padding(.vertical, BovexaTheme.Space.xs)
     }
 }

@@ -79,13 +79,30 @@ struct LedenLijstView: View {
         canManage && member.canBeManaged(by: currentUserId)
     }
 
+    @ViewBuilder
     private func row(for member: CompanyMember, first: Bool) -> some View {
         let manageable = rowManageable(member)
+
+        // Alleen een beheerbare rij wordt een Button: een niet-beheerbare rij heeft
+        // geen actie en hoort dus ook geen knop-rol te krijgen. De ster blijft in
+        // beide gevallen zijn eigen Button (valkuil C/D) en dimt niet mee.
+        if manageable {
+            Button {
+                Haptics.selection()
+                viewModel.toggleExpanded(member.id)
+            } label: {
+                rowContent(for: member, first: first, manageable: true)
+            }
+            .buttonStyle(.plain)
+            .accessibilityValue(viewModel.expandedMemberId == member.id ? "uitgeklapt" : "ingeklapt")
+        } else {
+            rowContent(for: member, first: first, manageable: false)
+        }
+    }
+
+    private func rowContent(for member: CompanyMember, first: Bool, manageable: Bool) -> some View {
         let expanded = viewModel.expandedMemberId == member.id
 
-        // Geen omhullende Button: die dimt bij disabled() zijn hele label mee (ook de
-        // naam en de ster), terwijl alleen de chevron/uitklap-actie beheerrecht nodig
-        // heeft (valkuil C/D) — de ster blijft voor iedereen op volle sterkte tikbaar.
         return HStack(spacing: BovexaTheme.Space.sm) {
             avatar(for: member)
 
@@ -111,8 +128,10 @@ struct LedenLijstView: View {
             } label: {
                 Image(systemName: viewModel.isFavorite(member.userId) ? "star.fill" : "star")
                     .foregroundStyle(viewModel.isFavorite(member.userId) ? BovexaTheme.Colors.categoryAmber : BovexaTheme.Colors.muted)
+                    .minTapTarget()
             }
             .buttonStyle(.plain)
+            .accessibilityLabel(viewModel.isFavorite(member.userId) ? "Favoriet verwijderen" : "Als favoriet markeren")
 
             if manageable {
                 if viewModel.busyMemberId == member.id {
@@ -125,14 +144,10 @@ struct LedenLijstView: View {
                 }
             }
         }
-        .contentShape(Rectangle())
-        .onTapGesture {
-            guard manageable else { return }
-            Haptics.selection()
-            viewModel.toggleExpanded(member.id)
-        }
+        // Padding vóór contentShape: andersom bleef de 10pt rand rondom de rij dood.
         .padding(.horizontal, BovexaTheme.Space.sm)
         .padding(.vertical, BovexaTheme.Space.sm)
+        .contentShape(Rectangle())
         .overlay(alignment: .top) {
             if !first {
                 Rectangle().fill(BovexaTheme.Colors.edgeSoft).frame(height: 1)
@@ -144,18 +159,26 @@ struct LedenLijstView: View {
         VStack(alignment: .leading, spacing: BovexaTheme.Space.sm) {
             HStack(spacing: BovexaTheme.Space.xs) {
                 ForEach(SelectableCompanyRole.allCases, id: \.self) { option in
-                    Button(option.label) {
+                    // Opmaak ín het label (M11 patroon A): stond de padding en de
+                    // capsule op de Button, dan raakte alleen de 12pt tekst en gaf
+                    // de capsule geen ingedrukt-feedback.
+                    Button {
                         Haptics.selection()
                         Task { await viewModel.changeRole(member, to: option.role, actingUserId: currentUserId, token: token) }
+                    } label: {
+                        Text(option.label)
+                            .font(.system(size: 12, weight: .bold))
+                            .foregroundStyle(member.role == option.role ? BovexaTheme.Colors.accent : BovexaTheme.Colors.inkSoft)
+                            .padding(.horizontal, BovexaTheme.Space.sm)
+                            .frame(minHeight: 36)
+                            .background(
+                                Capsule().fill(member.role == option.role ? BovexaTheme.Colors.accent.opacity(0.14) : BovexaTheme.Colors.glass)
+                            )
+                            .overlay(Capsule().stroke(BovexaTheme.Colors.edge, lineWidth: member.role == option.role ? 0 : 1))
+                            .contentShape(Capsule())
                     }
-                    .font(.system(size: 12, weight: .bold))
-                    .foregroundStyle(member.role == option.role ? BovexaTheme.Colors.accent : BovexaTheme.Colors.inkSoft)
-                    .padding(.horizontal, BovexaTheme.Space.sm)
-                    .padding(.vertical, 6)
-                    .background(
-                        Capsule().fill(member.role == option.role ? BovexaTheme.Colors.accent.opacity(0.14) : BovexaTheme.Colors.glass)
-                    )
-                    .overlay(Capsule().stroke(BovexaTheme.Colors.edge, lineWidth: member.role == option.role ? 0 : 1))
+                    .buttonStyle(.plain)
+                    .accessibilityAddTraits(member.role == option.role ? .isSelected : [])
                 }
             }
 
@@ -183,20 +206,34 @@ struct LedenLijstView: View {
                                 .foregroundStyle(BovexaTheme.Colors.inkSoft)
                             Spacer()
                         }
+                        // Vijf rijen van 20pt boven elkaar: één mis-tik zette het
+                        // verkeerde recht om, inclusief netwerkcall.
+                        .frame(minHeight: 36)
                         .contentShape(Rectangle())
                     }
                     .buttonStyle(.plain)
+                    .accessibilityValue(on ? "aan" : "uit")
                 }
             }
 
-            Button("Verwijderen", role: .destructive) {
+            Button(role: .destructive) {
                 Haptics.warning()
                 pendingRemove = member
+            } label: {
+                Text("Verwijderen")
+                    .font(.system(size: 12, weight: .bold))
+                    .foregroundStyle(BovexaTheme.Colors.danger)
+                    .padding(.horizontal, BovexaTheme.Space.xs)
+                    .frame(minHeight: 44)
+                    .contentShape(Rectangle())
             }
-            .font(.system(size: 12, weight: .bold))
+            .buttonStyle(.plain)
         }
         .padding(.horizontal, BovexaTheme.Space.sm)
         .padding(.bottom, BovexaTheme.Space.sm)
+        // Zolang er een actie loopt doet de viewmodel toch niets (guard) — dan
+        // moeten de knoppen dat ook laten zien in plaats van dood aan te voelen.
+        .disabled(viewModel.busyMemberId != nil)
     }
 
     private func nameLabel(for member: CompanyMember) -> String {

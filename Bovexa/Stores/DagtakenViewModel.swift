@@ -16,6 +16,12 @@ final class DagtakenViewModel: ObservableObject {
     /// Wissen uit het lokale archief vraagt een tweede tik binnen dit venster
     /// (valkuil G); die vervalt vanzelf.
     @Published private(set) var confirmDeleteId: String?
+    /// Spiegel van `planningStore.notes`. Was een computed property, maar
+    /// PlanningNoteStore is geen ObservableObject: afvinken, archiveren en
+    /// terugzetten veranderden de waarde wél, maar publiceerden niets, dus het
+    /// scherm bleef staan tot een willekeurige herrender (tab wisselen, sheet
+    /// openen). Elke mutatie loopt nu via `syncNotes()`.
+    @Published private(set) var notes: [PlanningNote] = []
 
     let memberColors = MemberColors()
 
@@ -35,9 +41,11 @@ final class DagtakenViewModel: ObservableObject {
         self.taskRepository = taskRepository
         self.eventRepository = eventRepository
         self.confirmDeleteTimeout = confirmDeleteTimeout
+        syncNotes()
     }
 
-    var notes: [PlanningNote] { planningStore.notes }
+    private func syncNotes() { notes = planningStore.notes }
+
     var openNotes: [PlanningNote] { notes.filter { !$0.archived } }
     var archivedNotes: [PlanningNote] { notes.filter { $0.archived } }
     var isEditing: Bool { editingId != nil }
@@ -85,14 +93,17 @@ final class DagtakenViewModel: ObservableObject {
 
     func toggleNote(_ id: String) {
         planningStore.toggle(id: id)
+        syncNotes()
     }
 
     func archive(_ id: String) {
         planningStore.setArchived(id: id, archived: true)
+        syncNotes()
     }
 
     func restore(_ id: String) {
         planningStore.setArchived(id: id, archived: false)
+        syncNotes()
     }
 
     /// Eerste tik markeert, tweede tik binnen `confirmDeleteTimeout` wist definitief.
@@ -102,6 +113,7 @@ final class DagtakenViewModel: ObservableObject {
         if confirmDeleteId == id {
             confirmDeleteId = nil
             planningStore.delete(id: id)
+            syncNotes()
             return
         }
 
@@ -152,6 +164,7 @@ final class DagtakenViewModel: ObservableObject {
 
         if let editingId {
             planningStore.update(id: editingId, text: draft)
+            syncNotes()
             self.editingId = nil
             draft = ""
             return
@@ -163,6 +176,7 @@ final class DagtakenViewModel: ObservableObject {
         }
 
         planningStore.add(text: draft)
+        syncNotes()
         draft = ""
     }
 

@@ -89,8 +89,12 @@ struct SearchView: View {
                             Haptics.selection()
                             selectedEvent = event
                         } label: {
-                            resultRow(event)
+                            // Bugklasse van 26 juli: glas en Spacer tellen niet mee
+                            // voor hit-testing, dus zonder contentShape ín het label
+                            // raakten alleen de stip, de teksten en de chevron.
+                            resultRow(event).contentShape(Rectangle())
                         }
+                        .buttonStyle(.plain)
                     }
                 }
             }

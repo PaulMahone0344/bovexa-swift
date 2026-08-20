@@ -114,15 +114,17 @@ struct ProfielView: View {
                             }
                         }
 
-                        Button("Uitloggen") {
+                        // Frame ín het label en de danger-variant van de stijl: de
+                        // kleur, het lettertype en de breedte stonden op de Button
+                        // en werden alle drie door de stijl overschreven, dus deze
+                        // knop rendeerde als een smalle blauwe pil.
+                        Button {
                             Haptics.selection()
                             authStore.signOut()
+                        } label: {
+                            Text("Uitloggen").frame(maxWidth: .infinity)
                         }
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, BovexaTheme.Space.sm)
-                        .foregroundStyle(BovexaTheme.Colors.danger)
-                        .font(BovexaTheme.TypeStyle.headline)
-                        .buttonStyle(.glassSecondaryBrand)
+                        .buttonStyle(.glassSecondaryDanger)
 
                         Button("Account verwijderen") {
                             showDeleteConfirm = true

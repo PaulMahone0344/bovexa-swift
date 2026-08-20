@@ -1,5 +1,6 @@
 import Testing
 import Foundation
+import Combine
 @testable import Bovexa
 
 @MainActor
@@ -150,6 +151,71 @@ struct DagtakenViewModelTests {
 
         #expect(vm.openNotes.isEmpty)
         #expect(vm.archivedNotes.map(\.id) == [note.id])
+    }
+
+    // MARK: - publiceren na een mutatie op de lokale dagtaken (M11 plak 1a)
+
+    /// `notes` was een computed property op een PlanningNoteStore die geen
+    /// ObservableObject is: afvinken veranderde de waarde wél, maar niets
+    /// publiceerde, dus de rij bleef op het scherm staan zoals hij was. Deze test
+    /// kijkt daarom naar objectWillChange, niet alleen naar de waarde.
+    private func recordPublish(_ vm: DagtakenViewModel, during change: () -> Void) -> Bool {
+        var published = false
+        let token = vm.objectWillChange.sink { _ in published = true }
+        change()
+        token.cancel()
+        return published
+    }
+
+    @Test func toggleNotePublishesAndFlipsDone() async {
+        let vm = makeViewModel()
+        vm.draft = "Afvinken"
+        await vm.submit(userId: "u1", org: nil, token: "tok")
+        let note = vm.openNotes.first!
+
+        let published = recordPublish(vm) { vm.toggleNote(note.id) }
+
+        #expect(published)
+        #expect(vm.notes.first(where: { $0.id == note.id })?.done == true)
+    }
+
+    @Test func archivePublishesChange() async {
+        let vm = makeViewModel()
+        vm.draft = "Archiveren"
+        await vm.submit(userId: "u1", org: nil, token: "tok")
+        let note = vm.openNotes.first!
+
+        let published = recordPublish(vm) { vm.archive(note.id) }
+
+        #expect(published)
+        #expect(vm.archivedNotes.map(\.id) == [note.id])
+    }
+
+    @Test func restorePublishesChange() async {
+        let vm = makeViewModel()
+        vm.draft = "Terugzetten"
+        await vm.submit(userId: "u1", org: nil, token: "tok")
+        let note = vm.openNotes.first!
+        vm.archive(note.id)
+
+        let published = recordPublish(vm) { vm.restore(note.id) }
+
+        #expect(published)
+        #expect(vm.openNotes.map(\.id) == [note.id])
+    }
+
+    @Test func addAndEditKeepNotesInSync() async {
+        let vm = makeViewModel()
+        vm.draft = "Eerste"
+        await vm.submit(userId: "u1", org: nil, token: "tok")
+        #expect(vm.notes.map(\.title) == ["Eerste"])
+
+        let note = vm.openNotes.first!
+        vm.startEdit(note)
+        vm.draft = "Eerste, aangepast"
+        await vm.submit(userId: "u1", org: nil, token: "tok")
+
+        #expect(vm.notes.map(\.title) == ["Eerste, aangepast"])
     }
 
     // MARK: - loadOrgInfo

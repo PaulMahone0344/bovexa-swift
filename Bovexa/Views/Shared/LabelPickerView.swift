@@ -108,21 +108,32 @@ struct LabelPickerView: View {
                 )
                 .clipShape(RoundedRectangle(cornerRadius: BovexaTheme.Radius.md, style: .continuous))
 
-            FlowLayout(spacing: BovexaTheme.Space.xs) {
+            // Spacing 0: het bolletje blijft 26pt, maar het raakvlak is nu 44 —
+            // met xs-spacing erbij zou de rij hart-op-hart uit elkaar lopen.
+            FlowLayout(spacing: 0) {
                 ForEach(BovexaTheme.LabelPalette.options) { option in
-                    Circle()
-                        .fill(Color(hex: option.hex))
-                        .frame(width: 26, height: 26)
-                        .overlay(
-                            Circle().strokeBorder(BovexaTheme.Colors.white, lineWidth: newLabelColor == option.hex ? 2.5 : 0)
-                        )
-                        .overlay(
-                            Circle().strokeBorder(BovexaTheme.Colors.edge, lineWidth: newLabelColor == option.hex ? 0 : 1)
-                        )
-                        .onTapGesture {
-                            Haptics.selection()
-                            newLabelColor = option.hex
-                        }
+                    let isCurrent = newLabelColor == option.hex
+                    // Button in plaats van Circle().onTapGesture: een Shape heeft
+                    // geen knop-rol, dus met VoiceOver was hier geen kleur te
+                    // kiezen, en er was geen ingedrukt-feedback.
+                    Button {
+                        Haptics.selection()
+                        newLabelColor = option.hex
+                    } label: {
+                        Circle()
+                            .fill(Color(hex: option.hex))
+                            .frame(width: 26, height: 26)
+                            .overlay(
+                                Circle().strokeBorder(BovexaTheme.Colors.white, lineWidth: isCurrent ? 2.5 : 0)
+                            )
+                            .overlay(
+                                Circle().strokeBorder(BovexaTheme.Colors.edge, lineWidth: isCurrent ? 0 : 1)
+                            )
+                            .minTapTarget()
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel(option.name)
+                    .accessibilityAddTraits(isCurrent ? .isSelected : [])
                 }
 
                 ColorPicker("Vrije kleur", selection: $newCustomColor, supportsOpacity: false)
@@ -135,15 +146,17 @@ struct LabelPickerView: View {
             Button {
                 Task { await createLabel() }
             } label: {
+                // Frame ín het label, ook in de ProgressView-tak (M11 patroon A);
+                // de minHeight stond buiten de Button en deed daar niets.
                 if isCreating {
-                    ProgressView().tint(BovexaTheme.Colors.white)
+                    ProgressView().tint(BovexaTheme.Colors.white).frame(maxWidth: .infinity)
                 } else {
                     Text("Toevoegen")
                         .font(BovexaTheme.TypeStyle.subheadline.weight(.bold))
+                        .frame(maxWidth: .infinity)
                 }
             }
             .buttonStyle(.glassProminentBrand)
-            .frame(maxWidth: .infinity, minHeight: 42)
             .disabled(isCreating || newLabelName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
         }
         .padding(BovexaTheme.Space.md)

@@ -58,13 +58,14 @@ struct PersoonFormView: View {
                         }
 
                         if case .edit = mode {
-                            Button("Verwijderen", role: .destructive) {
+                            // Frame ín het label, kleur uit de stijl: buiten de
+                            // Button deden breedte, font en kleur niets (M11 1c).
+                            Button(role: .destructive) {
                                 showDeleteConfirm = true
+                            } label: {
+                                Text("Verwijderen").frame(maxWidth: .infinity)
                             }
-                            .frame(maxWidth: .infinity)
-                            .font(BovexaTheme.TypeStyle.headline)
-                            .foregroundStyle(BovexaTheme.Colors.danger)
-                            .buttonStyle(.glassSecondaryBrand)
+                            .buttonStyle(.glassSecondaryDanger)
                         }
                     }
                     .padding(BovexaTheme.Space.xl)

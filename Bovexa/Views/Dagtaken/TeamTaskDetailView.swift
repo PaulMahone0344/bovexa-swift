@@ -125,8 +125,9 @@ struct TeamTaskDetailView: View {
                     Label("Wissen", systemImage: "trash")
                         .frame(maxWidth: .infinity, minHeight: 42)
                 }
-                .buttonStyle(.glassSecondaryBrand)
-                .tint(BovexaTheme.Colors.danger)
+                // `.tint` deed niets: GlassSecondaryButtonStyle zette de accentkleur
+                // hard op het label. De danger-variant regelt het nu in de stijl.
+                .buttonStyle(.glassSecondaryDanger)
                 .disabled(isDeleting)
             } else {
                 Text("Alleen \(ownerName(task)) kan deze dagtaak wissen.")

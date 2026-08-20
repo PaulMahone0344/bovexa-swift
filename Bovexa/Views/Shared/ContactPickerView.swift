@@ -126,15 +126,17 @@ struct ContactPickerView: View {
             Button {
                 Task { await createContact() }
             } label: {
+                // Frame ín het label, ook in de ProgressView-tak (M11 patroon A);
+                // de minHeight stond buiten de Button en deed daar niets.
                 if isCreating {
-                    ProgressView().tint(BovexaTheme.Colors.white)
+                    ProgressView().tint(BovexaTheme.Colors.white).frame(maxWidth: .infinity)
                 } else {
                     Text("Toevoegen")
                         .font(BovexaTheme.TypeStyle.subheadline.weight(.bold))
+                        .frame(maxWidth: .infinity)
                 }
             }
             .buttonStyle(.glassProminentBrand)
-            .frame(maxWidth: .infinity, minHeight: 42)
             .disabled(isCreating || newNaam.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
         }
         .padding(BovexaTheme.Space.md)

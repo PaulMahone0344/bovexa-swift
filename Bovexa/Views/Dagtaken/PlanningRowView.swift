@@ -40,9 +40,13 @@ struct PlanningRowView: View {
                                     .foregroundStyle(BovexaTheme.Colors.white)
                             }
                         }
+                        // Raakvlak 40×44 zoals TeamTaskRowView; het bolletje blijft
+                        // 22pt. Links uitgelijnd, anders schuift de tekst op.
+                        .frame(width: 40, height: 44, alignment: .leading)
+                        .contentShape(Rectangle())
                     }
                     .buttonStyle(.plain)
-                    .padding(.top, 1)
+                    .accessibilityLabel(note.done ? "Afvinken ongedaan maken" : "Afvinken")
 
                     Button(action: {
                         Haptics.selection()
@@ -82,25 +86,37 @@ struct PlanningRowView: View {
                     .buttonStyle(.plain)
                 }
 
-                HStack(spacing: BovexaTheme.Space.md) {
+                HStack(spacing: BovexaTheme.Space.sm) {
                     Spacer()
 
-                    Button("Bewerken", action: onEdit)
-                        .font(BovexaTheme.TypeStyle.footnote.weight(.bold))
-                        .foregroundStyle(BovexaTheme.Colors.accent)
+                    actionButton("Bewerken", tint: BovexaTheme.Colors.accent, action: onEdit)
 
                     if let onRestore {
-                        Button("Terugzetten", action: onRestore)
-                            .font(BovexaTheme.TypeStyle.footnote.weight(.bold))
-                            .foregroundStyle(BovexaTheme.Colors.accent)
+                        actionButton("Terugzetten", tint: BovexaTheme.Colors.accent, action: onRestore)
                     }
 
-                    Button(trailingLabel, action: trailingAction)
-                        .font(BovexaTheme.TypeStyle.footnote.weight(.bold))
-                        .foregroundStyle(BovexaTheme.Colors.danger)
+                    actionButton(trailingLabel, tint: BovexaTheme.Colors.danger, action: trailingAction)
                 }
             }
         }
+    }
+
+    /// Drie tekstknoppen naast elkaar in footnote waren elk ±16pt hoog, waarvan
+    /// één destructief. Opmaak en raakvlak staan nu ín het label; de tekst blijft
+    /// even groot, alleen de ruimte eromheen groeit (M11 patroon B).
+    private func actionButton(_ title: String, tint: Color, action: @escaping () -> Void) -> some View {
+        Button {
+            Haptics.selection()
+            action()
+        } label: {
+            Text(title)
+                .font(BovexaTheme.TypeStyle.footnote.weight(.bold))
+                .foregroundStyle(tint)
+                .padding(.horizontal, BovexaTheme.Space.xs)
+                .frame(minHeight: 44)
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
     }
 }
 

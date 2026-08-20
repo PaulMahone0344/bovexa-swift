@@ -150,36 +150,44 @@ struct LegendeView: View {
                     customColor = Color(hex: label.kleur)
                     withAnimation(.snappy) { colorPickingLabelId = colorPickingLabelId == label.id ? nil : label.id }
                 } label: {
+                    // Bolletje blijft 18pt, raakvlak 44 (M11 patroon B).
                     Circle()
                         .fill(Color(hex: label.kleur))
                         .frame(width: 18, height: 18)
                         .overlay(Circle().strokeBorder(BovexaTheme.Colors.edge, lineWidth: 1))
+                        .minTapTarget()
                 }
+                .buttonStyle(.plain)
+                .accessibilityLabel("Kleur van \(label.naam) wijzigen")
 
                 Button {
+                    Haptics.selection()
                     renameText = label.naam
                     renamingLabel = label
                 } label: {
+                    // Hele rij tot aan de prullenbak hernoemt; alles rechts van de
+                    // naam was dood.
                     Text(label.naam)
                         .font(BovexaTheme.TypeStyle.body.weight(.medium))
                         .foregroundStyle(BovexaTheme.Colors.ink)
                         .lineLimit(1)
+                        .rowTapTarget()
                 }
                 .buttonStyle(.plain)
 
-                Spacer()
-
                 if viewModel.isAdmin {
                     Button {
+                        Haptics.selection()
                         pendingDelete = label
                     } label: {
                         Image(systemName: "trash")
                             .foregroundStyle(BovexaTheme.Colors.danger)
+                            .minTapTarget()
                     }
                     .buttonStyle(.plain)
+                    .accessibilityLabel("Label \(label.naam) verwijderen")
                 }
             }
-            .padding(.vertical, BovexaTheme.Space.xs)
 
             if colorPickingLabelId == label.id {
                 colorSwatchRow(for: label)
@@ -188,18 +196,30 @@ struct LegendeView: View {
     }
 
     private func colorSwatchRow(for label: AgendaLabel) -> some View {
-        FlowLayout(spacing: BovexaTheme.Space.xs) {
+        // Spacing van xs (6) naar 0: de swatches zijn nu 44pt raakvlak in plaats
+        // van 24pt, dus zonder die verlaging rekt de rij hart-op-hart op.
+        FlowLayout(spacing: 0) {
             ForEach(BovexaTheme.LabelPalette.options) { option in
-                Circle()
-                    .fill(Color(hex: option.hex))
-                    .frame(width: 24, height: 24)
-                    .overlay(Circle().strokeBorder(BovexaTheme.Colors.edge, lineWidth: 1))
-                    .onTapGesture {
-                        Haptics.selection()
-                        customCommitTask?.cancel()
-                        Task { await viewModel.updateColor(label, to: option.hex) }
-                        withAnimation(.snappy) { colorPickingLabelId = nil }
-                    }
+                let isCurrent = option.hex.caseInsensitiveCompare(label.kleur) == .orderedSame
+                // Button in plaats van Circle().onTapGesture: een Shape heeft geen
+                // knop-rol, dus met VoiceOver was hier geen kleur te kiezen, en er
+                // was geen ingedrukt-feedback.
+                Button {
+                    Haptics.selection()
+                    customCommitTask?.cancel()
+                    Task { await viewModel.updateColor(label, to: option.hex) }
+                    withAnimation(.snappy) { colorPickingLabelId = nil }
+                } label: {
+                    Circle()
+                        .fill(Color(hex: option.hex))
+                        .frame(width: 24, height: 24)
+                        .overlay(Circle().strokeBorder(BovexaTheme.Colors.white, lineWidth: isCurrent ? 2.5 : 0))
+                        .overlay(Circle().strokeBorder(BovexaTheme.Colors.edge, lineWidth: isCurrent ? 0 : 1))
+                        .minTapTarget()
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel(option.name)
+                .accessibilityAddTraits(isCurrent ? .isSelected : [])
             }
 
             // Vrije kleur via de systeem-picker (raster/spectrum/sliders). Sluit
@@ -234,8 +254,12 @@ struct LegendeView: View {
                     .font(BovexaTheme.TypeStyle.subheadline.weight(.semibold))
             }
             .foregroundStyle(BovexaTheme.Colors.accent)
+            // `.padding(.top)` stond op de Button en telde dus niet mee voor het
+            // raakvlak; nu een echte 44pt hoogte in het label.
+            .frame(minHeight: 44)
+            .contentShape(Rectangle())
         }
-        .padding(.top, BovexaTheme.Space.xs)
+        .buttonStyle(.plain)
     }
 
     private var newLabelForm: some View {
@@ -250,17 +274,24 @@ struct LegendeView: View {
                 )
                 .clipShape(RoundedRectangle(cornerRadius: BovexaTheme.Radius.md, style: .continuous))
 
-            FlowLayout(spacing: BovexaTheme.Space.xs) {
+            // Spacing 0: de swatches zijn nu 44pt raakvlak in plaats van 24pt.
+            FlowLayout(spacing: 0) {
                 ForEach(BovexaTheme.LabelPalette.options) { option in
-                    Circle()
-                        .fill(Color(hex: option.hex))
-                        .frame(width: 24, height: 24)
-                        .overlay(Circle().strokeBorder(BovexaTheme.Colors.white, lineWidth: newLabelColor == option.hex ? 2.5 : 0))
-                        .overlay(Circle().strokeBorder(BovexaTheme.Colors.edge, lineWidth: newLabelColor == option.hex ? 0 : 1))
-                        .onTapGesture {
-                            Haptics.selection()
-                            newLabelColor = option.hex
-                        }
+                    let isCurrent = newLabelColor == option.hex
+                    Button {
+                        Haptics.selection()
+                        newLabelColor = option.hex
+                    } label: {
+                        Circle()
+                            .fill(Color(hex: option.hex))
+                            .frame(width: 24, height: 24)
+                            .overlay(Circle().strokeBorder(BovexaTheme.Colors.white, lineWidth: isCurrent ? 2.5 : 0))
+                            .overlay(Circle().strokeBorder(BovexaTheme.Colors.edge, lineWidth: isCurrent ? 0 : 1))
+                            .minTapTarget()
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel(option.name)
+                    .accessibilityAddTraits(isCurrent ? .isSelected : [])
                 }
 
                 ColorPicker("Vrije kleur", selection: $newCustomColor, supportsOpacity: false)

@@ -49,18 +49,26 @@ struct GlassProminentButtonStyle: ButtonStyle {
 /// blauwe tekst zweven zonder knopvorm, wat las als een link uit 1999. Dekkend
 /// wit geeft de knop een rand tegen de kaart eronder; de accentrand en de lichte
 /// schaduw maken duidelijk dat je erop kunt tikken.
+///
+/// `tint` bestaat sinds M11. De stijl zette de accentkleur en het lettertype hard
+/// op het label en overschreef daarmee elke `.foregroundStyle(danger)` of
+/// `.tint(danger)` die de aanroeper erbuiten zette: Uitloggen, Verwijderen en
+/// Wissen renderden gewoon blauw, terwijl de code rood bedoelde. Voor die drie
+/// bestaat nu `.glassSecondaryDanger`.
 struct GlassSecondaryButtonStyle: ButtonStyle {
     @Environment(\.isEnabled) private var isEnabled
+
+    var tint: Color = BovexaTheme.Colors.accent
 
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
             .font(BovexaTheme.TypeStyle.subheadline.weight(.semibold))
-            .foregroundStyle(BovexaTheme.Colors.accent)
+            .foregroundStyle(tint)
             .padding(.horizontal, BovexaTheme.Space.md)
             .frame(minHeight: 38)
             .background(BovexaTheme.Colors.floatingSurface, in: Capsule())
             .overlay(
-                Capsule().strokeBorder(BovexaTheme.Colors.accent.opacity(0.22), lineWidth: 1)
+                Capsule().strokeBorder(tint.opacity(0.22), lineWidth: 1)
             )
             .shadow(color: BovexaTheme.Shadow.softColor.opacity(0.18), radius: 6, y: 3)
             .opacity(isEnabled ? 1 : 0.45)
@@ -79,6 +87,13 @@ extension ButtonStyle where Self == GlassProminentButtonStyle {
 
 extension ButtonStyle where Self == GlassSecondaryButtonStyle {
     static var glassSecondaryBrand: GlassSecondaryButtonStyle { GlassSecondaryButtonStyle() }
+
+    /// Zelfde pil, maar tekst en rand in `danger` — voor Uitloggen, Verwijderen
+    /// en Wissen. Alleen voor acties die iets weggooien of afsluiten; niet als
+    /// algemene "let op"-kleur.
+    static var glassSecondaryDanger: GlassSecondaryButtonStyle {
+        GlassSecondaryButtonStyle(tint: BovexaTheme.Colors.danger)
+    }
 }
 
 #Preview {
@@ -89,6 +104,8 @@ extension ButtonStyle where Self == GlassSecondaryButtonStyle {
                 .buttonStyle(.glassProminentBrand)
             Button("Secundair") {}
                 .buttonStyle(.glassSecondaryBrand)
+            Button {} label: { Text("Uitloggen").frame(maxWidth: .infinity) }
+                .buttonStyle(.glassSecondaryDanger)
             Button("Uitgeschakeld") {}
                 .buttonStyle(.glassSecondaryBrand)
                 .disabled(true)

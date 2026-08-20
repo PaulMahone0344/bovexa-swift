@@ -265,6 +265,35 @@ struct BedrijfViewModelTests {
         #expect(vm.memberActionErrorMessage == nil)
     }
 
+    // MARK: - Tik op de al actieve rol (M11 plak 1d)
+
+    /// `expandedMemberId = nil` stond vóór de guard `role != member.role`: tikken op
+    /// de rol die het lid al heeft deed niets behalve de rij dichtklappen, wat als
+    /// een fout aanvoelt. De guard hoort eerst.
+    @Test func tappingTheAlreadyActiveRoleKeepsTheRowExpanded() async {
+        let vm = await loadedViewModel()
+        let bram = vm.members.first { $0.userId == "u2" }!  // role: .member
+        vm.toggleExpanded(bram.id)
+        #expect(vm.expandedMemberId == bram.id)
+
+        URLProtocolStub.requestHandler = { _ in Issue.record("mocht geen request doen"); return (500, Data()) }
+        await vm.changeRole(bram, to: .member, actingUserId: "u1", token: "tok")
+
+        #expect(vm.expandedMemberId == bram.id)
+        #expect(vm.members.first { $0.userId == "u2" }?.role == .member)
+    }
+
+    @Test func changingToAnotherRoleStillCollapsesTheRow() async {
+        let vm = await loadedViewModel()
+        let bram = vm.members.first { $0.userId == "u2" }!
+        vm.toggleExpanded(bram.id)
+        URLProtocolStub.requestHandler = { _ in (200, Self.membersJSON.data(using: .utf8)!) }
+
+        await vm.changeRole(bram, to: .admin, actingUserId: "u1", token: "tok")
+
+        #expect(vm.expandedMemberId == nil)
+    }
+
     // MARK: - Plekken-tekst
 
     @Test func seatsTextShowsCountOfMax() async {
