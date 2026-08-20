@@ -65,8 +65,7 @@ struct TeambeheerView: View {
                 .font(BovexaTheme.TypeStyle.subheadline)
                 .foregroundStyle(BovexaTheme.Colors.muted)
             Button("Opnieuw proberen") { Task { await viewModel.load(token: token) } }
-                .font(BovexaTheme.TypeStyle.subheadline.weight(.bold))
-                .foregroundStyle(BovexaTheme.Colors.accent)
+                .buttonStyle(.glassSecondaryBrand)
         }
     }
 

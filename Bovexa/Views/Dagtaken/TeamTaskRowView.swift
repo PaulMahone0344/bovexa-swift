@@ -35,7 +35,7 @@ struct TeamTaskRowView: View {
                     // Een vinkje van 22 punten is krap om te raken naast een rij die
                     // zelf ook reageert; dit vergroot het raakvlak zonder het beeld
                     // te veranderen.
-                    .frame(width: 40, height: 32, alignment: .leading)
+                    .frame(width: 40, height: 44, alignment: .leading)
                     .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)

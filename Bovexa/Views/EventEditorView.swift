@@ -175,7 +175,7 @@ struct EventEditorView: View {
                         .font(BovexaTheme.TypeStyle.subheadline.weight(.bold))
                         .foregroundStyle(active ? BovexaTheme.Colors.white : BovexaTheme.Colors.muted)
                         .padding(.horizontal, BovexaTheme.Space.md)
-                        .frame(minHeight: 40)
+                        .frame(minHeight: 44)
                         .background(active ? BovexaTheme.Colors.blueDeep : BovexaTheme.Colors.glass)
                         .clipShape(Capsule())
                         .overlay(Capsule().strokeBorder(active ? BovexaTheme.Colors.blueDeep : BovexaTheme.Colors.edge, lineWidth: 1))
@@ -215,7 +215,8 @@ private struct StepperRow: View {
                 Image(systemName: "chevron.left")
                     .font(.system(size: 15, weight: .semibold))
                     .foregroundStyle(BovexaTheme.Colors.accent)
-                    .frame(width: 42, height: 42)
+                    .frame(width: 44, height: 44)
+                    .contentShape(Rectangle())
             }
             .accessibilityLabel(minusLabel)
             Spacer()
@@ -227,7 +228,8 @@ private struct StepperRow: View {
                 Image(systemName: "chevron.right")
                     .font(.system(size: 15, weight: .semibold))
                     .foregroundStyle(BovexaTheme.Colors.accent)
-                    .frame(width: 42, height: 42)
+                    .frame(width: 44, height: 44)
+                    .contentShape(Rectangle())
             }
             .accessibilityLabel(plusLabel)
         }

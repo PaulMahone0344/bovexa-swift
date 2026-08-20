@@ -25,7 +25,7 @@ struct ReminderChipsView: View {
                 .font(BovexaTheme.TypeStyle.subheadline.weight(.bold))
                 .foregroundStyle(active ? BovexaTheme.Colors.white : BovexaTheme.Colors.muted)
                 .padding(.horizontal, BovexaTheme.Space.md)
-                .frame(minHeight: 36)
+                .frame(minHeight: 44)
                 .background(active ? BovexaTheme.Colors.blueDeep : BovexaTheme.Colors.glass)
                 .clipShape(Capsule())
                 .overlay(

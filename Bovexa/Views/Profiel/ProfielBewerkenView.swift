@@ -32,18 +32,27 @@ struct ProfielBewerkenView: View {
                             HStack(spacing: BovexaTheme.Space.lg) {
                                 PhotosPicker(selection: $selection, matching: .images) {
                                     Text(viewModel.hasPhoto ? "Foto wijzigen" : "Foto kiezen")
+                                        .font(BovexaTheme.TypeStyle.footnote.weight(.semibold))
+                                        .foregroundStyle(BovexaTheme.Colors.accent)
+                                        .padding(.horizontal, BovexaTheme.Space.xs)
+                                        .frame(minHeight: 44)
+                                        .contentShape(Rectangle())
                                 }
-                                .font(BovexaTheme.TypeStyle.footnote.weight(.semibold))
-                                .foregroundStyle(BovexaTheme.Colors.accent)
 
                                 if viewModel.hasPhoto {
-                                    Button("Foto verwijderen") {
+                                    Button {
                                         Haptics.selection()
                                         viewModel.markRemovePhoto()
                                         previewImage = nil
+                                    } label: {
+                                        Text("Foto verwijderen")
+                                            .font(BovexaTheme.TypeStyle.footnote.weight(.semibold))
+                                            .foregroundStyle(BovexaTheme.Colors.muted)
+                                            .padding(.horizontal, BovexaTheme.Space.xs)
+                                            .frame(minHeight: 44)
+                                            .contentShape(Rectangle())
                                     }
-                                    .font(BovexaTheme.TypeStyle.footnote.weight(.semibold))
-                                    .foregroundStyle(BovexaTheme.Colors.muted)
+                                    .buttonStyle(.plain)
                                 }
                             }
                         }

@@ -64,10 +64,15 @@ struct YearOverviewView: View {
 
     private var yearHeader: some View {
         HStack(spacing: BovexaTheme.Space.xl) {
-            Button { withAnimation(.snappy) { viewModel.goToPreviousYear() } } label: {
+            Button {
+                Haptics.selection()
+                withAnimation(.snappy) { viewModel.goToPreviousYear() }
+            } label: {
                 Image(systemName: "chevron.left")
                     .font(.system(size: 22, weight: .semibold))
+                    .minTapTarget()
             }
+            .buttonStyle(.plain)
             .accessibilityLabel("Vorig jaar")
             VStack(spacing: 2) {
                 Text(String(viewModel.year))
@@ -77,10 +82,15 @@ struct YearOverviewView: View {
                     .foregroundStyle(BovexaTheme.Colors.muted)
             }
             .frame(minWidth: 120)
-            Button { withAnimation(.snappy) { viewModel.goToNextYear() } } label: {
+            Button {
+                Haptics.selection()
+                withAnimation(.snappy) { viewModel.goToNextYear() }
+            } label: {
                 Image(systemName: "chevron.right")
                     .font(.system(size: 22, weight: .semibold))
+                    .minTapTarget()
             }
+            .buttonStyle(.plain)
             .accessibilityLabel("Volgend jaar")
         }
         .foregroundStyle(BovexaTheme.Colors.ink)
@@ -169,9 +179,14 @@ private struct MiniMonthView: View {
                     .frame(width: 24, height: 24)
                     .background(isToday ? AnyShapeStyle(BovexaTheme.Colors.blueDeep) : (has ? AnyShapeStyle(BovexaTheme.Colors.blue.opacity(0.18)) : AnyShapeStyle(Color.clear)))
                     .clipShape(Circle())
+                    // Cirkel blijft 24pt; de hele gridcel raakt, want in twaalf
+                    // minimaanden past geen 44pt-doel (M11 patroon B, ontwerp-grens).
+                    .frame(maxWidth: .infinity, minHeight: 30)
+                    .contentShape(Rectangle())
             }
+            .buttonStyle(.plain)
         } else {
-            Color.clear.frame(height: 24)
+            Color.clear.frame(height: 30)
         }
     }
 

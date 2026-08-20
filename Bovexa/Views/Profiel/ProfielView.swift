@@ -126,13 +126,17 @@ struct ProfielView: View {
                         }
                         .buttonStyle(.glassSecondaryDanger)
 
-                        Button("Account verwijderen") {
+                        Button {
                             showDeleteConfirm = true
+                        } label: {
+                            Text("Account verwijderen")
+                                .font(BovexaTheme.TypeStyle.footnote.weight(.semibold))
+                                .foregroundStyle(BovexaTheme.Colors.muted)
+                                .underline()
+                                .frame(maxWidth: .infinity, minHeight: 44)
+                                .contentShape(Rectangle())
                         }
-                        .frame(maxWidth: .infinity)
-                        .font(BovexaTheme.TypeStyle.footnote.weight(.semibold))
-                        .foregroundStyle(BovexaTheme.Colors.muted)
-                        .underline()
+                        .buttonStyle(.plain)
                     }
                     .padding(BovexaTheme.Space.xl)
                     .padding(.bottom, BovexaTheme.Space.tabBarClearance)

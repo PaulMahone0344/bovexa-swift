@@ -118,7 +118,7 @@ struct AfwezigView: View {
                 .font(BovexaTheme.TypeStyle.subheadline.weight(.bold))
                 .foregroundStyle(active ? BovexaTheme.Colors.white : BovexaTheme.Colors.muted)
                 .padding(.horizontal, BovexaTheme.Space.md)
-                .frame(minHeight: 38)
+                .frame(minHeight: 44)
                 .background(active ? BovexaTheme.categoryColor(for: .afwezig) : BovexaTheme.Colors.glass)
                 .clipShape(Capsule())
                 .overlay(Capsule().strokeBorder(active ? BovexaTheme.categoryColor(for: .afwezig) : BovexaTheme.Colors.edge, lineWidth: 1))
@@ -155,7 +155,7 @@ struct AfwezigView: View {
             Button {
                 viewModel.shiftMonth(-1)
             } label: {
-                Image(systemName: "chevron.left")
+                Image(systemName: "chevron.left").frame(minWidth: 44)
             }
             .buttonStyle(.glassSecondaryBrand)
             .accessibilityLabel("Vorige maand")
@@ -171,7 +171,7 @@ struct AfwezigView: View {
             Button {
                 viewModel.shiftMonth(1)
             } label: {
-                Image(systemName: "chevron.right")
+                Image(systemName: "chevron.right").frame(minWidth: 44)
             }
             .buttonStyle(.glassSecondaryBrand)
             .accessibilityLabel("Volgende maand")
@@ -220,7 +220,7 @@ struct AfwezigView: View {
             Text("\(Calendar.current.component(.day, from: cell.date))")
                 .font(BovexaTheme.TypeStyle.subheadline.weight(active ? .bold : .medium))
                 .foregroundStyle(past ? BovexaTheme.Colors.muted.opacity(0.5) : (active ? BovexaTheme.Colors.ink : BovexaTheme.Colors.ink))
-                .frame(maxWidth: .infinity, minHeight: 40)
+                .frame(maxWidth: .infinity, minHeight: 44)
                 .background(active ? BovexaTheme.categoryColor(for: .afwezig).opacity(0.35) : Color.clear)
                 .clipShape(RoundedRectangle(cornerRadius: BovexaTheme.Radius.sm, style: .continuous))
         }

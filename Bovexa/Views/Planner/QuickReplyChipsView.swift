@@ -18,7 +18,7 @@ struct QuickReplyChipsView: View {
                             .font(BovexaTheme.TypeStyle.subheadline.weight(.bold))
                             .foregroundStyle(BovexaTheme.Colors.accent)
                             .padding(.horizontal, BovexaTheme.Space.md)
-                            .padding(.vertical, BovexaTheme.Space.sm)
+                            .frame(minHeight: 44)
                             .background(BovexaTheme.Colors.glassStrong)
                             .clipShape(Capsule())
                             .overlay(Capsule().strokeBorder(BovexaTheme.Colors.blue, lineWidth: 1))

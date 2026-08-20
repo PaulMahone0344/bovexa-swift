@@ -19,7 +19,12 @@ struct MicButtonView: View {
                 .clipShape(Circle())
                 .overlay(Circle().strokeBorder(listening ? Color.clear : BovexaTheme.Colors.edge, lineWidth: 1))
                 .scaleEffect(listening && pulse ? 1.12 : 1.0)
+                // Tekening blijft `size` (34 in de composer, 36 in de pill), het
+                // raakvlak wordt 44 (M11 patroon B).
+                .minTapTarget()
         }
+        .buttonStyle(.plain)
+        .accessibilityLabel(listening ? "Stop dicteren" : "Dicteren")
         .onChange(of: listening) { _, isListening in
             if isListening {
                 withAnimation(.easeInOut(duration: 0.7).repeatForever(autoreverses: true)) { pulse = true }

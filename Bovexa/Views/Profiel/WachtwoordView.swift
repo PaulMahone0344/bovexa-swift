@@ -35,12 +35,16 @@ struct WachtwoordView: View {
                                 field(placeholder: "Nieuw wachtwoord", text: $next)
                                 field(placeholder: "Herhaal nieuw wachtwoord", text: $repeatPassword)
 
-                                Button(showPasswords ? "Verberg wachtwoorden" : "Toon wachtwoorden") {
+                                Button {
                                     withAnimation(.snappy) { showPasswords.toggle() }
+                                } label: {
+                                    Text(showPasswords ? "Verberg wachtwoorden" : "Toon wachtwoorden")
+                                        .font(BovexaTheme.TypeStyle.footnote.weight(.medium))
+                                        .foregroundStyle(BovexaTheme.Colors.accent)
+                                        .frame(maxWidth: .infinity, minHeight: 44, alignment: .trailing)
+                                        .contentShape(Rectangle())
                                 }
-                                .font(BovexaTheme.TypeStyle.footnote.weight(.medium))
-                                .foregroundStyle(BovexaTheme.Colors.accent)
-                                .frame(maxWidth: .infinity, alignment: .trailing)
+                                .buttonStyle(.plain)
 
                                 if let errorMessage {
                                     Text(errorMessage)

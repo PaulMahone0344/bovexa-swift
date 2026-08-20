@@ -141,7 +141,7 @@ struct DagtakenView: View {
                     }
                     .foregroundStyle(active ? BovexaTheme.Colors.white : BovexaTheme.Colors.muted)
                     .padding(.horizontal, BovexaTheme.Space.md)
-                    .frame(maxWidth: .infinity, minHeight: 38)
+                    .frame(maxWidth: .infinity, minHeight: 44)
                     .background(active ? BovexaTheme.Colors.blueDeep : BovexaTheme.Colors.glass)
                     .clipShape(Capsule())
                     .overlay(Capsule().strokeBorder(active ? BovexaTheme.Colors.blueDeep : BovexaTheme.Colors.edge, lineWidth: 1))
@@ -282,6 +282,7 @@ struct DagtakenView: View {
                             .font(BovexaTheme.TypeStyle.footnote)
                             .foregroundStyle(BovexaTheme.Colors.inkSoft)
                     }
+                    .frame(minHeight: 44)
                     .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
@@ -371,6 +372,7 @@ struct DagtakenView: View {
                         .font(BovexaTheme.TypeStyle.footnote)
                         .foregroundStyle(BovexaTheme.Colors.inkSoft)
                 }
+                .frame(minHeight: 44)
                 .contentShape(Rectangle())
             }
             .buttonStyle(.plain)

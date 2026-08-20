@@ -84,13 +84,17 @@ struct OnboardingView: View {
             }
             .buttonStyle(.glassSecondaryBrand)
 
-            Button("Start als lid") {
+            Button {
                 Haptics.selection()
                 authStore.finishOnboarding()
+            } label: {
+                Text("Start als lid")
+                    .font(BovexaTheme.TypeStyle.subheadline.weight(.semibold))
+                    .foregroundStyle(BovexaTheme.Colors.accent)
+                    .frame(maxWidth: .infinity, minHeight: 44)
+                    .contentShape(Rectangle())
             }
-            .font(BovexaTheme.TypeStyle.subheadline.weight(.semibold))
-            .foregroundStyle(BovexaTheme.Colors.accent)
-            .padding(.top, BovexaTheme.Space.xs)
+            .buttonStyle(.plain)
         }
     }
 
@@ -119,12 +123,17 @@ struct OnboardingView: View {
             .buttonStyle(.glassProminentBrand)
             .disabled(viewModel.busy)
 
-            Button("Terug") {
+            Button {
                 Haptics.selection()
                 viewModel.openMode(.choice)
+            } label: {
+                Text("Terug")
+                    .font(BovexaTheme.TypeStyle.subheadline.weight(.semibold))
+                    .foregroundStyle(BovexaTheme.Colors.accent)
+                    .frame(maxWidth: .infinity, minHeight: 44)
+                    .contentShape(Rectangle())
             }
-            .font(BovexaTheme.TypeStyle.subheadline.weight(.semibold))
-            .foregroundStyle(BovexaTheme.Colors.accent)
+            .buttonStyle(.plain)
         }
     }
 

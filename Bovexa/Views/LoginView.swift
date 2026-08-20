@@ -81,22 +81,32 @@ struct LoginView: View {
                                     .textContentType(.password)
                                 }
 
-                                Button(showPassword ? "Verberg" : "Toon") {
+                                Button {
                                     withAnimation(.snappy) {
                                         showPassword.toggle()
                                     }
+                                } label: {
+                                    Text(showPassword ? "Verberg" : "Toon")
+                                        .font(BovexaTheme.TypeStyle.footnote.weight(.medium))
+                                        .foregroundStyle(BovexaTheme.Colors.accent)
+                                        .padding(.horizontal, BovexaTheme.Space.xs)
+                                        .frame(minHeight: 44)
+                                        .contentShape(Rectangle())
                                 }
-                                .font(BovexaTheme.TypeStyle.footnote.weight(.medium))
-                                .foregroundStyle(BovexaTheme.Colors.accent)
+                                .buttonStyle(.plain)
                             }
 
                             if isSignIn {
-                                Button("Wachtwoord vergeten?") {
+                                Button {
                                     Task { await forgotPassword() }
+                                } label: {
+                                    Text("Wachtwoord vergeten?")
+                                        .font(BovexaTheme.TypeStyle.footnote.weight(.medium))
+                                        .foregroundStyle(BovexaTheme.Colors.accent)
+                                        .frame(maxWidth: .infinity, minHeight: 44, alignment: .trailing)
+                                        .contentShape(Rectangle())
                                 }
-                                .font(BovexaTheme.TypeStyle.footnote.weight(.medium))
-                                .foregroundStyle(BovexaTheme.Colors.accent)
-                                .frame(maxWidth: .infinity, alignment: .trailing)
+                                .buttonStyle(.plain)
                             }
 
                             if let errorMessage {
@@ -133,13 +143,16 @@ struct LoginView: View {
                             authMode = isSignIn ? .signUp : .signIn
                         }
                     } label: {
-                        Text(isSignIn ? "Nog geen account? " : "Al een account? ")
+                        (Text(isSignIn ? "Nog geen account? " : "Al een account? ")
                             .foregroundStyle(BovexaTheme.Colors.muted)
                         + Text(isSignIn ? "Maak er een" : "Inloggen")
                             .foregroundStyle(BovexaTheme.Colors.accent)
-                            .fontWeight(.bold)
+                            .fontWeight(.bold))
+                            .font(BovexaTheme.TypeStyle.footnote)
+                            .frame(maxWidth: .infinity, minHeight: 44)
+                            .contentShape(Rectangle())
                     }
-                    .font(BovexaTheme.TypeStyle.footnote)
+                    .buttonStyle(.plain)
                 }
                 .padding(BovexaTheme.Space.xl)
             }

@@ -64,10 +64,14 @@ struct PlannerEntryPillView: View {
                 fieldFocused = false
                 expanded = false
             } label: {
+                // Enige manier om de pill te sluiten zonder te versturen; het
+                // raakvlak was 9x15pt (M11 patroon B).
                 Image(systemName: "chevron.right")
                     .font(.system(size: 15, weight: .semibold))
                     .foregroundStyle(BovexaTheme.Colors.muted)
+                    .minTapTarget()
             }
+            .buttonStyle(.plain)
             .accessibilityLabel("Invoer sluiten")
 
             TextField("Typ of spreek een planning", text: $text)
@@ -95,11 +99,16 @@ struct PlannerEntryPillView: View {
                 onOpenPlanner()
                 expanded = false
             } label: {
-                sparkleCircle(size: 40, icon: 17)
+                sparkleCircle(size: 40, icon: 17).minTapTarget()
             }
+            .buttonStyle(.plain)
+            .accessibilityLabel("Planner openen")
         }
         .padding(.horizontal, BovexaTheme.Space.md)
-        .padding(.vertical, BovexaTheme.Space.sm)
+        // Van sm (10) naar 8: de knoppen in de pill dragen sinds M11 hun eigen
+        // 44pt raakvlak in plaats van 36-40, dus zonder deze correctie werd de
+        // pill hoger dan de 60pt waarop de rest is afgeregeld. 44 + 2×8 = 60.
+        .padding(.vertical, 8)
         .background(BovexaTheme.Colors.floatingSurface)
         .clipShape(Capsule())
         .overlay(Capsule().strokeBorder(BovexaTheme.Colors.edge, lineWidth: 1))

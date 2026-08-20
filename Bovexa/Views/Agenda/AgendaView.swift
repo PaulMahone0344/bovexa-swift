@@ -198,7 +198,7 @@ struct AgendaView: View {
     /// grote systeemtitel met een zwevende icoonpil erboven. Die pil stond los van
     /// alles en de systeemtitel duwde de maandregel ver naar beneden.
     private var agendaHeader: some View {
-        HStack(alignment: .center, spacing: BovexaTheme.Space.xs) {
+        HStack(alignment: .center, spacing: 0) {
             Text("Agenda")
                 .font(.system(size: 34, weight: .bold, design: .rounded))
                 .foregroundStyle(BovexaTheme.Colors.ink)
@@ -229,7 +229,7 @@ struct AgendaView: View {
                 Image(systemName: "square.3.layers.3d")
                     .font(.system(size: 16, weight: .semibold))
                     .foregroundStyle(BovexaTheme.Colors.accent)
-                    .frame(width: 34, height: 34)
+                    .frame(width: 44, height: 44)
                     .contentShape(Rectangle())
             }
             .accessibilityLabel("Weergave")
@@ -244,7 +244,9 @@ struct AgendaView: View {
             Image(systemName: systemImage)
                 .font(.system(size: 16, weight: .semibold))
                 .foregroundStyle(BovexaTheme.Colors.accent)
-                .frame(width: 34, height: 34)
+                // 44 sinds M11 (was 34); het icoon blijft 16pt. De HStack-spacing ging
+                // daarom naar 0 — op 375pt past "Agenda" + vier knoppen precies.
+                .frame(width: 44, height: 44)
                 // Glas telt niet mee voor hit-testing; zonder dit is alleen het
                 // icoontje zelf raakbaar.
                 .contentShape(Rectangle())
@@ -278,11 +280,15 @@ struct AgendaView: View {
                     Image(systemName: "xmark.circle.fill")
                         .font(.system(size: 15))
                         .foregroundStyle(BovexaTheme.Colors.muted)
+                        .minTapTarget()
                 }
+                .buttonStyle(.plain)
                 .accessibilityLabel("Alleen mijn eigen agenda tonen")
             }
-            .padding(.horizontal, BovexaTheme.Space.md)
-            .padding(.vertical, BovexaTheme.Space.xs)
+            .padding(.leading, BovexaTheme.Space.md)
+            // Het kruisje draagt zijn eigen 44pt; extra rechterpadding zou de chip
+            // onnodig breed maken.
+            .padding(.trailing, BovexaTheme.Space.xs)
             .background(BovexaTheme.Colors.floatingSurface)
             .clipShape(Capsule())
             .overlay(Capsule().strokeBorder(BovexaTheme.Colors.edge, lineWidth: 1))

@@ -43,12 +43,12 @@ struct DayPanelView: View {
 
                 Spacer()
 
+                // Was een kale tekstknop van ~55x18pt die als link las.
                 Button("Open dag") {
                     Haptics.selection()
                     onOpenDay()
                 }
-                .font(BovexaTheme.TypeStyle.footnote.weight(.semibold))
-                .foregroundStyle(BovexaTheme.Colors.accent)
+                .buttonStyle(.glassSecondaryBrand)
             }
 
             GlassCard {

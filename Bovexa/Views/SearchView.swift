@@ -62,7 +62,10 @@ struct SearchView: View {
                 } label: {
                     Image(systemName: "xmark.circle.fill")
                         .foregroundStyle(BovexaTheme.Colors.muted)
+                        .minTapTarget()
                 }
+                .buttonStyle(.plain)
+                .accessibilityLabel("Zoekopdracht wissen")
             }
         }
         .padding(.horizontal, BovexaTheme.Space.md)

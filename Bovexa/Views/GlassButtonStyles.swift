@@ -21,7 +21,10 @@ struct GlassProminentButtonStyle: ButtonStyle {
             .font(BovexaTheme.TypeStyle.subheadline.weight(.semibold))
             .foregroundStyle(BovexaTheme.Colors.white.opacity(isEnabled ? 1 : 0.85))
             .padding(.horizontal, BovexaTheme.Space.lg)
-            .frame(minHeight: 42)
+            // 44 sinds M11 (was 42): Apple's tapdoel-richtlijn, in één plek voor
+            // elke primaire knop in de app. Visueel 2pt hoger, de pil leest daar
+            // beter door.
+            .frame(minHeight: 44)
             .background(
                 Capsule().fill(
                     LinearGradient(
@@ -65,7 +68,8 @@ struct GlassSecondaryButtonStyle: ButtonStyle {
             .font(BovexaTheme.TypeStyle.subheadline.weight(.semibold))
             .foregroundStyle(tint)
             .padding(.horizontal, BovexaTheme.Space.md)
-            .frame(minHeight: 38)
+            // 44 sinds M11 (was 38): raakt elke secundaire knop in de app.
+            .frame(minHeight: 44)
             .background(BovexaTheme.Colors.floatingSurface, in: Capsule())
             .overlay(
                 Capsule().strokeBorder(tint.opacity(0.22), lineWidth: 1)

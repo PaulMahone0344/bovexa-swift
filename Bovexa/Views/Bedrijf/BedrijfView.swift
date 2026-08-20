@@ -271,8 +271,7 @@ private struct EmptyOrgView: View {
                 Haptics.selection()
                 viewModel.openMode(.choice)
             }
-            .font(BovexaTheme.TypeStyle.subheadline.weight(.semibold))
-            .foregroundStyle(BovexaTheme.Colors.accent)
+            .buttonStyle(.glassSecondaryBrand)
         }
         .padding(.horizontal, BovexaTheme.Space.xl)
     }

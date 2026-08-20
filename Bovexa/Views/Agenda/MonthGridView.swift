@@ -43,9 +43,11 @@ struct MonthGridView: View {
                 DragGesture(minimumDistance: 30)
                     .onEnded { value in
                         if value.translation.width < -40 {
-                            withAnimation(.snappy) { viewModel.goToNextMonth() }
+                            Haptics.selection()
+                withAnimation(.snappy) { viewModel.goToNextMonth() }
                         } else if value.translation.width > 40 {
-                            withAnimation(.snappy) { viewModel.goToPreviousMonth() }
+                            Haptics.selection()
+                withAnimation(.snappy) { viewModel.goToPreviousMonth() }
                         }
                     }
             )
@@ -55,19 +57,28 @@ struct MonthGridView: View {
     private var monthHeader: some View {
         HStack {
             Button {
+                Haptics.selection()
                 withAnimation(.snappy) { viewModel.goToPreviousMonth() }
             } label: {
-                Image(systemName: "chevron.left")
+                Image(systemName: "chevron.left").minTapTarget()
             }
+            .buttonStyle(.plain)
             .accessibilityLabel("Vorige maand")
 
             Spacer()
 
             HStack(spacing: BovexaTheme.Space.xs) {
                 Text(monthName)
-                Button(action: onYearTap) {
+                Button {
+                    Haptics.selection()
+                    onYearTap()
+                } label: {
                     Text(yearText).underline()
+                        .padding(.horizontal, BovexaTheme.Space.xs)
+                        .frame(minHeight: 44)
+                        .contentShape(Rectangle())
                 }
+                .buttonStyle(.plain)
             }
             .font(BovexaTheme.TypeStyle.headline)
             .foregroundStyle(BovexaTheme.Colors.ink)
@@ -75,10 +86,12 @@ struct MonthGridView: View {
             Spacer()
 
             Button {
+                Haptics.selection()
                 withAnimation(.snappy) { viewModel.goToNextMonth() }
             } label: {
-                Image(systemName: "chevron.right")
+                Image(systemName: "chevron.right").minTapTarget()
             }
+            .buttonStyle(.plain)
             .accessibilityLabel("Volgende maand")
         }
         .foregroundStyle(BovexaTheme.Colors.ink)

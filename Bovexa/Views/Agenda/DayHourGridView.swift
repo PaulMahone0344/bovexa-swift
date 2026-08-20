@@ -73,7 +73,9 @@ struct DayHourGridView: View {
                             .font(BovexaTheme.TypeStyle.footnote.weight(.medium))
                             .foregroundStyle(BovexaTheme.Colors.ink)
                             .padding(.horizontal, BovexaTheme.Space.sm)
-                            .padding(.vertical, 4)
+                            // Chip was ~21pt hoog; 32 is het maximum dat hier past
+                            // zonder het uurraster naar beneden te duwen.
+                            .frame(minHeight: 32)
                             .glassEffect(.regular.tint(EventHelpers.eventColor(event, labelStore: labelStore).opacity(0.35)), in: .capsule)
                             .contentShape(.capsule)
                     }
@@ -189,7 +191,7 @@ struct DayHourGridView: View {
                 EventBlockView(event: item.event, currentUserId: currentUserId, memberColors: memberColors, labelStore: labelStore)
             }
             .buttonStyle(.plain)
-            .frame(width: max(columnWidth - 4, 24), height: max(hourHeight * durationMinutes / 60 - 2, 16), alignment: .topLeading)
+            .frame(width: max(columnWidth - 4, 24), height: max(hourHeight * durationMinutes / 60 - 2, 26), alignment: .topLeading)
             .offset(
                 x: gutterWidth + xInset + CGFloat(item.column) * columnWidth + 2,
                 y: hourHeight * startOffsetMinutes / 60

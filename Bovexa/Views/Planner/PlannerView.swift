@@ -183,7 +183,7 @@ struct PlannerView: View {
                                 .font(BovexaTheme.TypeStyle.caption.weight(.bold))
                                 .foregroundStyle(BovexaTheme.Colors.accent)
                                 .padding(.horizontal, BovexaTheme.Space.md)
-                                .padding(.vertical, BovexaTheme.Space.sm)
+                                .frame(minHeight: 44)
                                 .background(BovexaTheme.Colors.glass)
                                 .clipShape(Capsule())
                                 .overlay(Capsule().strokeBorder(BovexaTheme.Colors.edgeSoft, lineWidth: 1))
@@ -412,7 +412,11 @@ struct PlannerView: View {
                     .frame(width: 38, height: 38)
                     .background(LinearGradient(colors: BovexaTheme.Gradients.blue, startPoint: .topLeading, endPoint: .bottomTrailing))
                     .clipShape(Circle())
+                    // Cirkel blijft 38pt, raakvlak 44.
+                    .minTapTarget()
             }
+            .buttonStyle(.plain)
+            .accessibilityLabel("Verstuur")
             .disabled(!canSend)
             .opacity(canSend ? 1 : 0.5)
         }

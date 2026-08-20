@@ -50,8 +50,10 @@ struct OpenTasksCard: View {
                                     .font(.system(size: 11, weight: .semibold))
                                     .foregroundStyle(BovexaTheme.Colors.accent)
                             }
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                            .padding(.top, BovexaTheme.Space.sm)
+                            // Raakvlak was ~28pt hoog; minHeight vóór de
+                            // contentShape maakt er 44 van (M11 patroon B).
+                            .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
+                            .padding(.top, BovexaTheme.Space.xs)
                             // Zonder dit is alleen de tekst raakbaar: glas telt niet
                             // mee voor hit-testing.
                             .contentShape(Rectangle())

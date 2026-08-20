@@ -68,7 +68,7 @@ struct ContactPickerView: View {
             }
             .foregroundStyle(BovexaTheme.Colors.accent)
             .padding(.horizontal, BovexaTheme.Space.md)
-            .frame(minHeight: 40)
+            .frame(minHeight: 44)
             .background(BovexaTheme.Colors.glass)
             .clipShape(Capsule())
             .overlay(Capsule().strokeBorder(BovexaTheme.Colors.edge, lineWidth: 1))
@@ -92,7 +92,7 @@ struct ContactPickerView: View {
             }
             .foregroundStyle(active ? BovexaTheme.Colors.white : BovexaTheme.Colors.muted)
             .padding(.horizontal, BovexaTheme.Space.md)
-            .frame(minHeight: 40)
+            .frame(minHeight: 44)
             .background(active ? BovexaTheme.Colors.blueDeep : BovexaTheme.Colors.glass)
             .clipShape(Capsule())
             .overlay(Capsule().strokeBorder(active ? BovexaTheme.Colors.blueDeep : BovexaTheme.Colors.edge, lineWidth: 1))
