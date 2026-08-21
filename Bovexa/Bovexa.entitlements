@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<!-- Pushmeldingen. "development" laat een dev-build met de sandbox-APNs praten;
+	     bij het archiveren voor de store vervangt Xcode dit door "production", zolang
+	     het provisioningprofiel de Push Notifications-capability heeft. Staat die
+	     capability niet op de App ID, dan faalt de signing met een profielfout. -->
+	<key>aps-environment</key>
+	<string>development</string>
+</dict>
+</plist>

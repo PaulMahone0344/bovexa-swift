@@ -58,6 +58,11 @@ targets:
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
         DEVELOPMENT_TEAM: R7V2WLVDDF
         CODE_SIGN_STYLE: Automatic
+        # Pushmeldingen (APNs). Vereist dat de Push Notifications-capability op de
+        # App ID com.bovexa.flow aanstaat in Apple Developer; met
+        # -allowProvisioningUpdates zet Xcode dat er zelf bij, maar de APNs-key
+        # om te versturen moet handmatig aangemaakt worden (serverkant).
+        CODE_SIGN_ENTITLEMENTS: Bovexa/Bovexa.entitlements
   BovexaTests:
     type: bundle.unit-test
     platform: iOS
