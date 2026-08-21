@@ -27,13 +27,19 @@ struct EventEditorCreateModeTests {
 
     private func makeViewModel(
         seed: NieuweAfspraakSeed = .empty, org: String = "org1", defaultDurationMin: Int = EventEditorViewModel.fallbackDurationMin,
-        now: Date = Date(), scheduler: FakeNotificationScheduler = FakeNotificationScheduler()
+        now: Date = Date(), scheduler: FakeNotificationScheduler = FakeNotificationScheduler(),
+        calendarWriter: FakeDeviceCalendarWriter = FakeDeviceCalendarWriter(),
+        calendarDefaults: UserDefaults? = nil
     ) -> EventEditorViewModel {
         EventEditorViewModel(
             mode: .create(seed), ownerId: "u1", org: org, token: "tok",
             defaultDurationMin: defaultDurationMin, now: now,
             repository: EventRepository(client: PBClient(session: URLProtocolStub.makeSession())),
-            reminderService: ReminderService(scheduler: scheduler)
+            reminderService: ReminderService(scheduler: scheduler),
+            deviceCalendarService: DeviceCalendarService(
+                writer: calendarWriter,
+                preferenceDefaults: calendarDefaults ?? UserDefaults(suiteName: "EventEditorCreateModeTests.\(UUID().uuidString)")!
+            )
         )
     }
 
@@ -288,5 +294,52 @@ struct EventEditorCreateModeTests {
 
         #expect(result == nil)
         #expect(vm.saveFailedAlert)
+    }
+
+    // MARK: - sync naar de iPhone Agenda (besluit Ibrahim 21 aug 2026)
+
+    @Test func manualCreateAlsoSyncsToTheDeviceCalendar() async {
+        stubCreate()
+        let writer = FakeDeviceCalendarWriter()
+        let vm = makeViewModel(seed: .forHour(9, on: day(2026, 8, 3)), calendarWriter: writer)
+        vm.title = "Kapper"
+
+        let created = await vm.save()
+
+        #expect(created?.id == "new1")
+        #expect(writer.createdTitles == ["Kapper"])
+    }
+
+    /// Zelfde stille overslag als bij de AI-route: staat de voorkeur uit, dan komt de
+    /// afspraak wél op de server maar niet in de iPhone Agenda.
+    @Test func syncIsSkippedWhenThePreferenceIsOff() async {
+        stubCreate()
+        let defaults = UserDefaults(suiteName: "EventEditorCreateModeTests.\(UUID().uuidString)")!
+        DeviceCalendarSyncPreference.setEnabled(false, defaults: defaults)
+        let writer = FakeDeviceCalendarWriter()
+        let vm = makeViewModel(seed: .forHour(9, on: day(2026, 8, 3)), calendarWriter: writer, calendarDefaults: defaults)
+        vm.title = "Kapper"
+
+        let created = await vm.save()
+
+        #expect(created?.id == "new1")
+        #expect(writer.createdTitles.isEmpty)
+    }
+
+    /// Mislukt het aanmaken, dan mag er ook niets in de iPhone Agenda belanden.
+    @Test func nothingIsSyncedWhenTheCreateFails() async {
+        URLProtocolStub.requestHandler = { request in
+            if request.httpMethod == "GET" { return (200, Data(Self.emptyList.utf8)) }
+            return (400, Data())
+        }
+        let writer = FakeDeviceCalendarWriter()
+        let vm = makeViewModel(seed: .forHour(9, on: day(2026, 8, 3)), calendarWriter: writer)
+        vm.title = "Kapper"
+
+        let created = await vm.save()
+
+        #expect(created == nil)
+        #expect(vm.saveFailedAlert)
+        #expect(writer.createdTitles.isEmpty)
     }
 }

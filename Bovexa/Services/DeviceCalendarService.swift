@@ -59,9 +59,21 @@ final class DeviceCalendarService {
 
     @discardableResult
     func sync(_ appointment: ProposedAppointment) async -> Bool {
+        await write(DeviceCalendarEventMapper.map(appointment))
+    }
+
+    /// M12-nalevering (besluit Ibrahim 21 aug): een handmatig aangemaakte afspraak
+    /// gaat óók naar de iPhone Agenda. Zelfde voorkeur, zelfde permissie, zelfde
+    /// stille overslag — het verschil met de AI-route zat alleen in de aanroep.
+    @discardableResult
+    func sync(title: String, start: Date, end: Date) async -> Bool {
+        await write(DeviceCalendarEventMapper.map(title: title, start: start, end: end))
+    }
+
+    private func write(_ mapped: DeviceCalendarEventMapper.MappedEvent) async -> Bool {
         guard DeviceCalendarSyncPreference.isEnabled(defaults: preferenceDefaults) else { return false }
         guard await writer.requestWriteAccess() else { return false }
         guard let calendarId = writer.writableCalendarId() else { return false }
-        return writer.createEvent(DeviceCalendarEventMapper.map(appointment), calendarId: calendarId)
+        return writer.createEvent(mapped, calendarId: calendarId)
     }
 }

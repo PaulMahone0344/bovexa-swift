@@ -61,4 +61,20 @@ struct DeviceCalendarEventMapperTests {
         let mapped = DeviceCalendarEventMapper.map(appointment(recurrence: "FREQ=WEEKLY;BYDAY=MO;UNTIL=20261231"))
         #expect(mapped.recurrenceRule != nil)
     }
+
+    // MARK: - handmatige afspraak (M12-nalevering)
+
+    /// Het formulier levert al een echte start en eind; de mapping voegt alleen de
+    /// tijdzone en dezelfde notitie toe als het AI-pad, en nooit een herhaalregel.
+    @Test func mapsAManualAppointmentWithoutLocationOrRecurrence() {
+        let start = Date(timeIntervalSince1970: 1_785_000_000)
+        let mapped = DeviceCalendarEventMapper.map(title: "Kapper", start: start, end: start.addingTimeInterval(3600))
+        #expect(mapped.title == "Kapper")
+        #expect(mapped.startDate == start)
+        #expect(mapped.endDate == start.addingTimeInterval(3600))
+        #expect(mapped.timeZone.identifier == DeviceCalendarEventMapper.timeZoneIdentifier)
+        #expect(mapped.notes == DeviceCalendarEventMapper.note)
+        #expect(mapped.location == nil)
+        #expect(mapped.recurrenceRule == nil)
+    }
 }

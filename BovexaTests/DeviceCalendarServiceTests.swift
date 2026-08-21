@@ -64,6 +64,28 @@ struct DeviceCalendarServiceTests {
         #expect(result == false)
     }
 
+    // MARK: - handmatige afspraak (M12-nalevering)
+
+    @Test func syncsAManualAppointmentByTitleAndRange() async {
+        let writer = FakeDeviceCalendarWriter()
+        let service = DeviceCalendarService(writer: writer, preferenceDefaults: makeDefaults())
+        let start = Date(timeIntervalSince1970: 1_785_000_000)
+        let result = await service.sync(title: "Kapper", start: start, end: start.addingTimeInterval(3600))
+        #expect(result == true)
+        #expect(writer.createdTitles == ["Kapper"])
+    }
+
+    @Test func manualSyncSkipsWhenPreferenceIsOff() async {
+        let defaults = makeDefaults()
+        DeviceCalendarSyncPreference.setEnabled(false, defaults: defaults)
+        let writer = FakeDeviceCalendarWriter()
+        let service = DeviceCalendarService(writer: writer, preferenceDefaults: defaults)
+        let start = Date(timeIntervalSince1970: 1_785_000_000)
+        let result = await service.sync(title: "Kapper", start: start, end: start.addingTimeInterval(3600))
+        #expect(result == false)
+        #expect(writer.createdTitles.isEmpty)
+    }
+
     @Test func defaultPreferenceIsOn() {
         #expect(DeviceCalendarSyncPreference.isEnabled(defaults: makeDefaults()) == true)
     }

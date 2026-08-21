@@ -22,14 +22,31 @@ enum DeviceCalendarEventMapper {
 
     static func map(_ appointment: ProposedAppointment, calendar: Calendar = .current) -> MappedEvent {
         let range = AppointmentRange.range(for: appointment, calendar: calendar)
-        return MappedEvent(
+        return map(
             title: appointment.title,
-            startDate: range.start,
-            endDate: range.end,
-            timeZone: TimeZone(identifier: timeZoneIdentifier) ?? .current,
+            start: range.start,
+            end: range.end,
             location: appointment.location,
-            notes: note,
             recurrenceRule: appointment.recurrence.flatMap { weeklyRecurrenceRule(from: $0, calendar: calendar) }
+        )
+    }
+
+    /// M12-nalevering: een handmatig ingevoerde afspraak heeft al een echte start en
+    /// eind en kent geen locatie of herhaling — het formulier heeft die velden niet.
+    /// Zelfde tijdzone en zelfde notitie als het AI-pad, zodat beide routes in de
+    /// iPhone Agenda niet van elkaar te onderscheiden zijn.
+    static func map(
+        title: String, start: Date, end: Date,
+        location: String? = nil, recurrenceRule: EKRecurrenceRule? = nil
+    ) -> MappedEvent {
+        MappedEvent(
+            title: title,
+            startDate: start,
+            endDate: end,
+            timeZone: TimeZone(identifier: timeZoneIdentifier) ?? .current,
+            location: location,
+            notes: note,
+            recurrenceRule: recurrenceRule
         )
     }
 

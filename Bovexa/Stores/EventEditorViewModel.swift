@@ -10,7 +10,7 @@ enum EditorMode {
 
 /// Viewmodel voor het afspraak-formulier. Opslaan: titel-check, dubbele-boeking-check
 /// (fetchOwnEvents + findOverlap), dan updateEvent (valkuil E) of createEvent
-/// (M12, source 'manual') + herinnering plannen.
+/// (M12, source 'manual') + herinnering plannen + sync naar de iPhone Agenda.
 @MainActor
 final class EventEditorViewModel: ObservableObject {
     @Published var title: String
@@ -69,11 +69,13 @@ final class EventEditorViewModel: ObservableObject {
     private let token: String
     private let repository: EventRepository
     private let reminderService: ReminderService
+    private let deviceCalendarService: DeviceCalendarService
 
     init(
         mode: EditorMode, ownerId: String, org: String, token: String,
         defaultDurationMin: Int = EventEditorViewModel.fallbackDurationMin, now: Date = Date(),
-        repository: EventRepository = EventRepository(), reminderService: ReminderService = ReminderService()
+        repository: EventRepository = EventRepository(), reminderService: ReminderService = ReminderService(),
+        deviceCalendarService: DeviceCalendarService = DeviceCalendarService()
     ) {
         self.mode = mode
         self.ownerId = ownerId
@@ -81,6 +83,7 @@ final class EventEditorViewModel: ObservableObject {
         self.token = token
         self.repository = repository
         self.reminderService = reminderService
+        self.deviceCalendarService = deviceCalendarService
 
         switch mode {
         case .edit(let event):
@@ -203,7 +206,8 @@ final class EventEditorViewModel: ObservableObject {
 
     /// M12: dezelfde create-payload als de planner, met source 'manual' en een lege
     /// raw_input. De herinnering hangt aan het id dat de server teruggeeft — een
-    /// zelfbedacht id zou nooit meer op te ruimen zijn.
+    /// zelfbedacht id zou nooit meer op te ruimen zijn. Sinds 21 aug gaat een
+    /// handmatige afspraak ook naar de iPhone Agenda, net als de AI-route.
     private func create(end: Date) async -> AgendaEvent? {
         let hasOrg = !org.isEmpty
         let payload = AppointmentPayloadBuilder.buildManual(
@@ -227,6 +231,11 @@ final class EventEditorViewModel: ObservableObject {
             if reminderMin > 0 {
                 await reminderService.schedule(eventId: created.id, title: created.title, start: created.start, minutesBefore: reminderMin)
             }
+            // De server bepaalt start en eind; het formulier kan afgerond hebben.
+            await deviceCalendarService.sync(
+                title: created.title, start: created.start,
+                end: created.end ?? created.start.addingTimeInterval(Double(durationMin) * 60)
+            )
             return created
         } catch {
             saveFailedAlert = true
