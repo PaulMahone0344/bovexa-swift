@@ -101,13 +101,43 @@ struct LabelRepositoryTests {
 
     // MARK: - deleteLabel
 
-    @Test func deleteLabelSendsDeleteToRecordId() async throws {
+    /// Sinds 21 aug via de route met de admin-check op de server, niet meer
+    /// rechtstreeks op de collectie.
+    @Test func deleteLabelPostsToTheAdminRoute() async throws {
         URLProtocolStub.requestHandler = { request in
-            #expect(request.httpMethod == "DELETE")
-            #expect(request.url!.absoluteString.contains("/api/collections/agenda_labels/records/l1"))
-            return (204, Data())
+            #expect(request.httpMethod == "POST")
+            #expect(request.url!.absoluteString.contains("/api/agenda/labels/delete"))
+            return (200, Data(#"{"id":"l1"}"#.utf8))
         }
         let repo = makeRepository()
         try await repo.deleteLabel(id: "l1", token: "tok")
+    }
+
+    @Test func deleteLabelSendsTheLabelIdInTheBody() async throws {
+        var body: [String: Any] = [:]
+        URLProtocolStub.requestHandler = { request in
+            body = (try? JSONSerialization.jsonObject(with: Self.bodyData(from: request))) as? [String: Any] ?? [:]
+            return (200, Data(#"{"id":"l1"}"#.utf8))
+        }
+        let repo = makeRepository()
+        try await repo.deleteLabel(id: "l1", token: "tok")
+        #expect(body["labelId"] as? String == "l1")
+    }
+
+    /// URLSession verplaatst httpBody vaak naar httpBodyStream vóórdat een
+    /// URLProtocol-subclass het verzoek ziet — request.httpBody is dan nil.
+    private static func bodyData(from request: URLRequest) -> Data {
+        if let body = request.httpBody { return body }
+        guard let stream = request.httpBodyStream else { return Data() }
+        stream.open()
+        defer { stream.close() }
+        var data = Data()
+        var buffer = [UInt8](repeating: 0, count: 4096)
+        while stream.hasBytesAvailable {
+            let read = stream.read(&buffer, maxLength: buffer.count)
+            guard read > 0 else { break }
+            data.append(buffer, count: read)
+        }
+        return data
     }
 }

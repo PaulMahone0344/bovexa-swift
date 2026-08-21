@@ -34,7 +34,17 @@ final class LabelRepository {
     /// Verwijderen mag geen afspraken slopen (valkuil H) — dat gedrag zit in
     /// EventHelpers.eventColor, niet hier: een afspraak met een verwijzing naar
     /// een niet meer bestaand label valt daar netjes terug.
+    ///
+    /// Gaat sinds 21 aug via een route met een echte admin-check op de server.
+    /// De deleteRule van de collectie staat nog org-breed open (noodgreep van
+    /// 26 juli) en mag pas op null zodra deze versie in de store staat.
     func deleteLabel(id: String, token: String) async throws {
-        try await client.deleteRecord(collection: Self.collection, id: id, token: token)
+        _ = try await client.postCustom(
+            DeleteLabelResponse.self, path: "/api/agenda/labels/delete", body: ["labelId": id], token: token
+        )
     }
+}
+
+private struct DeleteLabelResponse: Decodable {
+    let id: String
 }

@@ -147,8 +147,10 @@ struct LegendeViewModelTests {
         await vm.loadRole()
 
         URLProtocolStub.requestHandler = { request in
-            #expect(request.httpMethod == "DELETE")
-            return (204, Data())
+            // Sinds 21 aug loopt verwijderen via de admin-route op de server.
+            #expect(request.httpMethod == "POST")
+            #expect(request.url!.absoluteString.contains("/api/agenda/labels/delete"))
+            return (200, Data(#"{"id":"l1"}"#.utf8))
         }
         await vm.delete(label("l1"))
         #expect(store.label(for: "l1") == nil)
