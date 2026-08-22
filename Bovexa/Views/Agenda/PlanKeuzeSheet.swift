@@ -1,17 +1,13 @@
 import SwiftUI
 
-/// Kleine keuze-sheet na het typen in de plan-pill: zelf invullen of door de AI
-/// laten invullen.
+/// Kleine keuze-sheet achter de knop "Nieuwe afspraak": zelf invullen of door de
+/// AI laten invullen.
 ///
-/// Waarom hier wél een keuze en bij een leeg veld niet: met een lege pill weet de
-/// app dat er niets te lezen valt, dus dan is het formulier de enige zinnige
-/// uitkomst. Heb je een zin getypt, dan zijn beide routes echt mogelijk — en
-/// zonder keuze verdween je zin altijd in de AI-planner, ook als je 'm gewoon als
-/// titel bedoelde.
+/// Bewust de eerste stap en niet iets dat pas na het typen komt. Typen in de
+/// Agenda zelf betekende dat de zin daarna herhaald moest worden om te laten zien
+/// wat er meeging; nu kies je eerst de route en typ je dáár, in het veld dat er
+/// toch al staat.
 struct PlanKeuzeSheet: View {
-    /// De zin die de gebruiker net typte of insprak; hij moet 'm terugzien, anders
-    /// is niet duidelijk wat er met de keuze meegaat.
-    let zin: String
     let onHandmatig: () -> Void
     let onAI: () -> Void
 
@@ -19,23 +15,22 @@ struct PlanKeuzeSheet: View {
         ZStack {
             AppBackground()
             VStack(alignment: .leading, spacing: BovexaTheme.Space.md) {
-                Text(zin)
-                    .font(BovexaTheme.TypeStyle.subheadline)
-                    .foregroundStyle(BovexaTheme.Colors.muted)
-                    .lineLimit(2)
+                Text("Nieuwe afspraak")
+                    .font(BovexaTheme.TypeStyle.title3)
+                    .foregroundStyle(BovexaTheme.Colors.ink)
                     .padding(.top, BovexaTheme.Space.sm)
 
                 keuzeRij(
                     icon: "square.and.pencil",
                     titel: "Zelf invullen",
-                    uitleg: "Als titel in het formulier; datum en tijd zet je zelf.",
+                    uitleg: "Datum, tijd en details vul je zelf in.",
                     actie: onHandmatig
                 )
 
                 keuzeRij(
                     icon: "sparkles",
                     titel: "Met AI invullen",
-                    uitleg: "De planner leest de dag, de tijd en de naam eruit.",
+                    uitleg: "Typ of spreek een zin; de planner leest het eruit.",
                     actie: onAI
                 )
 
@@ -46,7 +41,7 @@ struct PlanKeuzeSheet: View {
         }
         // Klein genoeg om de agenda erachter te blijven zien: dit is een afslag,
         // geen pagina.
-        .presentationDetents([.height(300)])
+        .presentationDetents([.height(290)])
         .presentationDragIndicator(.visible)
     }
 
@@ -93,6 +88,6 @@ struct PlanKeuzeSheet: View {
 #Preview {
     Color.clear
         .sheet(isPresented: .constant(true)) {
-            PlanKeuzeSheet(zin: "morgen 15:00 tandarts in Amsterdam", onHandmatig: {}, onAI: {})
+            PlanKeuzeSheet(onHandmatig: {}, onAI: {})
         }
 }

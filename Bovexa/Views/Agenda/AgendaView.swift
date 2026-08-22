@@ -3,13 +3,11 @@ import SwiftUI
 struct AgendaView: View {
     @EnvironmentObject private var authStore: AuthStore
     @StateObject private var viewModel = AgendaViewModel()
-    @StateObject private var speech = SpeechToTextService()
     @State private var selectedEvent: AgendaEvent?
     @State private var showSearch = false
     @State private var showLegende = false
     @State private var showPersoonKiezer = false
     @State private var showYearOverview = false
-    @State private var pillText = ""
     @State private var plannerSeed: String?
     @State private var showPlanner = false
     @State private var nieuweAfspraak: NieuweAfspraakTarget?
@@ -18,7 +16,6 @@ struct AgendaView: View {
     /// elkaar in dezelfde tik afwisselen laat SwiftUI vallen; daarom pas openen als
     /// de eerste echt weg is.
     @State private var naKeuze: NaKeuze?
-    @State private var speechAlertMessage: String?
 
     /// `.sheet(item:)` in plaats van een losse bool: de voorzet en het openen komen
     /// dan als één waarde binnen, en niet als twee @State-wijzigingen waarvan de
@@ -30,12 +27,11 @@ struct AgendaView: View {
 
     private struct PlanKeuzeTarget: Identifiable {
         let id = UUID()
-        let zin: String
     }
 
     private enum NaKeuze {
-        case handmatig(String)
-        case ai(String)
+        case handmatig
+        case ai
     }
 
     private var currentUser: AgendaUser? {
@@ -57,11 +53,7 @@ struct AgendaView: View {
             }
         }
         .safeAreaInset(edge: .bottom) {
-            PlannerEntryPillView(
-                text: $pillText, micAvailable: speech.available, listening: speech.listening,
-                onMicTap: { Task { await speech.toggle() } },
-                onSubmit: openPlannerFromPill, onOpenPlanner: openPlannerFromPill
-            )
+            NieuweAfspraakKnop { planKeuze = PlanKeuzeTarget() }
         }
         // Eén laadpad (zie VandaagView): `.task` herstart al bij elke terugkeer
         // naar deze tab.
@@ -75,17 +67,6 @@ struct AgendaView: View {
         // maand; blader je verder, dan moet dat venster mee.
         .onChange(of: viewModel.displayedMonth) { _, _ in
             Task { await viewModel.refreshExternalForDisplayedMonth() }
-        }
-        .onChange(of: speech.transcript) { _, transcript in
-            if !transcript.isEmpty { pillText = transcript }
-        }
-        .onChange(of: speech.error) { _, error in
-            if let error { speechAlertMessage = error }
-        }
-        .alert("Spraak", isPresented: Binding(get: { speechAlertMessage != nil }, set: { if !$0 { speechAlertMessage = nil } })) {
-            Button("Oké", role: .cancel) {}
-        } message: {
-            Text(speechAlertMessage ?? "")
         }
         // Terug naar een popup bij het kiezen van een dag (verzoek opdrachtgever
         // 26 juli): het paneel onder de kalender vroeg om scrollen en duwde de
@@ -127,15 +108,14 @@ struct AgendaView: View {
                 )
             }
         }
-        .sheet(item: $planKeuze, onDismiss: voerNaKeuzeUit) { target in
+        .sheet(item: $planKeuze, onDismiss: voerNaKeuzeUit) { _ in
             PlanKeuzeSheet(
-                zin: target.zin,
                 onHandmatig: {
-                    naKeuze = .handmatig(target.zin)
+                    naKeuze = .handmatig
                     planKeuze = nil
                 },
                 onAI: {
-                    naKeuze = .ai(target.zin)
+                    naKeuze = .ai
                     planKeuze = nil
                 }
             )
@@ -160,27 +140,13 @@ struct AgendaView: View {
     /// De plan-pill: mét tekst ga je meteen naar de planner — die keuze is dan al
     /// gemaakt en een keuzesheet ertussen zou een extra tik zijn. Zonder tekst opent
     /// de keuzesheet, want dan is nog niet gezegd of het met AI of handmatig moet.
-    private func openPlannerFromPill() {
-        if speech.listening { speech.stop() }
-        let typed = pillText.trimmingCharacters(in: .whitespacesAndNewlines)
-        pillText = ""
-        // Leeg veld: er valt niets te lezen, dus het formulier is de enige zinnige
-        // uitkomst. Getypte zin: allebei de routes kunnen, dus eerst vragen — hij
-        // verdween anders altijd in de AI-planner.
-        if typed.isEmpty {
-            openNieuweAfspraak(seed: .empty)
-        } else {
-            planKeuze = PlanKeuzeTarget(zin: typed)
-        }
-    }
-
     /// Draait de gemaakte keuze uit, nadat de keuze-sheet is gesloten.
     private func voerNaKeuzeUit() {
         guard let keuze = naKeuze else { return }
         naKeuze = nil
         switch keuze {
-        case .handmatig(let zin): openNieuweAfspraak(seed: .typed(zin))
-        case .ai(let zin): openPlanner(seed: zin)
+        case .handmatig: openNieuweAfspraak(seed: .empty)
+        case .ai: openPlanner(seed: "")
         }
     }
 
