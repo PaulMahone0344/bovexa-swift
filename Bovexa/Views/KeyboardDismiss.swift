@@ -13,10 +13,16 @@ struct KeyboardDoneModifier: ViewModifier {
         content
             .focused($focused)
             .toolbar {
-                ToolbarItemGroup(placement: .keyboard) {
-                    Spacer()
-                    Button("Klaar") { focused = false }
-                        .font(BovexaTheme.TypeStyle.body.weight(.semibold))
+                // Alleen aanwezig zolang het veld focus heeft. Zonder die
+                // voorwaarde bleef de balk na het sluiten van het toetsenbord
+                // achter, onderaan het scherm: over de tabbalk in de Agenda, en
+                // over de composer in de Planner.
+                if focused {
+                    ToolbarItemGroup(placement: .keyboard) {
+                        Spacer()
+                        Button("Klaar") { focused = false }
+                            .font(BovexaTheme.TypeStyle.body.weight(.semibold))
+                    }
                 }
             }
     }

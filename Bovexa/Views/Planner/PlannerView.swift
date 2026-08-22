@@ -289,13 +289,6 @@ struct PlannerView: View {
         VStack(alignment: .leading, spacing: BovexaTheme.Space.md) {
             detailsToggle
 
-            if showDetails {
-                detailPickers
-                    // Van bovenaf invouwen: de rij waarop je tikt blijft staan en de
-                    // inhoud groeit eronder, in plaats van dat het blok verspringt.
-                    .transition(.opacity.combined(with: .move(edge: .top)))
-            }
-
             Button {
                 Task { await viewModel.confirm() }
             } label: {
@@ -311,6 +304,34 @@ struct PlannerView: View {
             .buttonStyle(.glassProminentBrand)
             .disabled(viewModel.saving)
         }
+        // De vijf blokken uitklappen ín het gesprek duwde "Zet in agenda" een half
+        // scherm naar beneden, precies wanneer je die knop nodig hebt. In een eigen
+        // sheet blijft de bevestiging in beeld en houden de pickers hun ruimte.
+        .sheet(isPresented: $showDetails) { detailsSheet }
+    }
+
+    private var detailsSheet: some View {
+        NavigationStack {
+            ZStack {
+                AppBackground()
+                ScrollView {
+                    detailPickers
+                        .padding(BovexaTheme.Space.xl)
+                }
+            }
+            .navigationTitle("Details")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button("Klaar") { showDetails = false }
+                        .font(BovexaTheme.TypeStyle.body.weight(.semibold))
+                }
+            }
+        }
+        // Medium is genoeg voor zichtbaarheid en toewijzen; wie bij contact of
+        // herinnering moet zijn trekt hem omhoog.
+        .presentationDetents([.medium, .large])
+        .presentationDragIndicator(.visible)
     }
 
     /// De rij met de chevron. Toont samengevat wat er onder zit, zodat dichtklappen
@@ -318,7 +339,7 @@ struct PlannerView: View {
     private var detailsToggle: some View {
         Button {
             Haptics.selection()
-            withAnimation(.snappy(duration: 0.25)) { showDetails.toggle() }
+            showDetails = true
         } label: {
             HStack(spacing: BovexaTheme.Space.sm) {
                 Image(systemName: "slider.horizontal.3")
@@ -339,10 +360,9 @@ struct PlannerView: View {
 
                 Spacer(minLength: BovexaTheme.Space.sm)
 
-                Image(systemName: "chevron.down")
+                Image(systemName: "chevron.right")
                     .font(.system(size: 13, weight: .semibold))
                     .foregroundStyle(BovexaTheme.Colors.muted)
-                    .rotationEffect(.degrees(showDetails ? 180 : 0))
             }
             .padding(.horizontal, BovexaTheme.Space.md)
             .padding(.vertical, BovexaTheme.Space.sm + 2)
@@ -357,7 +377,7 @@ struct PlannerView: View {
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
-        .accessibilityLabel(showDetails ? "Details verbergen" : "Details tonen")
+        .accessibilityLabel("Details aanpassen")
     }
 
     private var detailsSummary: String {
