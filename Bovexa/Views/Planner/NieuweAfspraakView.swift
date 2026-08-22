@@ -1,13 +1,17 @@
 import SwiftUI
 
-/// Keuzesheet "Nieuwe afspraak" (M12): twee gelijkwaardige kaarten — MET AI (met
-/// een eigen tekstveld en microfoon, zodat de AI-route géén extra tik kost) en
-/// HANDMATIG (het bestaande formulier in create-modus).
+/// "Nieuwe afspraak" (M12, herzien 22 aug): het handmatige formulier ís de pagina,
+/// met daarboven één regel voor de AI-route.
 ///
-/// Waarom één sheet en niet twee knoppen in de plan-pill: de pill is al vol, en de
-/// drie ingangen (pill, dagsheet, leeg uur) zouden anders elk dezelfde twee knoppen
-/// moeten tekenen. Deze sheet vertelt bovendien in woorden wat de app kan — dat was
-/// tot nu toe onzichtbaar.
+/// Hier stonden eerst twee gelijkwaardige keuzekaarten (MET AI / HANDMATIG). Zelf
+/// invullen is de route die je het vaakst neemt, en die kostte daardoor een tik
+/// extra op een scherm dat verder niets deed. De AI-route levert niets in: het
+/// tekstveld met microfoon staat er nog, nu bovenaan, dus typen of inspreken kan
+/// nog steeds meteen.
+///
+/// Waarom nog steeds één sheet en geen twee knoppen in de plan-pill: de pill is al
+/// vol, en de drie ingangen (pill, dagsheet, leeg uur) zouden anders elk dezelfde
+/// twee knoppen moeten tekenen.
 struct NieuweAfspraakView: View {
     /// Waar de gebruiker vandaan kwam: een dag, een leeg uur, of niets.
     let seed: NieuweAfspraakSeed
@@ -30,11 +34,10 @@ struct NieuweAfspraakView: View {
     @State private var path: [Route] = []
     @State private var speechAlertMessage: String?
 
-    /// Beide routes worden gepusht in dezelfde stapel: terug leidt naar de keuze,
+    /// De AI-route wordt op het formulier gepusht: terug leidt naar het formulier,
     /// het kruisje sluit alles.
     private enum Route: Hashable {
         case planner(String?)
-        case handmatig
     }
 
     var body: some View {
@@ -43,8 +46,8 @@ struct NieuweAfspraakView: View {
                 AppBackground()
                 ScrollView {
                     VStack(spacing: BovexaTheme.Space.lg) {
-                        aiCard
-                        handmatigCard
+                        aiStrip
+                        formulier
                     }
                     .padding(BovexaTheme.Space.xl)
                 }
@@ -58,13 +61,11 @@ struct NieuweAfspraakView: View {
                 switch route {
                 case .planner(let sentence):
                     plannerPage(sentence: sentence)
-                case .handmatig:
-                    handmatigPage
                 }
             }
         }
-        // Valkuil D: de AI-kaart heeft een tekstveld. Op een halve sheet duwt het
-        // toetsenbord de handmatig-kaart volledig uit beeld.
+        // Valkuil D: bovenaan staat een tekstveld. Op een halve sheet duwt het
+        // toetsenbord het formulier eronder volledig uit beeld.
         .presentationDetents([.large])
         .onChange(of: speech.transcript) { _, transcript in
             if !transcript.isEmpty { input = transcript }
@@ -79,30 +80,58 @@ struct NieuweAfspraakView: View {
         }
     }
 
-    // MARK: - kaarten
+    // MARK: - AI-regel boven het formulier
 
-    private var aiCard: some View {
+    /// Bewust één regel hoog en zonder eigen knoppenrij: dit is de afslag, niet de
+    /// hoofdweg. Zelfde vorm als de plan-pill in de Agenda (veld + microfoon +
+    /// ✨-knop), zodat het herkenbaar dezelfde ingang is.
+    private var aiStrip: some View {
         GlassCard {
-            VStack(alignment: .leading, spacing: BovexaTheme.Space.md) {
-                cardHeading(
-                    icon: "sparkles",
-                    title: "Met AI",
-                    subtitle: "Typ of spreek: “morgen 10:00 keuken bij Daan”."
-                )
+            VStack(alignment: .leading, spacing: BovexaTheme.Space.sm) {
+                HStack(spacing: BovexaTheme.Space.sm) {
+                    ZStack {
+                        Circle()
+                            .fill(LinearGradient(colors: BovexaTheme.Gradients.blue, startPoint: .topLeading, endPoint: .bottomTrailing))
+                            .frame(width: 28, height: 28)
+                        Image(systemName: "sparkles")
+                            .font(.system(size: 13, weight: .semibold))
+                            .foregroundStyle(BovexaTheme.Colors.white)
+                    }
+                    Text("Laat AI het invullen")
+                        .font(BovexaTheme.TypeStyle.subheadline.weight(.semibold))
+                        .foregroundStyle(BovexaTheme.Colors.ink)
+                    Spacer(minLength: 0)
+                }
 
                 HStack(spacing: BovexaTheme.Space.sm) {
-                    TextField("Typ of spreek een planning", text: $input)
+                    TextField("morgen 10:00 keuken bij Daan", text: $input)
                         .font(BovexaTheme.TypeStyle.subheadline)
                         .foregroundStyle(BovexaTheme.Colors.ink)
                         .submitLabel(.send)
-                        .keyboardDone(focused: $fieldFocused)
+                        // Geen keyboardDone: eenregelig veld, Return verstuurt al.
+                        // Het formulier eronder heeft zelf een meerregelig
+                        // notitieveld mét die knop; twee toetsenbord-toolbars in
+                        // dezelfde hiërarchie laten er één achter op het scherm.
+                        .focused($fieldFocused)
                         .onSubmit(openPlanner)
 
                     if speech.available {
-                        MicButtonView(listening: speech.listening, size: 36) {
+                        MicButtonView(listening: speech.listening, size: 34) {
                             Task { await speech.toggle() }
                         }
                     }
+
+                    Button(action: openPlanner) {
+                        Image(systemName: "sparkles")
+                            .font(.system(size: 15, weight: .semibold))
+                            .foregroundStyle(BovexaTheme.Colors.white)
+                            .frame(width: 34, height: 34)
+                            .background(LinearGradient(colors: BovexaTheme.Gradients.blue, startPoint: .topLeading, endPoint: .bottomTrailing))
+                            .clipShape(Circle())
+                            .minTapTarget()
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel("Plannen met AI")
                 }
                 .padding(.horizontal, BovexaTheme.Space.md)
                 .padding(.vertical, BovexaTheme.Space.xs)
@@ -112,67 +141,30 @@ struct NieuweAfspraakView: View {
                         .strokeBorder(BovexaTheme.Colors.edge, lineWidth: 1)
                 )
                 .clipShape(RoundedRectangle(cornerRadius: BovexaTheme.Radius.md, style: .continuous))
-
-                Button(action: openPlanner) {
-                    // Opmaak ín de label-closure (M11 patroon A): buiten de Button
-                    // tekent de pil wel breed, maar raakt hij alleen zijn tekst.
-                    // Losse HStack in plaats van Label: die zet het icoon vóór de
-                    // tekst, en een pijl vooraan leest als "terug".
-                    HStack(spacing: BovexaTheme.Space.xs) {
-                        Text("Plannen met AI")
-                        Image(systemName: "arrow.right")
-                    }
-                    .frame(maxWidth: .infinity)
-                }
-                .buttonStyle(.glassProminentBrand)
             }
         }
     }
 
-    private var handmatigCard: some View {
-        GlassCard {
-            VStack(alignment: .leading, spacing: BovexaTheme.Space.md) {
-                cardHeading(
-                    icon: "square.and.pencil",
-                    title: "Handmatig",
-                    subtitle: "Vul datum, tijd en details zelf in."
-                )
+    // MARK: - het formulier
 
-                Button {
-                    Haptics.selection()
-                    fieldFocused = false
-                    path.append(.handmatig)
-                } label: {
-                    Text("Zelf invullen")
-                        .frame(maxWidth: .infinity)
-                }
-                .buttonStyle(.glassSecondaryBrand)
+    private var formulier: some View {
+        EventEditorView(
+            seed: seed, currentUserId: userId, org: org ?? "",
+            companyName: memberColors.orgName ?? "Bedrijf", token: token,
+            members: memberColors.members, labelStore: labelStore,
+            defaultDurationMin: defaultDurationMin,
+            // Het formulier is nu de eerste pagina, dus Annuleren sluit de sheet in
+            // plaats van een stap terug te gaan.
+            onCancel: { dismiss() },
+            onSaved: { created in
+                // Haptics.success() staat al in EventEditorView.
+                onConfirmed(created.start)
+                dismiss()
             }
-        }
+        )
     }
 
-    private func cardHeading(icon: String, title: String, subtitle: String) -> some View {
-        HStack(spacing: BovexaTheme.Space.md) {
-            ZStack {
-                Circle()
-                    .fill(LinearGradient(colors: BovexaTheme.Gradients.blue, startPoint: .topLeading, endPoint: .bottomTrailing))
-                    .frame(width: 34, height: 34)
-                Image(systemName: icon)
-                    .font(.system(size: 15, weight: .semibold))
-                    .foregroundStyle(BovexaTheme.Colors.white)
-            }
-            VStack(alignment: .leading, spacing: 2) {
-                Text(title)
-                    .font(BovexaTheme.TypeStyle.title3)
-                    .foregroundStyle(BovexaTheme.Colors.ink)
-                Text(subtitle)
-                    .font(BovexaTheme.TypeStyle.footnote)
-                    .foregroundStyle(BovexaTheme.Colors.muted)
-            }
-        }
-    }
-
-    // MARK: - de twee routes
+    // MARK: - de AI-route
 
     private func plannerPage(sentence: String?) -> some View {
         PlannerView(
@@ -183,29 +175,6 @@ struct NieuweAfspraakView: View {
                 dismiss()
             }
         )
-    }
-
-    private var handmatigPage: some View {
-        ZStack {
-            AppBackground()
-            ScrollView {
-                EventEditorView(
-                    seed: seed, currentUserId: userId, org: org ?? "",
-                    companyName: memberColors.orgName ?? "Bedrijf", token: token,
-                    members: memberColors.members, labelStore: labelStore,
-                    defaultDurationMin: defaultDurationMin,
-                    onCancel: { if !path.isEmpty { path.removeLast() } },
-                    onSaved: { created in
-                        // Haptics.success() staat al in EventEditorView.
-                        onConfirmed(created.start)
-                        dismiss()
-                    }
-                )
-                .padding(BovexaTheme.Space.xl)
-            }
-        }
-        .navigationTitle("Zelf invullen")
-        .navigationBarTitleDisplayMode(.inline)
     }
 
     /// Getypte of gesproken tekst wint van de dag waar de gebruiker vandaan kwam;

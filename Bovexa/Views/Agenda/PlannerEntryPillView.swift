@@ -48,9 +48,17 @@ struct PlannerEntryPillView: View {
         .padding(.bottom, BovexaTheme.Space.sm)
     }
 
-    private func sparkleCircle(size: CGFloat, icon: CGFloat) -> some View {
-        Image(systemName: "sparkles")
+    /// Leeg veld betekent dat er niets te plannen valt met AI; dan gaat de knop
+    /// naar het handmatige formulier. Het icoon volgt die betekenis, want een
+    /// ✨ die je naar een leeg formulier stuurt valt niet te raden.
+    private var hasText: Bool {
+        !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+    }
+
+    private func sparkleCircle(size: CGFloat, icon: CGFloat, symbol: String = "sparkles") -> some View {
+        Image(systemName: symbol)
             .font(.system(size: icon, weight: .semibold))
+            .contentTransition(.symbolEffect(.replace))
             .foregroundStyle(BovexaTheme.Colors.white)
             .frame(width: size, height: size)
             .background(LinearGradient(colors: BovexaTheme.Gradients.blue, startPoint: .topLeading, endPoint: .bottomTrailing))
@@ -66,9 +74,10 @@ struct PlannerEntryPillView: View {
                 expanded = false
             } label: {
                 // Enige manier om de pill te sluiten zonder te versturen; het
-                // raakvlak was 9x15pt (M11 patroon B).
-                Image(systemName: "chevron.right")
-                    .font(.system(size: 15, weight: .semibold))
+                // raakvlak was 9x15pt (M11 patroon B). Een chevron las als
+                // "verder/terug"; een kruisje zegt sluiten.
+                Image(systemName: "xmark")
+                    .font(.system(size: 14, weight: .semibold))
                     .foregroundStyle(BovexaTheme.Colors.muted)
                     .minTapTarget()
             }
@@ -78,7 +87,12 @@ struct PlannerEntryPillView: View {
             TextField("Typ of spreek een planning", text: $text)
                 .font(BovexaTheme.TypeStyle.subheadline)
                 .submitLabel(.send)
-                .keyboardDone(focused: $fieldFocused)
+                .focused($fieldFocused)
+                // Geen keyboardDone hier. Deze pill hangt in een safeAreaInset
+                // binnen de TabView; een ToolbarItemGroup(.keyboard) landt dan
+                // niet boven het toetsenbord maar onderin het scherm, dwars over
+                // de tabbalk. Nodig is hij ook niet: dit veld is eenregelig, dus
+                // Return verstuurt (submitLabel .send) en de chevron sluit.
                 .onSubmit {
                     // Eerst focus loslaten: de pill klapt hierna in en een veld
                     // dat nog focus heeft terwijl het uit de hiërarchie verdwijnt
@@ -100,10 +114,11 @@ struct PlannerEntryPillView: View {
                 onOpenPlanner()
                 expanded = false
             } label: {
-                sparkleCircle(size: 40, icon: 17).minTapTarget()
+                sparkleCircle(size: 40, icon: 17, symbol: hasText ? "sparkles" : "plus")
+                    .minTapTarget()
             }
             .buttonStyle(.plain)
-            .accessibilityLabel("Planner openen")
+            .accessibilityLabel(hasText ? "Plannen met AI" : "Nieuwe afspraak")
         }
         .padding(.horizontal, BovexaTheme.Space.md)
         // Van sm (10) naar 8: de knoppen in de pill dragen sinds M11 hun eigen

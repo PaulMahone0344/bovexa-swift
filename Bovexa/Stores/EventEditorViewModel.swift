@@ -102,7 +102,12 @@ final class EventEditorViewModel: ObservableObject {
         case .create(let seed):
             // Defaults gelijk aan de planner: privé, geen herinnering, geen
             // toewijzing, categorie werk.
-            title = ""
+            //
+            // Getypte zin uit de plan-pill wordt de titel. Hij staat er alleen als
+            // je "zelf invullen" koos; die tekst weggooien betekent dat je 'm
+            // opnieuw moet intikken. Datum en tijd leest alleen de AI eruit, dus
+            // die blijven op de voorzet staan.
+            title = seed.trimmedText ?? ""
             category = .work
             start = seed.startDate(now: now)
             durationMin = max(15, defaultDurationMin)

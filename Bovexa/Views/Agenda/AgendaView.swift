@@ -13,6 +13,11 @@ struct AgendaView: View {
     @State private var plannerSeed: String?
     @State private var showPlanner = false
     @State private var nieuweAfspraak: NieuweAfspraakTarget?
+    @State private var planKeuze: PlanKeuzeTarget?
+    /// Wat er ná het sluiten van de keuze-sheet moet gebeuren. Twee sheets die
+    /// elkaar in dezelfde tik afwisselen laat SwiftUI vallen; daarom pas openen als
+    /// de eerste echt weg is.
+    @State private var naKeuze: NaKeuze?
     @State private var speechAlertMessage: String?
 
     /// `.sheet(item:)` in plaats van een losse bool: de voorzet en het openen komen
@@ -21,6 +26,16 @@ struct AgendaView: View {
     private struct NieuweAfspraakTarget: Identifiable {
         let id = UUID()
         let seed: NieuweAfspraakSeed
+    }
+
+    private struct PlanKeuzeTarget: Identifiable {
+        let id = UUID()
+        let zin: String
+    }
+
+    private enum NaKeuze {
+        case handmatig(String)
+        case ai(String)
     }
 
     private var currentUser: AgendaUser? {
@@ -112,6 +127,19 @@ struct AgendaView: View {
                 )
             }
         }
+        .sheet(item: $planKeuze, onDismiss: voerNaKeuzeUit) { target in
+            PlanKeuzeSheet(
+                zin: target.zin,
+                onHandmatig: {
+                    naKeuze = .handmatig(target.zin)
+                    planKeuze = nil
+                },
+                onAI: {
+                    naKeuze = .ai(target.zin)
+                    planKeuze = nil
+                }
+            )
+        }
         .sheet(item: $nieuweAfspraak) { target in
             if let userId = currentUser?.id {
                 NieuweAfspraakView(
@@ -136,10 +164,23 @@ struct AgendaView: View {
         if speech.listening { speech.stop() }
         let typed = pillText.trimmingCharacters(in: .whitespacesAndNewlines)
         pillText = ""
+        // Leeg veld: er valt niets te lezen, dus het formulier is de enige zinnige
+        // uitkomst. Getypte zin: allebei de routes kunnen, dus eerst vragen — hij
+        // verdween anders altijd in de AI-planner.
         if typed.isEmpty {
             openNieuweAfspraak(seed: .empty)
         } else {
-            openPlanner(seed: typed)
+            planKeuze = PlanKeuzeTarget(zin: typed)
+        }
+    }
+
+    /// Draait de gemaakte keuze uit, nadat de keuze-sheet is gesloten.
+    private func voerNaKeuzeUit() {
+        guard let keuze = naKeuze else { return }
+        naKeuze = nil
+        switch keuze {
+        case .handmatig(let zin): openNieuweAfspraak(seed: .typed(zin))
+        case .ai(let zin): openPlanner(seed: zin)
         }
     }
 
