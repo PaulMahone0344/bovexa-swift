@@ -25,13 +25,16 @@ struct AgendaView: View {
         let seed: NieuweAfspraakSeed
     }
 
+    /// Draagt de voorzet mee de keuze-sheet in: welke dag (of welk uur) de
+    /// gebruiker aanwees blijft zo behouden, welke route hij daarna ook kiest.
     private struct PlanKeuzeTarget: Identifiable {
         let id = UUID()
+        let seed: NieuweAfspraakSeed
     }
 
     private enum NaKeuze {
-        case handmatig
-        case ai
+        case handmatig(NieuweAfspraakSeed)
+        case ai(NieuweAfspraakSeed)
     }
 
     private var currentUser: AgendaUser? {
@@ -44,16 +47,17 @@ struct AgendaView: View {
             if viewModel.viewKind == .dag, let userId = currentUser?.id {
                 DayView(
                     viewModel: viewModel, currentUserId: userId,
-                    // Long-press op een leeg uur: dag én uur staan vast, dus juist
-                    // hier is handmatig invullen de korte route (M12).
-                    onPlanAtHour: { hour, day in openNieuweAfspraak(seed: .forHour(hour, on: day)) }
+                    // Long-press op een leeg uur: ook hier eerst de vraag
+                    // handmatig of AI. Dag én uur gaan als voorzet mee, dus welke
+                    // route je ook kiest, je begint op het aangewezen tijdstip.
+                    onPlanAtHour: { hour, day in openPlanKeuze(seed: .forHour(hour, on: day)) }
                 )
             } else {
                 monthOrListContent
             }
         }
         .safeAreaInset(edge: .bottom) {
-            NieuweAfspraakKnop { planKeuze = PlanKeuzeTarget() }
+            NieuweAfspraakKnop { openPlanKeuze(seed: .empty) }
         }
         // Eén laadpad (zie VandaagView): `.task` herstart al bij elke terugkeer
         // naar deze tab.
@@ -88,7 +92,7 @@ struct AgendaView: View {
                         // Valkuil C: de dagsheet moet eerst dicht in dezelfde tick,
                         // anders blijft hij onder de keuzesheet hangen.
                         viewModel.closeDaySheet()
-                        openNieuweAfspraak(seed: .forDay(target.day))
+                        openPlanKeuze(seed: .forDay(target.day))
                     }
                 )
             }
@@ -108,14 +112,14 @@ struct AgendaView: View {
                 )
             }
         }
-        .sheet(item: $planKeuze, onDismiss: voerNaKeuzeUit) { _ in
+        .sheet(item: $planKeuze, onDismiss: voerNaKeuzeUit) { target in
             PlanKeuzeSheet(
                 onHandmatig: {
-                    naKeuze = .handmatig
+                    naKeuze = .handmatig(target.seed)
                     planKeuze = nil
                 },
                 onAI: {
-                    naKeuze = .ai
+                    naKeuze = .ai(target.seed)
                     planKeuze = nil
                 }
             )
@@ -145,9 +149,17 @@ struct AgendaView: View {
         guard let keuze = naKeuze else { return }
         naKeuze = nil
         switch keuze {
-        case .handmatig: openNieuweAfspraak(seed: .empty)
-        case .ai: openPlanner(seed: "")
+        case .handmatig(let seed):
+            openNieuweAfspraak(seed: seed)
+        case .ai(let seed):
+            // Geen aangewezen dag ⇒ nil ⇒ de planner opent met zijn startkaart,
+            // precies zoals vóór deze wijziging.
+            openPlanner(seed: seed.plannerSeed() ?? "")
         }
+    }
+
+    private func openPlanKeuze(seed: NieuweAfspraakSeed) {
+        planKeuze = PlanKeuzeTarget(seed: seed)
     }
 
     private func openPlanner(seed: String) {
