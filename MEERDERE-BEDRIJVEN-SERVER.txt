@@ -1,0 +1,197 @@
+MEERDERE BEDRIJVEN PER ACCOUNT — WAT DE SERVER MOET LEVEREN
+===========================================================
+
+Voor: beheerder van api.qawayahbase.com (PocketBase)
+Van:  app-kant, Bovexa Flow iOS (bundle com.bovexa.flow)
+Doel: één account kan lid zijn van meerdere bedrijven — bijvoorbeeld
+      "Voetbalschool De Betuwe" én "ObyHelpt" — en in de app wisselen tussen
+      die bedrijven. Alle schermen ná de keuze blijven precies zoals ze nu
+      zijn; ze horen alleen de gegevens van het actieve bedrijf te tonen.
+
+
+1. HOE HET NU WERKT
+-------------------
+
+Op het account (collection agenda_users) staat één veld default_org. Dat is
+het bedrijf van die gebruiker, en het is er precies één.
+
+Alle bedrijfsroutes gaan zonder bedrijfs-id mee vanuit de app. De server leidt
+het bedrijf af uit het token, dus in de praktijk uit default_org:
+
+    POST /api/agenda/company/create
+    POST /api/agenda/company/join
+    GET  /api/agenda/company/members
+    POST /api/agenda/company/member/role
+    POST /api/agenda/company/member/permissions
+    POST /api/agenda/company/member/remove
+    POST /api/agenda/company/code/rotate
+    GET  /api/agenda/company/profile
+    POST /api/agenda/company/profile
+    POST /api/agenda/company/invite
+    POST /api/agenda/company/logo
+
+Gevolg: zodra een gebruiker een tweede bedrijf aanmaakt of ergens toetreedt,
+overschrijft dat vermoedelijk default_org en is het eerste bedrijf uit beeld —
+en mogelijk zelfs de koppeling met dat eerste bedrijf kwijt. Dat laatste moet
+uitgezocht worden vóór er iemand mee test met een echt account.
+
+
+2. EERSTE VRAAG DIE BEANTWOORD MOET WORDEN
+------------------------------------------
+
+Waarop autoriseert de server op dit moment?
+
+  A. Op lidmaatschap — er bestaat al een tabel of veld waarin staat welke
+     gebruikers bij welk bedrijf horen, en default_org zegt alleen "dit is het
+     bedrijf dat je nu open hebt".
+
+  B. Op default_org zelf — het account hoort bij precies dat ene bedrijf en er
+     is geen aparte lidmaatschapsadministratie.
+
+Bij A is het werk klein: alleen punt 3 en 4 hieronder.
+Bij B moet eerst punt 5 gebouwd worden.
+
+Te controleren in de PocketBase-admin: bestaat er een collection met daarin
+gebruiker + bedrijf (bijvoorbeeld agenda_org_members)? En staan de API-rules
+van afspraken, taken, labels en contacten op "eigen record" of op "bedrijf van
+de gebruiker"?
+
+
+3. NIEUWE ROUTE: MIJN BEDRIJVEN
+-------------------------------
+
+De app kan nu niet weten bij welke bedrijven een account hoort. Er is één
+route nodig die dat teruggeeft.
+
+    GET /api/agenda/company/mine
+    Authorization: Bearer <token>
+
+    Antwoord 200:
+    {
+      "orgs": [
+        {
+          "id": "abc123",
+          "name": "Voetbalschool De Betuwe",
+          "logo": "https://.../logo.png",
+          "role": "owner",
+          "isDefault": true
+        },
+        {
+          "id": "def456",
+          "name": "ObyHelpt",
+          "logo": null,
+          "role": "member",
+          "isDefault": false
+        }
+      ]
+    }
+
+Velden: id en name zijn verplicht, logo mag null, role is dezelfde waarde als
+nu al bij members teruggegeven wordt (owner, admin, member — zie
+CompanyRole in Bovexa/Models/CompanyModels.swift), isDefault is optioneel.
+
+Lege lijst (orgs: []) betekent: dit account hoort nog nergens bij. De app
+toont dan het bestaande scherm om een bedrijf te starten of toe te treden.
+
+
+4. NIEUWE ROUTE: WISSELEN VAN BEDRIJF
+-------------------------------------
+
+    POST /api/agenda/company/switch
+    Authorization: Bearer <token>
+    { "orgId": "def456" }
+
+    Antwoord 200: het bijgewerkte account, in hetzelfde formaat als de
+    bestaande /api/agenda/me — dus met default_org al op de nieuwe waarde.
+
+    Antwoord 403 als het account geen lid is van dat bedrijf.
+
+De app zet daarna alles opnieuw op basis van dit antwoord. Werkt de route
+niet, dan gebeurt er in de app niets en blijft het oude bedrijf gewoon staan.
+
+Alternatief zonder nieuwe route: toestaan dat een gebruiker default_org op
+zijn eigen record patcht, mits de nieuwe waarde een bedrijf is waar hij lid
+van is. Dat is minder netjes, want dan bewaakt een API-rule wat eigenlijk een
+autorisatiebeslissing is. Een eigen route heeft de voorkeur.
+
+
+5. ALLEEN NODIG BIJ SCENARIO B: LIDMAATSCHAPPEN
+-----------------------------------------------
+
+Als er nog geen lidmaatschapsadministratie is, dan hoort die er te komen:
+
+    collection agenda_org_members
+      user        relation -> agenda_users   (verplicht)
+      org         relation -> agenda_orgs    (verplicht)
+      role        select: owner | admin | member
+      permissions json (dezelfde vorm als nu bij members)
+      created     autodate
+
+    uniek op de combinatie (user, org)
+
+Daarbij hoort dan:
+
+  - company/create maakt naast het bedrijf ook een lidmaatschap aan met rol
+    owner, en zet default_org op het nieuwe bedrijf.
+  - company/join maakt een lidmaatschap aan met rol member, en laat de
+    bestaande lidmaatschappen ongemoeid. Dit is het belangrijkste punt: een
+    tweede bedrijf toevoegen mag het eerste nooit weghalen.
+  - member/remove haalt alleen het lidmaatschap bij dat ene bedrijf weg. Was
+    dat het actieve bedrijf, dan moet default_org naar een ander lidmaatschap
+    wijzen, of leeg worden als er geen ander is.
+  - Alle bestaande company-routes controleren voortaan op lidmaatschap van
+    default_org, niet op default_org alleen.
+
+
+6. GEGEVENS MOETEN PER BEDRIJF GESCHEIDEN BLIJVEN
+-------------------------------------------------
+
+Dit is het punt waar het stil misgaat als het vergeten wordt: een afspraak
+van de voetbalschool hoort niet in de agenda van ObyHelpt te staan.
+
+Voor elke collection die aan een bedrijf hangt — afspraken, dagtaken, labels,
+contacten, meldingen — geldt:
+
+  - er staat een org-veld op het record (of het hangt er via een relatie aan);
+  - lezen geeft alleen records van het actieve bedrijf terug;
+  - schrijven zet het actieve bedrijf op het nieuwe record.
+
+Bestaande records hebben dat veld mogelijk nog niet. Die moeten in één keer
+gevuld worden met het bedrijf van hun eigenaar, vóór de filters aangaan.
+Anders verdwijnt bestaande data uit beeld zodra er gefilterd wordt.
+
+Persoonlijke gegevens die niet bij een bedrijf horen — naam, avatar,
+wachtwoord, apparaat-token voor meldingen — blijven op het account staan en
+horen niet mee te wisselen.
+
+
+7. AI-PLANNER
+-------------
+
+POST /functions/agenda/ai-plan leest de agenda van de gebruiker. Ook die
+functie moet het actieve bedrijf aanhouden, anders plant hij rond afspraken
+van het verkeerde bedrijf.
+
+
+8. WAT DE APP DOET ZODRA DIT ER IS
+----------------------------------
+
+  - Bij het openen van de Bedrijf-tab: GET company/mine.
+  - Onder de titel Bedrijf komt een rij knoppen, één per bedrijf, met het
+    actieve bedrijf gemarkeerd, plus een plus-knop om er een toe te voegen
+    (dat is het bestaande scherm om te starten of toe te treden).
+  - Tikken op een knop: POST company/switch, daarna alles opnieuw laden.
+  - Alle overige schermen blijven ongewijzigd; ze volgen automatisch het
+    actieve bedrijf.
+
+Zolang company/mine en company/switch er niet zijn, blijft de app werken zoals
+nu: één bedrijf, geen knoppenrij.
+
+
+9. OM TE TESTEN
+---------------
+
+Graag een testaccount dat lid is van twee bedrijven, of admin-toegang tot
+PocketBase. Testen met een echt account is riskant zolang punt 2 niet
+beantwoord is: als het scenario B is, kan het aanmaken van een tweede bedrijf
+de koppeling met het eerste verbreken.
