@@ -173,6 +173,18 @@ struct LoginView: View {
                             .contentShape(Rectangle())
                     }
                     .buttonStyle(.plain)
+
+                    // Merkafsluiter onderaan het scherm. Binnen de ScrollView-VStack
+                    // zodat hij meebeweegt als het toetsenbord opkomt; decoratief,
+                    // dus verborgen voor VoiceOver.
+                    Image("BovexaLogo")
+                        .resizable()
+                        .renderingMode(.original)
+                        .scaledToFit()
+                        .frame(width: 120)
+                        .opacity(0.75)
+                        .padding(.top, BovexaTheme.Space.lg)
+                        .accessibilityHidden(true)
                 }
                 .padding(BovexaTheme.Space.xl)
             }
