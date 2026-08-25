@@ -8,15 +8,28 @@ import SwiftUI
 ///    anders ongemerkt altijd op "privé" staan) en de knop "Toevoegen".
 struct EventEditorView: View {
     @FocusState private var notesFocused: Bool
+    @StateObject private var eigenCategorieen = EigenCategorieStore.shared
+    /// Welke eigen categorie aangetikt is. Los van `viewModel.category`, want de
+    /// server kent alleen de vaste waarde eronder — de naam leeft in dit scherm.
+    @State private var gekozenEigenCategorie: String?
+    @State private var toonNieuweCategorie = false
+    @State private var nieuweCategorieNaam = ""
     @StateObject private var viewModel: EventEditorViewModel
     @ObservedObject var labelStore: LabelStore
     let members: [Member]
     let onCancel: () -> Void
     let onSaved: (AgendaEvent) -> Void
 
+    /// Vaste categorieën. De onderliggende waarden blijven wat ze waren, zodat
+    /// bestaande afspraken hun kleur en icoon houden; alleen het opschrift is
+    /// veranderd (Sociaal ⇒ Familie, Lichaam ⇒ Sport). `.focus` staat niet meer
+    /// als vaste knop in de rij: die waarde draagt nu de eigen categorieën.
     private static let categories: [(BovexaTheme.Category, String)] = [
-        (.work, "Werk"), (.focus, "Focus"), (.social, "Sociaal"), (.body, "Lichaam"),
+        (.work, "Werk"), (.social, "Familie"), (.body, "Sport"),
     ]
+
+    /// Vaste waarde waaronder een zelfbedachte categorie naar de server gaat.
+    private static let eigenCategorieWaarde: BovexaTheme.Category = .focus
 
     init(
         event: AgendaEvent, currentUserId: String, token: String, members: [Member], labelStore: LabelStore,
@@ -73,9 +86,7 @@ struct EventEditorView: View {
                         .textFieldStyle(EditorFieldStyle())
 
                     fieldLabel("Categorie")
-                    chipRow(Self.categories, isActive: { $0 == viewModel.category }) { value in
-                        withAnimation(.snappy) { viewModel.category = value }
-                    }
+                    categorieChips
 
                     if !org.isEmpty {
                         fieldLabel("Label")
@@ -202,25 +213,88 @@ struct EventEditorView: View {
             .tracking(0.3)
     }
 
-    private func chipRow<T: Hashable>(_ items: [(T, String)], isActive: @escaping (T) -> Bool, onSelect: @escaping (T) -> Void) -> some View {
+    /// Vaste categorieën, daarna de zelfbedachte, en "Anders" altijd als laatste.
+    /// Een nieuwe eigen categorie komt er dus links naast te staan.
+    private var categorieChips: some View {
         FlowLayout(spacing: BovexaTheme.Space.xs) {
-            ForEach(items, id: \.0) { value, label in
-                let active = isActive(value)
-                Button {
-                    onSelect(value)
-                } label: {
-                    Text(label)
-                        .font(BovexaTheme.TypeStyle.subheadline.weight(.bold))
-                        .foregroundStyle(active ? BovexaTheme.Colors.white : BovexaTheme.Colors.muted)
-                        .padding(.horizontal, BovexaTheme.Space.md)
-                        .frame(minHeight: 44)
-                        .background(active ? BovexaTheme.Colors.blueDeep : BovexaTheme.Colors.glass)
-                        .clipShape(Capsule())
-                        .overlay(Capsule().strokeBorder(active ? BovexaTheme.Colors.blueDeep : BovexaTheme.Colors.edge, lineWidth: 1))
+            ForEach(Self.categories, id: \.0) { value, label in
+                categorieChip(label, actief: gekozenEigenCategorie == nil && viewModel.category == value) {
+                    withAnimation(.snappy) {
+                        viewModel.category = value
+                        gekozenEigenCategorie = nil
+                    }
                 }
             }
+
+            ForEach(eigenCategorieen.namen, id: \.self) { naam in
+                categorieChip(naam, actief: gekozenEigenCategorie == naam) {
+                    withAnimation(.snappy) {
+                        viewModel.category = Self.eigenCategorieWaarde
+                        gekozenEigenCategorie = naam
+                    }
+                }
+                // Weghalen kan alleen hier: een kruisje op elke chip zou de rij
+                // laten struikelen en per ongeluk-tikken uitlokken.
+                .contextMenu {
+                    Button("Verwijderen", role: .destructive) {
+                        if gekozenEigenCategorie == naam {
+                            gekozenEigenCategorie = nil
+                            viewModel.category = Self.categories[0].0
+                        }
+                        eigenCategorieen.verwijder(naam)
+                    }
+                }
+            }
+
+            categorieChip("Anders", actief: false, systemImage: "plus") {
+                nieuweCategorieNaam = ""
+                toonNieuweCategorie = true
+            }
+            .disabled(eigenCategorieen.namen.count >= EigenCategorieStore.maxAantal)
+        }
+        .alert("Eigen categorie", isPresented: $toonNieuweCategorie) {
+            TextField("Naam", text: $nieuweCategorieNaam)
+                .textInputAutocapitalization(.words)
+            Button("Annuleren", role: .cancel) {}
+            Button("Opslaan") { bewaarEigenCategorie() }
+        } message: {
+            Text("De naam blijft als knop staan, alleen op dit toestel.")
         }
     }
+
+    private func categorieChip(_ label: String, actief: Bool, systemImage: String? = nil, actie: @escaping () -> Void) -> some View {
+        Button {
+            Haptics.selection()
+            actie()
+        } label: {
+            HStack(spacing: BovexaTheme.Space.xs) {
+                if let systemImage {
+                    Image(systemName: systemImage)
+                        .font(.system(size: 13, weight: .bold))
+                }
+                Text(label)
+                    .font(BovexaTheme.TypeStyle.subheadline.weight(.bold))
+            }
+            .foregroundStyle(actief ? BovexaTheme.Colors.white : BovexaTheme.Colors.muted)
+            .padding(.horizontal, BovexaTheme.Space.md)
+            .frame(minHeight: 44)
+            .background(actief ? BovexaTheme.Colors.blueDeep : BovexaTheme.Colors.glass)
+            .clipShape(Capsule())
+            .overlay(Capsule().strokeBorder(actief ? BovexaTheme.Colors.blueDeep : BovexaTheme.Colors.edge, lineWidth: 1))
+        }
+    }
+
+    /// Opslaan én meteen selecteren: je tikt "Anders" aan omdat je die categorie
+    /// nu nodig hebt, niet om een lijstje te vullen.
+    private func bewaarEigenCategorie() {
+        guard let bewaard = eigenCategorieen.voegToe(nieuweCategorieNaam) else { return }
+        withAnimation(.snappy) {
+            viewModel.category = Self.eigenCategorieWaarde
+            gekozenEigenCategorie = bewaard
+        }
+    }
+
+
 }
 
 private struct EditorFieldStyle: TextFieldStyle {
