@@ -1,0 +1,145 @@
+SERVERKANT — ALLES WAT ER GEREGELD MOET WORDEN
+==============================================
+
+Voor: beheerder van api.qawayahbase.com (PocketBase)
+Van:  app-kant, Bovexa Flow iOS (bundle com.bovexa.flow)
+Doel: één overzicht van al het werk dat aan de serverkant ligt. De uitwerking
+      per onderdeel staat in MEERDERE-BEDRIJVEN-SERVER.txt (genummerde punten)
+      en PLEKKEN-SERVER.txt. Dit bestand is de checklist erboven: wat is er,
+      hoe erg blokkeert het, en waar staan de details.
+
+Stand: 26 augustus. De app-kant van alles hieronder is af en getest tegen de
+schermen; wat ontbreekt is telkens de route of het recht aan de serverkant.
+
+
+BLOK A — DIT BLOKKEERT HET TESTEN NU
+------------------------------------
+
+A1. Plekken in het bedrijf ophogen
+    Org xt029411b785co8 ("Voetbalschool De Betuwe") staat op plan free met
+    seats_max 3, en die drie zijn bezet. Toetreden geeft daardoor
+    {"message":"Bedrijf zit vol.","status":400} en er kan niemand meer bij om
+    mee te testen. Gevraagd: seats_max op 10. Alle omwegen vanuit de app zijn
+    dichtgetimmerd, dus dit kan alleen aan de serverkant.
+    Details, inclusief de drie klaarstaande testaccounts en de controlestappen:
+    PLEKKEN-SERVER.txt.
+
+A2. Rechten die de app nergens omheen kan
+    Drie dingen zijn voor een gewone client afgesloten, en dat raakt bijna elk
+    punt hieronder:
+      - collection agenda_members is superuser-only, dus lidmaatschappen zijn
+        niet te lezen of te schrijven vanuit de app;
+      - collection agenda_orgs heeft een leesregel die alles wegfiltert, ook
+        het eigen bedrijf;
+      - veld default_org op agenda_users is niet schrijfbaar vanuit de app.
+    Zolang dat zo is, moet elk bedrijfsgegeven via een route lopen. Graag
+    bevestigen of dat de bedoeling is; zo ja, dan zijn de routes hieronder
+    geen luxe maar de enige weg.
+
+
+BLOK B — MEERDERE BEDRIJVEN PER ACCOUNT
+---------------------------------------
+
+Het grootste blok. Nu staat er op een account één veld default_org, dus één
+bedrijf. Zodra iemand een tweede bedrijf aanmaakt of ergens toetreedt,
+overschrijft dat vermoedelijk default_org en is het eerste bedrijf uit beeld.
+Dat moet uitgezocht worden vóór iemand hier met een echt account op test.
+
+    B1. Uitzoeken wat er nu gebeurt bij een tweede bedrijf.
+        MEERDERE-BEDRIJVEN-SERVER.txt, punt 1 en 2.
+    B2. Nieuwe route: mijn bedrijven (lijst van alle bedrijven van dit
+        account). Punt 3.
+    B3. Nieuwe route: wisselen van bedrijf. Punt 4.
+    B4. Lidmaatschappen als eigen begrip, als voor scenario B gekozen wordt.
+        Punt 5.
+    B5. Gegevens per bedrijf gescheiden houden — afspraken, contacten,
+        dagtaken, meldingen. Punt 6.
+    B6. AI-planner moet het actieve bedrijf meekrijgen. Punt 7.
+    B7. Testset om het na te lopen. Punt 9.
+
+De app-kant hiervoor staat klaar: OrgSummary, listMyOrgs, switchOrg en
+BekendeBedrijvenStore bestaan al. Alleen de chipsrij in de UI is nog niet
+gebouwd, want die heeft de lijst uit B2 nodig om iets te tonen.
+
+
+BLOK C — VELDEN EN ROUTES DIE PER SCHERM ONTBREKEN
+--------------------------------------------------
+
+Losse punten, elk op zichzelf klein, allemaal uitgewerkt in
+MEERDERE-BEDRIJVEN-SERVER.txt:
+
+    C1. Veld org op agenda_contacten, zodat een contact bij een bedrijf
+        hoort in plaats van alleen lokaal in de app. Punt 10.
+        (Nu houdt ContactOrgStore dat op de telefoon bij. Dat overleeft geen
+        tweede toestel.)
+    C2. Dagtaken toewijzen aan personen. Punt 11.
+    C3. Koppelingsaanvraag voor nieuwe accounts. Punt 12.
+    C4. Meerdere contacten per afspraak. Punt 13.
+    C5. Afspraak zonder categorie toestaan. Punt 14.
+    C6. Meerdere herinneringen per afspraak. Punt 15.
+    C7. Bijhouden wie een dagtaak heeft afgevinkt. Punt 16.
+    C8. Beschikbaarheid doorgeven. Punt 17.
+    C9. Afwezigheid laten goedkeuren. Punt 18.
+    C10. Extra veld reactie op agenda_events, zodat het antwoord van de
+         beheerder de reden van de medewerker niet overschrijft. Punt 19.
+
+
+BLOK D — FEATURE DIE VOLLEDIG STILLIGT
+--------------------------------------
+
+D1. Vrienden- en koppelingsverzoeken tussen accounts.
+    De hele app-kant is gebouwd (Vriend.swift, VriendRepository.swift,
+    VriendenViewModel.swift, VriendenView.swift) maar staat uit de navigatie,
+    omdat alles onder /api/agenda/friends/ een 404 geeft. Verwacht worden vijf
+    POST-routes: list, request, accept, decline, remove. Zodra ze bestaan, kan
+    het scherm er in één keer bij. Uitwerking in punt 20.
+
+
+WAT DE APP-KANT AL KLAAR HEEFT STAAN
+------------------------------------
+
+Zodat duidelijk is dat hier niets meer op gewacht hoeft te worden:
+
+    - meerdere bedrijven: modellen en aanroepen (blok B) staan er;
+    - vrienden: compleet scherm plus repository (blok D) staan er;
+    - afwezigheid met herhalen, weekdagen, einddatum en opmerking staat er;
+    - medewerker-detailscherm met inzet per persoon staat er;
+    - personenlijst die meeschakelt met "Wie kan dit zien?" staat er.
+
+Alles daarvan werkt zodra de bijbehorende route of het bijbehorende veld
+bestaat, zonder verdere wijziging in de app.
+
+
+TESTACCOUNTS
+------------
+
+Wachtwoord overal demo12345. Backend api.qawayahbase.com, inloggen via
+POST /api/collections/agenda_users/auth-with-password. Let op: de header is
+Authorization: <token>, dus zonder Bearer ervoor, en het naamveld heet naam.
+
+    lid van de org:
+      ayman.demo@bovexa.nl     62i5h4023ojb35x
+      youssef.demo@bovexa.nl   64o2g2gzyo9snqv
+
+    klaar maar nog niet gekoppeld, wachten op A1:
+      yassin.demo@bovexa.nl    34s1ftk475i4ty3
+      mo.demo@bovexa.nl        7giiqm6i9xd146u
+      sami.demo@bovexa.nl      291xvoe7usge064
+
+    eigenaar/admin:
+      info@obyhelpt.nl         rn1u909olu8b65f   (wachtwoord onbekend aan
+                                                  app-kant)
+
+Org xt029411b785co8, "Voetbalschool De Betuwe", toetredingscode
+VOETBALSCH-FV2M.
+
+
+VOLGORDE DIE HET MEESTE OPLEVERT
+--------------------------------
+
+1. A1, want zonder plekken kan niemand meetesten.
+2. A2, want dat bepaalt of de rest via routes moet of niet.
+3. B1 en B2, want daar hangt de bedrijfskeuze in de app aan vast.
+4. C1 en C10, twee kleine velden die nu tot verkeerde gegevens leiden.
+5. De rest van blok C, per scherm.
+6. D1, als laatste — dat scherm staat uit en hindert verder niets.

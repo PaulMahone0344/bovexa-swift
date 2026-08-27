@@ -195,3 +195,229 @@ Graag een testaccount dat lid is van twee bedrijven, of admin-toegang tot
 PocketBase. Testen met een echt account is riskant zolang punt 2 niet
 beantwoord is: als het scenario B is, kan het aanmaken van een tweede bedrijf
 de koppeling met het eerste verbreken.
+
+
+==========================================================================
+AANVULLING 25 AUGUSTUS — WAT ER NOG MEER OP DE SERVER MOET
+==========================================================================
+
+Onderstaande punten komen uit een testronde in de simulator. De app-kant is
+gebouwd en werkt; wat hier staat is wat de server nog mist. Zolang dat er niet
+is, doet de app het lokaal of laat hij een nette foutmelding zien.
+
+
+10. VELD `org` OP agenda_contacten
+----------------------------------
+
+Contacten hebben nu geen bedrijf. In de app staan mensen onder "Privé" of
+onder de bedrijfsnaam, afhankelijk van welke plusknop je gebruikt. De server
+laat het veld vallen, dus die indeling staat voorlopig alleen op het toestel
+zelf (ContactOrgStore, UserDefaults, per gebruiker).
+
+Nodig: een tekstveld `org` op agenda_contacten, leeg = privé. Toegangsregels:
+een contact met een org is zichtbaar voor de leden van dat bedrijf, een
+contact zonder org alleen voor de eigenaar.
+
+Zodra dat veld er is, wint de serverwaarde vanzelf en mag ContactOrgStore weg.
+
+
+11. DAGTAKEN TOEWIJZEN AAN PERSONEN
+-----------------------------------
+
+Bij een nieuwe dagtaak kun je nu collega's aanwijzen. De taak gaat dan naar
+agenda_tasks met visibility 'people' en viewers = de gekozen leden plus de
+maker zelf.
+
+Nodig: de leesregel op agenda_tasks moet bij visibility 'people' de gebruikers
+in `viewers` toelaten — niet alleen de eigenaar en niet het hele bedrijf.
+Zonder die regel maakt de app de taak wel aan, maar ziet de ander hem niet.
+
+Dit geldt ook als de maker "Privé" koos: kiest hij daarbij toch iemand, dan
+wordt het een 'people'-taak. Een taak die op het scherm van een ander hoort te
+komen kan niet lokaal op één toestel blijven staan.
+
+`viewers` moet dus meerdere gebruikers kunnen bevatten (maxSelect > 1).
+
+
+12. KOPPELINGSAANVRAAG VOOR NIEUWE ACCOUNTS
+-------------------------------------------
+
+Een nieuw account kan in de app geen bedrijf meer starten. In plaats daarvan
+staat er "Bedrijf koppelen": bedrijfsnaam, korte toelichting, versturen. De
+beheerder handelt de aanvraag af en geeft een bedrijfscode of koppelt het
+account zelf.
+
+Nodig: POST /api/agenda/company/request met body { companyName, note }, die
+een aanvraag vastlegt (aanvrager, bedrijfsnaam, toelichting, status 'open',
+tijdstip) en de beheerder daarvan op de hoogte brengt. Antwoord: het record
+met id, company_name en status.
+
+De beheerder moet die aanvragen ergens kunnen zien en goedkeuren; als dat in
+PocketBase-admin gebeurt is dat voor nu genoeg.
+
+Tot die route bestaat toont de app na een mislukte poging een foutmelding, en
+blijft de bedrijfscode de werkende weg naar binnen. Een verstuurde aanvraag
+wordt op het toestel onthouden (BedrijfAanvraagStore), zodat het scherm niet
+elke keer opnieuw om dezelfde aanvraag vraagt.
+
+Let op: het maken van een bedrijf blijft op de server gewoon bestaan
+(company/create); alleen de knop is uit de app gehaald. Als een beheerder een
+nieuw bedrijf moet aanmaken, gebeurt dat voortaan buiten de app om.
+
+
+13. MEERDERE CONTACTEN PER AFSPRAAK
+------------------------------------
+
+De contactkiezer in "Nieuwe afspraak" en in de AI-bevestiging is een uitklap-
+lijst geworden waarin je meerdere contacten kunt aanvinken. De app stuurt op
+dit moment alleen de eerste keuze mee: `agenda_events.contact` is een relatie
+met maxSelect 1, en de klantnaam/telefoon van diezelfde eerste komen in
+klant_naam/klant_telefoon terecht.
+
+Nodig op de server:
+
+  a) `agenda_events.contact` naar maxSelect > 1, of een tweede veld
+     `contacten` (relatie naar agenda_contacten, meerdere). De eerste blijft
+     de klant van de afspraak; de rest zijn medegenodigden.
+
+  b) De wens erachter is dat de afspraak ook in de agenda van die mensen komt
+     te staan. Dat kan alleen als een contact aan een account gekoppeld is:
+     `agenda_contacten` heeft nu geen verwijzing naar een gebruiker. Voorstel:
+     een optioneel veld `user` op agenda_contacten, en bij het opslaan van een
+     afspraak elk gekoppeld account toevoegen aan `viewers` (zoals nu al met
+     toegewezen collega's gebeurt). Contacten zonder account blijven puur een
+     naam bij de afspraak.
+
+  c) Leesregel van agenda_events moet die viewers dan ook doorlaten, net als
+     bij punt 11 voor de dagtaken.
+
+Zolang a en b niet bestaan, onthoudt de app de extra genodigden niet: na
+opslaan staat alleen het eerste contact bij de afspraak.
+
+
+14. AFSPRAAK ZONDER CATEGORIE
+------------------------------
+
+De categorierij heeft er een knop "Leeg" bij gekregen. De app stuurt dan een
+lege string mee in het veld `category`. Dat veld moet dus niet verplicht zijn
+en een lege waarde accepteren (bij een select-veld: required uit).
+
+
+15. MEERDERE HERINNERINGEN PER AFSPRAAK
+----------------------------------------
+
+Bij een afspraak kun je nu meerdere herinneringen tegelijk aanzetten, bijvoorbeeld
+15 minuten vooraf én een uur vooraf. Het veld `reminder_min` op `agenda_events` is
+één getal, dus de server kent er maar één: de app stuurt de dichtstbijzijnde tijd
+mee en bewaart de rest op het toestel zelf (HerinneringStore).
+
+Gevolg: op een ander toestel of na opnieuw installeren zie je alleen de eerste
+herinnering terug. Voorstel: `reminder_min` vervangen door een lijst (JSON-veld
+`reminders`, een array met aantallen minuten), of een tweede veld ernaast. De app
+kan dan de hele lijst bewaren en de lokale opslag mag weg.
+
+De meldingen zelf blijven lokaal op het toestel — dat verandert hier niet.
+
+
+16. WIE HEEFT DE DAGTAAK AFGEVINKT
+-----------------------------------
+
+Op `agenda_tasks` staat `completed_at`: wanneer een dagtaak is afgevinkt. Wie het
+deed, staat er niet bij. Bij een taak die aan één persoon is toegewezen leidt de
+app de naam af uit `viewers`, maar bij een taak voor het hele team kan dat niet —
+dan ziet de beheerder alleen een tijdstip.
+
+Voorstel: een veld `completed_by` op `agenda_tasks` (relatie naar agenda_users,
+mag leeg zijn). De app vult het bij het afvinken en maakt het weer leeg bij
+uitvinken, net als `completed_at` nu.
+
+
+17. BESCHIKBAARHEID DOORGEVEN
+------------------------------
+
+Het beschikbaarheidsscherm kent nu twee meldingen: "Beschikbaarheid doorgeven"
+(ik kán werken op deze dag/tijd) en "Afwezigheid doorgeven" (ik ben weg, met een
+reden ernaast). Allebei komen ze als gewone afspraak op `agenda_events` terecht;
+het verschil zit in `raw_input` ("beschikbaar" tegenover "afwezig: ziek") en in
+de titel.
+
+De app houdt daarnaast een eigen lijstje bij van wat er is doorgegeven, zodat het
+onder de knoppen zichtbaar blijft (BeschikbaarheidStore, lokaal op het toestel).
+Dat is nodig omdat `raw_input` niet meekomt in de afspraken die de app ophaalt,
+en dus niet te zien is welk blok een beschikbaarheidsmelding was.
+
+Voorstel: `raw_input` meesturen bij het ophalen van afspraken, of een eigen
+collectie voor beschikbaarheid. Dan mag de lokale opslag weg en ziet de gebruiker
+zijn meldingen ook op een tweede toestel terug.
+
+
+18. AFWEZIGHEID LATEN GOEDKEUREN
+---------------------------------
+
+Wat een medewerker doorgeeft gaat nu eerst langs de beheerder. Dat loopt via het
+bestaande `assignee_status` op `agenda_events`: de beheerder komt in `assignee` te
+staan met status "pending", ziet het blok bij zijn meldingen en zet het daar op
+"accepted" of "declined". Een notitie bij dat antwoord komt in het `notes`-veld van
+dezelfde afspraak.
+
+Er is dus geen nieuw serverveld voor nodig. Twee dingen zijn wel nog los:
+
+- Het blok staat meteen in de agenda, ook zolang het nog niet is goedgekeurd. Wie
+  alleen goedgekeurde afwezigheid wil tonen, heeft een echt statusveld nodig
+  (bijvoorbeeld `goedkeuring`: open / akkoord / geweigerd).
+- De medewerker krijgt geen pushbericht als de beheerder antwoordt; hij ziet het
+  pas als hij de app opent. Daarvoor is een melding vanaf de server nodig.
+
+
+19. OPMERKING BIJ HET DOORGEVEN VAN AFWEZIGHEID
+------------------------------------------------
+
+Het afwezigheidsscherm heeft onderaan een vrij tekstveld ("Opmerking"). Wat de
+medewerker daar typt, zet de app in het `notes`-veld van de afspraak die ze
+aanmaakt. De beheerder gebruikt datzelfde veld later voor zijn antwoord bij het
+goedkeuren (punt 18).
+
+Dat botst: twee partijen schrijven in één veld, en het laatste antwoord overschrijft
+de reden van de medewerker. Zolang beide teksten kort zijn valt het niet op, maar
+het is geen houdbare oplossing.
+
+Voorstel: een tweede tekstveld op `agenda_events`, bijvoorbeeld `reactie`, voor het
+antwoord van de beheerder. Dan blijft `notes` van degene die de afwezigheid
+doorgeeft. Zonder dat veld blijft het bij één regel die door elkaar heen loopt.
+
+
+20. VRIENDEN / KOPPELINGSVERZOEKEN TUSSEN ACCOUNTS
+---------------------------------------------------
+
+In de app staat een complete vriendenkant klaar: een model (Vriend), een datalaag
+(VriendRepository), een viewmodel en een scherm (VriendenView). Het is nergens
+aangeroepen en dus onzichtbaar voor de gebruiker, omdat de bijbehorende routes op
+de server niet bestaan. Alles onder `/api/agenda/friends/` geeft nu 404.
+
+Wat de app verwacht:
+
+    POST /api/agenda/friends/list      eigen vrienden + openstaande verzoeken
+    POST /api/agenda/friends/request   verzoek sturen op e-mailadres
+    POST /api/agenda/friends/accept    verzoek goedkeuren
+    POST /api/agenda/friends/decline   verzoek weigeren
+    POST /api/agenda/friends/remove    koppeling verbreken
+
+Een verzoek heeft twee kanten (aanvrager en ontvanger) en een status: open,
+akkoord, geweigerd. Twee dingen horen erbij die de app zelf niet kan:
+
+- Een mail naar de ontvanger als er een verzoek binnenkomt, met daarin wie het
+  stuurt.
+- Een melding zodra de ontvanger goedkeurt, zodat de aanvrager het ziet zonder de
+  app te openen.
+
+Zolang dit er niet is, blijft het scherm uit de navigatie. De bestanden staan in de
+repo en compileren mee; ze hoeven niet weg.
+
+
+21. PLEKKEN IN HET BEDRIJF
+---------------------------
+
+Het bedrijf "Voetbalschool De Betuwe" zit op seats_max = 3 en die plekken zijn vol,
+waardoor drie klaarstaande demo-accounts (Yassin, Mo, Sami) niet kunnen toetreden.
+Dat staat los van deze spec beschreven in PLEKKEN-SERVER.txt, met de exacte
+accounts, wat er is geprobeerd en hoe je controleert of het goed staat.

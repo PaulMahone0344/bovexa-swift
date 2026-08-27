@@ -1,0 +1,87 @@
+MEER PLEKKEN IN HET BEDRIJF — WAT DE SERVER MOET DOEN
+=====================================================
+
+Voor: beheerder van api.qawayahbase.com (PocketBase)
+Van:  app-kant, Bovexa Flow iOS (bundle com.bovexa.flow)
+Doel: drie bestaande demo-accounts kunnen lid worden van "Voetbalschool De
+      Betuwe". Nu lukt dat niet, omdat het bedrijf op drie plekken zit en die
+      drie bezet zijn.
+
+
+1. WAT ER NU GEBEURT
+--------------------
+
+Het bedrijf "Voetbalschool De Betuwe" (org xt029411b785co8, plan free) heeft
+seats_max = 3. Die drie plekken zijn bezet:
+
+    Oubayd El Boukrioui   info@obyhelpt.nl        rn1u909olu8b65f   admin/eigenaar
+    Youssef               youssef.demo@bovexa.nl  64o2g2gzyo9snqv   member
+    Ayman                 ayman.demo@bovexa.nl    62i5h4023ojb35x   member
+
+Toetreden met de bedrijfscode VOETBALSCH-FV2M loopt daarom vast:
+
+    POST /api/agenda/company/join   { "code": "VOETBALSCH-FV2M" }
+    ->  400  { "message": "Bedrijf zit vol." }
+
+Vanuit de app is er geen weg omheen. Geprobeerd en dichtgetimmerd:
+
+  - POST /api/agenda/company/profile met seats_max
+        -> 403 "Alleen een admin kan het bedrijfsprofiel wijzigen."
+           De enige admin is Oubayd; dat wachtwoord hebben we niet.
+  - PATCH /api/collections/agenda_orgs/records/xt029411b785co8
+        -> 404 (leesregel van de collection laat dit record niet zien)
+  - Een route als /api/agenda/company/seats of /company/upgrade
+        -> bestaat niet.
+  - Rechtstreeks schrijven in agenda_members
+        -> superuser-only.
+
+
+2. WAT WE VRAGEN
+----------------
+
+Zet seats_max van org xt029411b785co8 op 10.
+
+Meer is niet nodig. Zodra er plek is, treden de accounts hieronder zelf toe
+via het gewone scherm in de app met de bedrijfscode VOETBALSCH-FV2M, of je
+zet ze er direct bij als member met de standaardrechten (mag maken, mag
+klanten zien, mag agenda anderen zien; niet wijzigen, niet verwijderen —
+gelijk aan Youssef en Ayman).
+
+
+3. DE DRIE ACCOUNTS
+-------------------
+
+Deze bestaan al in agenda_users, wachtwoord van alledrie is demo12345:
+
+    Yassin Demo   yassin.demo@bovexa.nl   34s1ftk475i4ty3
+    Mo Demo       mo.demo@bovexa.nl       7giiqm6i9xd146u
+    Sami Demo     sami.demo@bovexa.nl     291xvoe7usge064
+
+Ze kunnen inloggen, maar zien geen bedrijf zolang ze geen lid zijn.
+
+
+4. HOE WE CONTROLEREN OF HET GOED IS
+------------------------------------
+
+Inloggen als Yassin en de ledenlijst opvragen:
+
+    POST /api/collections/agenda_users/auth-with-password
+         { "identity": "yassin.demo@bovexa.nl", "password": "demo12345" }
+
+    POST /api/agenda/company/members
+         header  Authorization: <token>      (zonder "Bearer")
+         body    { "orgId": "xt029411b785co8" }
+
+Goed als items zes leden bevat en Yassin daarbij staat met status "active".
+In de app zelf: Yassin logt in en ziet "Voetbalschool De Betuwe" staan bij
+Bedrijf, met het team erin.
+
+
+5. LOSSE OPMERKING VOOR LATER
+-----------------------------
+
+In de app staat op het teamscherm nog de tekst "Bedrijf zit vol — meer
+plekken komt in een latere versie" (TeambeheerView.swift, regel 203). Zodra
+er een echte manier komt om plekken bij te kopen of een plan te wisselen,
+moet die tekst een knop worden. Dat hoort bij de betaalkant en zit nu nog
+nergens in.

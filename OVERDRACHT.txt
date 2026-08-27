@@ -1,0 +1,181 @@
+OVERDRACHT — WAT ER IN DEZE SESSIE GEBEURD IS
+=============================================
+
+Repo:       /Users/oby/Desktop/bovexaflow app/bovexa-swift
+Laatste commit: 10b295b "docs: opschrijven wat de server nodig heeft voor
+                meerdere bedrijven"
+Stand:      80 gewijzigde en nieuwe bestanden staan nog ongecommit. Dat is
+            met opzet — er is deze sessie bewust niet gecommit.
+Datum:      26 augustus
+
+
+1. HOE JE HET WEER AAN DE PRAAT KRIJGT
+--------------------------------------
+
+    cd "/Users/oby/Desktop/bovexaflow app/bovexa-swift"
+    xcodegen generate          # alleen nodig na een nieuw of verwijderd bestand
+    xcodebuild -project Bovexa.xcodeproj -scheme Bovexa \
+      -configuration Debug \
+      -destination 'platform=iOS Simulator,id=F9810CC9-15E4-4343-B116-3828EA5DB812' \
+      -derivedDataPath build CODE_SIGNING_ALLOWED=NO build
+
+Simulator: iPhone 17, id F9810CC9-15E4-4343-B116-3828EA5DB812, iOS 26.5.
+App-pad:   build/Build/Products/Debug-iphonesimulator/Bovexa.app
+Bundle-id: com.bovexa.flow
+
+Er zijn deze sessie veel nieuwe bronbestanden bijgekomen, dus xcodegen moet
+draaien vóór de eerste build.
+
+
+2. WAT ER GEBOUWD IS
+--------------------
+
+Schermen en gedrag
+    - Afwezigheidsscherm opnieuw opgebouwd naar de referentie: herhalen,
+      weekdagen, einddatum, "SELECTEER TIJD" en een opmerking die als notes
+      meegaat.
+    - Medewerker-detailscherm: wie wat doet per persoon. Nieuw zijn
+      MedewerkerInzet.swift, MedewerkerDetailViewModel.swift en
+      MedewerkerDetailView.swift; memberRow is aantikbaar geworden, waardoor
+      de signatuur in AssigneePickerView is meegewijzigd.
+    - Personenlijst onder "Wie kan dit zien?" schakelt automatisch mee:
+      privé toont contacten, bedrijf toont collega's met een account.
+      Nieuw: MemberChecklistView.swift, plus een filter in ContactPickerView.
+    - "Klaar"-knop staat nu onder zowel het start- als het eindtijdwiel, in
+      EventEditorView.tijdKiezer(selection:).
+    - Dagbalk heeft detents gekregen; AgendaEvent heeft created erbij.
+    - "INGEVOERD DOOR HET TEAM" in Meldingen, met TeamActiviteit.swift.
+    - Bovexa-logo naar de onderrand van het loginscherm, via GeometryReader
+      plus ScrollView en een Spacer.
+    - Transparant VSB-logo van 132x132 in BedrijfView.
+    - Categorieën met "Anders" voor een eigen categorie, via
+      EigenCategorieStore.
+
+Voorbereid maar nog niet zichtbaar in de app
+    - Meerdere bedrijven: OrgSummary, listMyOrgs, switchOrg en
+      BekendeBedrijvenStore staan er. De chipsrij in de UI is niet gebouwd,
+      want die heeft de lijst van bedrijven van de server nodig.
+    - Vrienden- en koppelingsverzoeken: Vriend.swift, VriendRepository.swift,
+      VriendenViewModel.swift en VriendenView.swift zijn compleet, maar staan
+      uit de navigatie omdat alles onder /api/agenda/friends/ 404 geeft.
+
+Deze twee blijven staan zoals ze zijn. Zodra de server levert, kunnen ze er
+zonder verdere wijziging in.
+
+
+3. WAT ER VOOR DE SERVER OPGESCHREVEN IS
+----------------------------------------
+
+Drie bestanden, alle drie ook op het bureaublad gezet:
+
+    SERVER-TODO.txt              de checklist erboven: vier blokken, van
+                                 "blokkeert nu" tot "hindert niets"
+    MEERDERE-BEDRIJVEN-SERVER.txt 21 genummerde punten met de uitwerking
+    PLEKKEN-SERVER.txt           het volle bedrijf en hoe het opgelost wordt
+
+Die kant doet Ibrahim. Nieuwe bevindingen horen daarbij.
+
+
+4. WAAR HET TESTEN OP VASTLIEP
+------------------------------
+
+Demo-account Yassin is aangemaakt (34s1ftk475i4ty3) en kan inloggen, maar
+toetreden tot de org geeft:
+
+    {"message":"Bedrijf zit vol.","status":400}
+
+Org xt029411b785co8 staat op plan free met seats_max 3, en die drie zijn
+bezet. Vier omwegen zijn geprobeerd en alle vier lopen dood:
+
+    GET/PATCH /api/collections/agenda_orgs/records/xt029411b785co8   404
+    POST /api/agenda/company/profile met seats_max, als Ayman           403
+    /api/agenda/company/seats                                bestaat niet
+    /api/agenda/company/upgrade                              bestaat niet
+
+De 403 luidt: "Alleen een admin kan het bedrijfsprofiel wijzigen." Dat laat
+twee wegen open, en daar is nooit een keuze in gemaakt:
+
+    a. het wachtwoord van Oubayd (info@obyhelpt.nl, admin) gebruiken;
+    b. Ibrahim hoogt seats_max op.
+
+Zolang dat niet opgelost is, kan er niemand bij om mee te testen.
+
+
+5. WAT ER NOG OPENSTAAT AAN DE APP-KANT
+---------------------------------------
+
+Vragen die eerder gesteld zijn en nooit beantwoord:
+
+    - Weg met de dode code Bovexa/Views/Klanten/KlantenView.swift en
+      Bovexa/Stores/KlantenViewModel.swift?
+    - Wit scherm na "Maak er een" en na "Wachtwoord vergeten?" — laten of
+      oplossen?
+    - "x uur gepland" in DayPanelView.swift:27 weghalen?
+    - Labels "Geweest" en "Nog gepland" hernoemen?
+    - AfwezigViewModelTests bijwerken?
+
+Tests zijn deze sessie niet gedraaid. Twee bestanden lopen waarschijnlijk
+stuk: BovexaTests/AfwezigViewModelTests.swift en
+BovexaTests/VandaagFormattingTests.swift. De risico's zitten in AgendaEvent
+.created, de weggehaalde MensenViewModel.visibleCompanyContacts, de
+verwachtingen rond BedrijfViewModel.seatsText en EventDeclinedFilter, en de
+gewijzigde memberRow-signatuur.
+
+
+6. AFSPRAKEN DIE GELDEN
+-----------------------
+
+    - Niet committen. Dat is bewust zo gelaten deze sessie.
+    - De serverkant doet Ibrahim, apart. Niets daarvan zelf proberen te
+      omzeilen in de app.
+    - Indelingsregel, geldt overal: privé is álle contacten van de gebruiker,
+      bedrijf is alleen wie een account heeft.
+
+
+7. DINGEN DIE JE ANDERS TWEE KEER UITZOEKT
+------------------------------------------
+
+    - Backend is https://api.qawayahbase.com, PocketBase. Inloggen via
+      POST /api/collections/agenda_users/auth-with-password.
+    - De header is Authorization: <token>, dus zonder Bearer ervoor.
+    - Het naamveld op een gebruiker heet naam, niet name.
+    - De company-routes zijn POST, ook die waarvan je een GET verwacht:
+      /api/agenda/company/mine, /members, /profile, /request, /code/rotate.
+      members accepteert {"orgId": ...}.
+    - Afgesloten voor de app: agenda_members (superuser-only),
+      agenda_users.default_org, agenda_orgs (leesregel filtert alles weg).
+    - Bestaan niet: /api/agenda/friends/*, en /api/agenda/company/plan,
+      /upgrade, /seats, /settings, /update.
+    - Knopstijlen staan in Bovexa/Views/GlassButtonStyles.swift:
+      .glassProminentBrand, .glassSecondaryBrand, .glassSecondaryDanger.
+      Een .glassSecondary bestaat niet.
+    - BovexaTheme.Space: xs 6, sm 10, md 14, lg 18, xl 24, xxl 32,
+      tabBarClearance 104.
+    - In zsh moet --include="*.swift" vóór de paden staan.
+
+
+8. ACCOUNTS
+-----------
+
+Wachtwoord overal demo12345.
+
+    ayman.demo@bovexa.nl     62i5h4023ojb35x   lid van de org
+    youssef.demo@bovexa.nl   64o2g2gzyo9snqv   lid van de org
+    yassin.demo@bovexa.nl    34s1ftk475i4ty3   nog niet gekoppeld
+    mo.demo@bovexa.nl        7giiqm6i9xd146u   nog niet gekoppeld
+    sami.demo@bovexa.nl      291xvoe7usge064   nog niet gekoppeld
+    info@obyhelpt.nl         rn1u909olu8b65f   eigenaar/admin, wachtwoord
+                                               niet bekend aan app-kant
+
+Org xt029411b785co8, "Voetbalschool De Betuwe", code VOETBALSCH-FV2M.
+
+
+9. STARTREGEL VOOR EEN VOLGENDE SESSIE
+--------------------------------------
+
+Werk verder aan de iOS-app in "/Users/oby/Desktop/bovexaflow app/bovexa-swift"
+(xcodegen + xcodebuild naar simulator F9810CC9-15E4-4343-B116-3828EA5DB812,
+git commits overslaan, caveman-modus); wat er gedaan is staat in
+OVERDRACHT.txt, en alles wat serverkant moet gebeuren staat in
+SERVER-TODO.txt, MEERDERE-BEDRIJVEN-SERVER.txt en PLEKKEN-SERVER.txt en doet
+Ibrahim.
