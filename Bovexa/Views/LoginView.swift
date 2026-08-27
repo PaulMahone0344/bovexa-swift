@@ -40,6 +40,10 @@ struct LoginView: View {
         ZStack {
             AppBackground()
 
+            // De GeometryReader levert alleen de schermhoogte, zodat de inhoud
+            // hieronder minstens zo hoog is als het scherm en het logo écht op de
+            // onderrand landt in plaats van vlak onder de knop.
+            GeometryReader { geo in
             ScrollView {
                 VStack(spacing: BovexaTheme.Space.xl) {
                     VStack(spacing: BovexaTheme.Space.xs) {
@@ -84,6 +88,12 @@ struct LoginView: View {
                                     // .newPassword in registratiemodus: dan biedt
                                     // iOS een sterk wachtwoord aan.
                                     .textContentType(isSignIn ? .password : .newPassword)
+                                    // Zonder deze twee maakt iOS in de zichtbare
+                                    // variant (gewone TextField) het eerste teken
+                                    // een hoofdletter en corrigeert het de tekst —
+                                    // je typt dan iets anders dan je ziet.
+                                    .textInputAutocapitalization(.never)
+                                    .autocorrectionDisabled()
                                     .submitLabel(.go)
                                     .onSubmit {
                                         guard canSubmit, !isSubmitting else { return }
@@ -174,6 +184,14 @@ struct LoginView: View {
                     }
                     .buttonStyle(.plain)
 
+                    // Duwt de merkafsluiter naar de onderrand. De VStack is via
+                    // containerRelativeFrame minstens zo hoog als het scherm, dus
+                    // deze Spacer heeft ruimte om weg te geven; zonder hem hing het
+                    // logo los onder de knop met een gat eronder. Komt het
+                    // toetsenbord op, dan groeit de inhoud voorbij het scherm en
+                    // scrollt het logo gewoon mee naar beneden.
+                    Spacer(minLength: BovexaTheme.Space.xl)
+
                     // Merkafsluiter onderaan het scherm. Binnen de ScrollView-VStack
                     // zodat hij meebeweegt als het toetsenbord opkomt; decoratief,
                     // dus verborgen voor VoiceOver.
@@ -183,10 +201,15 @@ struct LoginView: View {
                         .scaledToFit()
                         .frame(width: 120)
                         .opacity(0.75)
-                        .padding(.top, BovexaTheme.Space.lg)
                         .accessibilityHidden(true)
                 }
                 .padding(BovexaTheme.Space.xl)
+                // Minstens schermhoog, anders krimpt de VStack om zijn inhoud heen
+                // en heeft de Spacer hierboven niets te verdelen. minHeight en niet
+                // height: bij het aanmaakformulier (extra veld) en met het
+                // toetsenbord erbij mag de inhoud gewoon doorgroeien en scrollen.
+                .frame(minHeight: geo.size.height)
+            }
             }
         }
         .alert(item: $resetAlert) { alert in

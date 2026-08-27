@@ -6,6 +6,22 @@ struct VandaagView: View {
     @EnvironmentObject private var badgeStore: BadgeStore
     @StateObject private var viewModel = VandaagViewModel()
     @State private var selectedEvent: AgendaEvent?
+    /// Tikken op de tegel "afspraken" klapt de tijden eronder in of uit. Staat
+    /// standaard open: de lijst is sinds 26 augustus de enige plek op Vandaag
+    /// waar je de afspraken van de dag ziet.
+    @State private var toonAfspraken = true
+
+    /// Eerste letter van je naam, als terugval wanneer er geen foto is.
+    private var profielInitiaal: String {
+        let naam = (currentUser?.naam ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
+        let bron = naam.isEmpty ? (currentUser?.email ?? "") : naam
+        guard let eerste = bron.first else { return "?" }
+        return String(eerste).uppercased()
+    }
+
+    private var profielFoto: URL? {
+        currentUser.flatMap { AvatarURLBuilder.url(userId: $0.id, avatar: $0.avatar) }
+    }
 
     private var currentUser: AgendaUser? {
         if case .loggedIn(let user) = authStore.phase { return user }
@@ -42,17 +58,12 @@ struct VandaagView: View {
 
                         statsRow
 
-                        timeline
-
-                        // "Deze week" stond hier tot 26 juli: zeven staafjes met
-                        // de drukte per dag. Eruit op verzoek van de opdrachtgever
-                        // — het herhaalde wat de agenda zelf al laat zien.
-                        // WeekBusyCard blijft in de repo staan voor het geval het
-                        // terugkomt. Hiervoor in de plaats: de dagtaken, de enige
-                        // informatie op dit scherm die niet uit de agenda komt.
-                        OpenTasksCard(tasks: viewModel.openTasks) {
-                            router.open(.dagtaken)
-                        }
+                        // Hieronder stonden achtereenvolgens WeekBusyCard (eruit
+                        // 26 juli) en OpenTasksCard: de kop "Dagtaken" met de open
+                        // taken eronder. Ook eruit, op verzoek van de opdrachtgever
+                        // — die lijst herhaalde de teller in `statsRow`, en die
+                        // tegel brengt je met één tik naar het Dagtaken-tabblad.
+                        // Beide kaarten blijven in de repo staan.
                     }
                     .padding(BovexaTheme.Space.xl)
                     // De zwevende tabbalk ligt óver de content. Zonder deze
@@ -124,6 +135,17 @@ struct VandaagView: View {
                     .frame(maxWidth: .infinity, alignment: .trailing)
                     .offset(y: 8)
 
+                // Je eigen foto rechtsboven, zoals in de meeste apps: één tik naar
+                // je profiel, en meteen te zien met welk account je binnen bent.
+                Button {
+                    Haptics.selection()
+                    router.open(.profiel)
+                } label: {
+                    AvatarView(initial: profielInitiaal, url: profielFoto, size: 76)
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel("Profiel")
+
                 VStack(alignment: .leading, spacing: 2) {
                     Text("Vandaag")
                         .font(.system(size: 44, weight: .bold, design: .rounded))
@@ -139,75 +161,128 @@ struct VandaagView: View {
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(.top, 6)
             }
+            // Even hoog als de foto: zonder dit legde de grotere avatar zich over
+            // de kaart "Volgende afspraak" heen.
+            .frame(minHeight: 80, alignment: .top)
         }
         .padding(.horizontal, 2)
         .accessibilityElement(children: .combine)
         .accessibilityLabel("Vandaag, \(todayLine)")
     }
 
-    /// Twee cijfers naast elkaar als rustige pillen: informatie die je wel wilt
-    /// zien, maar die de hero-kaart niet mag beconcurreren.
-    private var statsRow: some View {
-        // .top plus gelijke hoogtes: de tegels stonden los van elkaar uitgelijnd
-        // omdat er maar in één een bijregel staat.
-        HStack(alignment: .top, spacing: BovexaTheme.Space.md) {
-            GlassCard(padding: BovexaTheme.Space.md, emphasis: .quiet) {
-                StatTile(
-                    value: "\(viewModel.appointmentCount)",
-                    label: "afspraken",
-                    note: viewModel.awayNote,
-                    systemImage: "calendar"
-                )
-            }
-            GlassCard(padding: BovexaTheme.Space.md, emphasis: .quiet) {
-                StatTile(
-                    value: viewModel.plannedHoursText, label: "geplande uren",
-                    systemImage: "clock", tint: BovexaTheme.Colors.categoryGreen
-                )
-            }
-        }
+    /// Het aantal afspraken als rustige pil: informatie die je wel wilt zien,
+    /// maar die de hero-kaart niet mag beconcurreren.
+    ///
+    /// "Geplande uren" stond hier tot 26 augustus ernaast, eruit op verzoek van de
+    /// opdrachtgever. De tegel die overblijft is nu een knop: tikken klapt de
+    /// afspraken met hun tijden eronder uit, zodat je ze ziet zonder eerst naar de
+    /// tijdlijn te scrollen.
+    /// Hetzelfde lijstje als in de kaart onderaan het scherm, alleen geteld:
+    /// eigen taken plus die van het bedrijf.
+    private var dagtaakAantal: Int {
+        viewModel.dagtaakRegels(orgNaam: viewModel.memberColors.orgName).count
     }
 
-    private var timeline: some View {
+    private var statsRow: some View {
         VStack(alignment: .leading, spacing: BovexaTheme.Space.sm) {
-            SectionHeading(title: "Tijdlijn", systemImage: "clock.fill")
-
+            // Stond tot nu in het tijdlijn-blok. Dat blok is eruit, dus de
+            // melding hangt hier: dit is het enige plekje op Vandaag waar de
+            // afspraken nog binnenkomen.
             if viewModel.loadFailed {
                 LoadFailedNote(surface: .background)
             }
 
-            GlassCard {
-                if !viewModel.hasLoadedOnce {
-                    ProgressView()
-                        .tint(BovexaTheme.Colors.blue)
-                        .frame(maxWidth: .infinity, alignment: .center)
-                } else if viewModel.todayEvents.isEmpty {
-                    EmptyStateView(systemImage: "calendar", text: "Nog niks gepland vandaag…")
-                } else if let userId = currentUser?.id {
-                    VStack(spacing: 0) {
-                        ForEach(viewModel.todayEvents) { event in
-                            let isLast = event.id == viewModel.todayEvents.last?.id
+            HStack(alignment: .top, spacing: BovexaTheme.Space.sm) {
+                Button {
+                    Haptics.selection()
+                    withAnimation(.snappy(duration: 0.22)) { toonAfspraken.toggle() }
+                } label: {
+                    GlassCard(padding: BovexaTheme.Space.md, emphasis: .quiet) {
+                        HStack(alignment: .top, spacing: BovexaTheme.Space.sm) {
+                            StatTile(
+                                value: "\(viewModel.appointmentCount)",
+                                label: "afspraken",
+                                note: viewModel.awayNote,
+                                systemImage: "calendar"
+                            )
+                            Image(systemName: "chevron.down")
+                                .font(.system(size: 13, weight: .semibold))
+                                .foregroundStyle(BovexaTheme.Colors.inkSoft)
+                                .rotationEffect(.degrees(toonAfspraken ? 180 : 0))
+                                .padding(.top, 6)
+                        }
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                    }
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel("\(viewModel.appointmentCount) afspraken")
+                .accessibilityHint(toonAfspraken ? "Tik om de tijden te verbergen" : "Tik om de tijden te tonen")
 
-                            Button {
-                                Haptics.selection()
-                                selectedEvent = event
-                            } label: {
-                                AppointmentRow(
-                                    event: event, currentUserId: userId,
-                                    memberColors: viewModel.memberColors, labelStore: viewModel.labelStore,
-                                    style: .timeline, isLast: isLast
-                                )
-                            }
-                            .buttonStyle(.plain)
+                // Tweede teller ernaast: hoeveel dagtaken er nog open staan.
+                // Die klapt niet uit — de lijst staat verderop op dit scherm al —
+                // maar springt naar het Dagtaken-tabblad.
+                Button {
+                    Haptics.selection()
+                    router.open(.dagtaken)
+                } label: {
+                    GlassCard(padding: BovexaTheme.Space.md, emphasis: .quiet) {
+                        StatTile(
+                            value: "\(dagtaakAantal)",
+                            label: dagtaakAantal == 1 ? "dagtaak" : "dagtaken",
+                            note: nil,
+                            systemImage: "checkmark.circle"
+                        )
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                    }
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel("\(dagtaakAantal) dagtaken")
+                .accessibilityHint("Tik om naar Dagtaken te gaan")
+            }
 
-                            // Geen scheidingslijn tussen tijdlijnrijen: de lijn
-                            // tussen de stippen doet dat werk al, en een streep
-                            // dwars door die lijn knipt de dag in stukken.
+            if toonAfspraken {
+                afsprakenUitklap
+            }
+        }
+    }
+
+    /// De afspraken van vandaag onder de tegel: dezelfde rijen als in de tijdlijn,
+    /// maar compact — het gaat hier om tijd en titel, niet om de hele dag in beeld.
+    @ViewBuilder
+    private var afsprakenUitklap: some View {
+        GlassCard(padding: BovexaTheme.Space.md, emphasis: .quiet) {
+            if !viewModel.hasLoadedOnce {
+                ProgressView()
+                    .tint(BovexaTheme.Colors.blue)
+                    .frame(maxWidth: .infinity, alignment: .center)
+            } else if viewModel.todayEvents.isEmpty {
+                EmptyStateView(systemImage: "calendar", text: "Nog niks gepland vandaag…")
+            } else if let userId = currentUser?.id {
+                VStack(spacing: BovexaTheme.Space.sm) {
+                    ForEach(viewModel.todayEvents) { event in
+                        Button {
+                            Haptics.selection()
+                            selectedEvent = event
+                        } label: {
+                            AppointmentRow(
+                                event: event, currentUserId: userId,
+                                memberColors: viewModel.memberColors, labelStore: viewModel.labelStore
+                            )
+                        }
+                        .buttonStyle(.plain)
+
+                        // Streep tussen de rijen: zonder scheiding lazen drie
+                        // tijden onder elkaar als één blok. Niet onder de
+                        // laatste — dat is de rand van de kaart al.
+                        if event.id != viewModel.todayEvents.last?.id {
+                            Divider()
+                                .overlay(BovexaTheme.Colors.edge)
                         }
                     }
                 }
             }
         }
+        .transition(.opacity.combined(with: .move(edge: .top)))
     }
 
     private func refresh() async {

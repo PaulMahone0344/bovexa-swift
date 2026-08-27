@@ -2,7 +2,7 @@ import SwiftUI
 import UIKit
 
 /// Profiel-tab: begroeting, gebruikerskaart en navigatierijen. Vervangt
-/// `ProfielPlaceholderView`. Alle rijen zijn echt: Meldingen, Mijn klanten,
+/// `ProfielPlaceholderView`. Alle rijen zijn echt: Meldingen, Mensen,
 /// Profiel bewerken, wachtwoord wijzigen en account verwijderen.
 struct ProfielView: View {
     @EnvironmentObject private var authStore: AuthStore
@@ -10,7 +10,6 @@ struct ProfielView: View {
     @StateObject private var viewModel = ProfielViewModel()
     @State private var showAfwezig = false
     @State private var showMeldingen = false
-    @State private var showKlanten = false
     @State private var showMensen = false
     @State private var showProfielBewerken = false
     @State private var showWachtwoord = false
@@ -58,39 +57,44 @@ struct ProfielView: View {
 
                 ScrollView {
                     VStack(alignment: .leading, spacing: BovexaTheme.Space.lg) {
+                        // Grote foto bovenaan, midden op het scherm: dit is jouw
+                        // pagina, dus staat je gezicht er ook groot op. De kleine
+                        // rij met een pijltje erachter stond hier tot 26 augustus.
+                        Button {
+                            Haptics.selection()
+                            showProfielBewerken = true
+                        } label: {
+                            VStack(spacing: BovexaTheme.Space.sm) {
+                                AvatarView(
+                                    initial: initial,
+                                    url: currentUser.flatMap { AvatarURLBuilder.url(userId: $0.id, avatar: $0.avatar) },
+                                    size: 108
+                                )
+
+                                VStack(spacing: 2) {
+                                    Text(displayName)
+                                        .font(BovexaTheme.TypeStyle.title2)
+                                        .foregroundStyle(BovexaTheme.Colors.ink)
+                                    Text(currentUser?.email ?? "")
+                                        .font(BovexaTheme.TypeStyle.footnote)
+                                        .foregroundStyle(BovexaTheme.Colors.inkSoft)
+                                        .lineLimit(1)
+                                }
+                            }
+                            .frame(maxWidth: .infinity)
+                            .contentShape(Rectangle())
+                        }
+                        .buttonStyle(.plain)
+                        .accessibilityLabel("Profiel bewerken")
+
                         VStack(alignment: .leading, spacing: BovexaTheme.Space.xs) {
                             Text("\(greeting), \(firstName)")
-                                .font(BovexaTheme.TypeStyle.title2)
+                                .font(BovexaTheme.TypeStyle.headline)
                                 .foregroundStyle(BovexaTheme.Colors.ink)
                             Text(viewModel.greetingSubtitle)
                                 .font(BovexaTheme.TypeStyle.subheadline)
                                 .foregroundStyle(BovexaTheme.Colors.inkSoft)
                         }
-
-                        Button {
-                            Haptics.selection()
-                            showProfielBewerken = true
-                        } label: {
-                            GlassCard {
-                                HStack(spacing: BovexaTheme.Space.md) {
-                                    AvatarView(initial: initial, url: currentUser.flatMap { AvatarURLBuilder.url(userId: $0.id, avatar: $0.avatar) })
-                                    VStack(alignment: .leading, spacing: 2) {
-                                        Text(displayName)
-                                            .font(BovexaTheme.TypeStyle.headline)
-                                            .foregroundStyle(BovexaTheme.Colors.ink)
-                                        Text(currentUser?.email ?? "")
-                                            .font(BovexaTheme.TypeStyle.footnote)
-                                            .foregroundStyle(BovexaTheme.Colors.inkSoft)
-                                            .lineLimit(1)
-                                    }
-                                    Spacer()
-                                    Image(systemName: "chevron.right")
-                                        .foregroundStyle(BovexaTheme.Colors.accent)
-                                }
-                            }
-                            .contentShape(Rectangle())
-                        }
-                        .buttonStyle(.plain)
 
                         VStack(spacing: BovexaTheme.Space.sm) {
                             row(
@@ -103,9 +107,9 @@ struct ProfielView: View {
                             row(icon: "sun.max.fill", label: "Beschikbaarheid doorgeven") {
                                 showAfwezig = true
                             }
-                            row(icon: "person.2.fill", label: "Mijn klanten") {
-                                showKlanten = true
-                            }
+                            // "Mijn klanten" stond hier tot 26 augustus. Mensen dekt
+                            // dezelfde contacten al, dus de aparte klantenrij was
+                            // dubbelop. KlantenView blijft bestaan voor later.
                             row(icon: "person.crop.circle.fill.badge.plus", label: "Mensen") {
                                 showMensen = true
                             }
@@ -169,11 +173,6 @@ struct ProfielView: View {
         .sheet(isPresented: $showMeldingen, onDismiss: { Task { await refresh() } }) {
             if let user = currentUser {
                 MeldingenView(userId: user.id, orgId: user.defaultOrg, token: authStore.token ?? "")
-            }
-        }
-        .sheet(isPresented: $showKlanten) {
-            if let user = currentUser {
-                KlantenView(userId: user.id, orgId: user.defaultOrg, token: authStore.token ?? "")
             }
         }
         .sheet(isPresented: $showMensen) {

@@ -2,12 +2,29 @@ import SwiftUI
 
 /// "Mensen": privécontacten van de gebruiker en collega's uit het bedrijf onder
 /// elkaar (m8). Privécontact aantikken opent wijzigen/verwijderen; collega aantikken
-/// doet hier niets (die beheer je bij Bedrijf, valkuil B — geen toewijzing/account).
+/// opent zijn overzicht (gewerkte en geplande dagen, afwezigheid). Beheren doe je
+/// niet hier maar bij Bedrijf (valkuil B).
 struct MensenView: View {
     @StateObject private var viewModel: MensenViewModel
     @Environment(\.dismiss) private var dismiss
-    @State private var showAddContact = false
+    /// Waar een nieuw contact bij hoort. Twee losse knoppen — één bij Privé, één
+    /// bij het bedrijf — in plaats van één knop met een keuze in het formulier.
+    private enum ToevoegenDoel: Identifiable {
+        case prive
+        case bedrijf(id: String, naam: String)
+
+        var id: String {
+            switch self {
+            case .prive: return "prive"
+            case .bedrijf(let id, _): return "org-\(id)"
+            }
+        }
+    }
+
+    @State private var toevoegenDoel: ToevoegenDoel?
     @State private var editingContact: AgendaContact?
+    /// De collega wiens overzicht openstaat.
+    @State private var bekekenMember: CompanyMember?
 
     private let userId: String
     private let token: String
@@ -34,7 +51,14 @@ struct MensenView: View {
                         if showSearch { searchField }
 
                         privateSection
-                        companySection
+
+                        // Zonder bedrijf hoort hier niets te staan: een nieuwe
+                        // gebruiker zonder koppeling zag een kop "COLLEGA'S" met
+                        // "Geen collega gevonden" eronder, terwijl er voor hem
+                        // helemaal geen bedrijf is om mensen bij te zetten.
+                        if !viewModel.orgId.isEmpty {
+                            companySection
+                        }
                     }
                     .padding(BovexaTheme.Space.xl)
                     .padding(.bottom, BovexaTheme.Space.tabBarClearance)
@@ -43,26 +67,36 @@ struct MensenView: View {
             .navigationTitle("Mensen")
             .navigationBarTitleDisplayMode(.large)
             .toolbar {
-                ToolbarItem(placement: .topBarTrailing) {
-                    Button("Persoon toevoegen") {
-                        Haptics.selection()
-                        showAddContact = true
-                    }
-                    .font(BovexaTheme.TypeStyle.subheadline.weight(.semibold))
-                }
                 SheetCloseButton { dismiss() }
             }
         }
         .task { await viewModel.load(userId: userId, token: token) }
         // De fout wordt in de sheet zelf getoond (PersoonFormView.errorText): een
         // alert op dit scherm werd niet gepresenteerd zolang de sheet openstond.
-        .sheet(isPresented: $showAddContact, onDismiss: { viewModel.clearError() }) {
+        .sheet(item: $toevoegenDoel, onDismiss: { viewModel.clearError() }) { doel in
+            let org: String = {
+                if case .bedrijf(let id, _) = doel { return id }
+                return ""
+            }()
+            let titel: String = {
+                if case .bedrijf(_, let naam) = doel { return naam }
+                return "Privé"
+            }()
             PersoonFormView(
                 mode: .add,
+                doelNaam: titel,
                 onSave: { naam, telefoon, notitie in
-                    await viewModel.addContact(userId: userId, naam: naam, telefoon: telefoon, notitie: notitie, token: token)
+                    await viewModel.addContact(userId: userId, naam: naam, telefoon: telefoon, notitie: notitie, org: org, token: token)
                 },
                 errorText: viewModel.errorMessage
+            )
+        }
+        .sheet(item: $bekekenMember) { member in
+            MedewerkerDetailView(
+                member: member,
+                userId: userId,
+                orgId: viewModel.orgId.isEmpty ? nil : viewModel.orgId,
+                token: token
             )
         }
         .sheet(item: $editingContact, onDismiss: { viewModel.clearError() }) { contact in
@@ -74,7 +108,12 @@ struct MensenView: View {
                 onDelete: {
                     await viewModel.deleteContact(id: contact.id, token: token)
                 },
-                errorText: viewModel.errorMessage
+                errorText: viewModel.errorMessage,
+                inzetBron: .init(
+                    userId: userId,
+                    orgId: viewModel.orgId.isEmpty ? nil : viewModel.orgId,
+                    token: token
+                )
             )
         }
     }
@@ -100,18 +139,18 @@ struct MensenView: View {
 
     private var privateSection: some View {
         VStack(alignment: .leading, spacing: BovexaTheme.Space.sm) {
-            Text("PRIVÉ")
-                .font(BovexaTheme.TypeStyle.caption.weight(.bold))
-                .foregroundStyle(BovexaTheme.Colors.accent)
+            sectionHeader("PRIVÉ", knopLabel: "Privépersoon toevoegen") {
+                toevoegenDoel = .prive
+            }
 
             if viewModel.loading && viewModel.contacts.isEmpty {
                 ProgressView().tint(BovexaTheme.Colors.accent)
-            } else if viewModel.visibleContacts.isEmpty {
-                EmptyStateView(systemImage: "person.crop.circle.badge.plus", text: "Nog geen privécontacten. Tik op \"Persoon toevoegen\".", surface: .background)
+            } else if viewModel.visiblePrivateContacts.isEmpty {
+                EmptyStateView(systemImage: "person.crop.circle.badge.plus", text: "Nog geen privécontacten. Tik op + hierboven.", surface: .background)
             } else {
                 GlassCard(padding: BovexaTheme.Space.xs) {
                     VStack(alignment: .leading, spacing: 0) {
-                        ForEach(Array(viewModel.visibleContacts.enumerated()), id: \.element.id) { index, contact in
+                        ForEach(Array(viewModel.visiblePrivateContacts.enumerated()), id: \.element.id) { index, contact in
                             contactRow(contact, first: index == 0)
                         }
                     }
@@ -120,8 +159,36 @@ struct MensenView: View {
         }
     }
 
+    /// Kop van een sectie met een eigen plusknop erachter: welke knop je aantikt
+    /// bepaalt waar de persoon terechtkomt.
+    private func sectionHeader(_ titel: String, knopLabel: String, action: @escaping () -> Void) -> some View {
+        HStack {
+            Text(titel)
+                .font(BovexaTheme.TypeStyle.caption.weight(.bold))
+                .foregroundStyle(BovexaTheme.Colors.accent)
+            Spacer()
+            Button {
+                Haptics.selection()
+                action()
+            } label: {
+                Image(systemName: "plus")
+                    .font(.system(size: 14, weight: .bold))
+                    .foregroundStyle(BovexaTheme.Colors.accent)
+                    .frame(width: 32, height: 32)
+                    .background(BovexaTheme.Colors.glass)
+                    .clipShape(Circle())
+                    .overlay(Circle().strokeBorder(BovexaTheme.Colors.edge, lineWidth: 1))
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel(knopLabel)
+        }
+    }
+
     private var companySection: some View {
         VStack(alignment: .leading, spacing: BovexaTheme.Space.sm) {
+            // Geen plusknop meer: onder het bedrijf staat alleen wie een account
+            // heeft, en dat regel je met een uitnodiging (Bedrijf > Teambeheer),
+            // niet door hier een naam in te typen.
             Text(viewModel.orgName.isEmpty ? "COLLEGA'S" : viewModel.orgName.uppercased())
                 .font(BovexaTheme.TypeStyle.caption.weight(.bold))
                 .foregroundStyle(BovexaTheme.Colors.accent)
@@ -129,7 +196,7 @@ struct MensenView: View {
             if viewModel.visibleMembers.isEmpty {
                 EmptyStateView(systemImage: "person.2", text: "Geen collega gevonden.", surface: .background)
             } else {
-                GlassCard(padding: BovexaTheme.Space.xs, emphasis: .quiet) {
+                GlassCard(padding: BovexaTheme.Space.xs) {
                     VStack(alignment: .leading, spacing: 0) {
                         ForEach(Array(viewModel.visibleMembers.enumerated()), id: \.element.id) { index, member in
                             memberRow(member, first: index == 0)
@@ -174,27 +241,39 @@ struct MensenView: View {
         .buttonStyle(.plain)
     }
 
-    /// Collega's zijn hier alleen-lezen (valkuil B) — geen tik-actie, geen chevron.
+    /// Aantikken opent het overzicht van die collega: zijn gegevens, hoeveel dagen
+    /// hij heeft gewerkt en gepland staat, en wanneer hij afwezig was. Alleen-lezen
+    /// (valkuil B) — rol, rechten en verwijderen blijven bij Bedrijf > Teambeheer.
     private func memberRow(_ member: CompanyMember, first: Bool) -> some View {
-        HStack(spacing: BovexaTheme.Space.sm) {
-            initialBadge(member.displayName, color: viewModel.memberColors.color(for: member.userId))
-            VStack(alignment: .leading, spacing: 2) {
-                Text(member.displayName)
-                    .font(BovexaTheme.TypeStyle.subheadline.weight(.bold))
-                    .foregroundStyle(BovexaTheme.Colors.inkSoft)
-                Text(MemberSubtitle.text(for: member, currentUserId: userId))
-                    .font(BovexaTheme.TypeStyle.caption)
+        Button {
+            Haptics.selection()
+            bekekenMember = member
+        } label: {
+            HStack(spacing: BovexaTheme.Space.sm) {
+                initialBadge(member.displayName, color: viewModel.memberColors.color(for: member.userId))
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(member.displayName)
+                        .font(BovexaTheme.TypeStyle.subheadline.weight(.bold))
+                        .foregroundStyle(BovexaTheme.Colors.inkSoft)
+                    Text(MemberSubtitle.text(for: member, currentUserId: userId))
+                        .font(BovexaTheme.TypeStyle.caption)
+                        .foregroundStyle(BovexaTheme.Colors.muted)
+                }
+                Spacer()
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 13, weight: .semibold))
                     .foregroundStyle(BovexaTheme.Colors.muted)
             }
-            Spacer()
-        }
-        .padding(.horizontal, BovexaTheme.Space.sm)
-        .padding(.vertical, BovexaTheme.Space.sm)
-        .overlay(alignment: .top) {
-            if !first {
-                Rectangle().fill(BovexaTheme.Colors.edgeSoft).frame(height: 1)
+            .padding(.horizontal, BovexaTheme.Space.sm)
+            .padding(.vertical, BovexaTheme.Space.sm)
+            .overlay(alignment: .top) {
+                if !first {
+                    Rectangle().fill(BovexaTheme.Colors.edgeSoft).frame(height: 1)
+                }
             }
+            .contentShape(Rectangle())
         }
+        .buttonStyle(.plain)
     }
 
     private func initialBadge(_ naam: String, color: Color) -> some View {

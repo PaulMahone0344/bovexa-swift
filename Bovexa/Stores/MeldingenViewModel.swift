@@ -57,7 +57,25 @@ final class MeldingenViewModel: ObservableObject {
     /// Valkuil D/E: plus-knop alleen voor admin/manager — de server checkt dit
     /// hoe dan ook, maar de knop moet ook client-side verborgen zijn.
     var canPost: Bool { role == .admin || role == .manager }
-    var isEmpty: Bool { loaded && pending.isEmpty && expired.isEmpty && notices.isEmpty }
+    /// Wat jij zelf hebt doorgegeven en waar de beheerder op moet reageren of al
+    /// op gereageerd heeft. Zo zie je op één plek of je vrije dag is goedgekeurd.
+    @Published private(set) var eigenAanvragen: [AgendaEvent] = []
+    /// Wat het team recent heeft ingevoerd. Alleen zichtbaar voor wie het bedrijf
+    /// beheert; een medewerker hoeft de invoer van collega's niet te volgen.
+    @Published private(set) var teamActiviteit: [AgendaEvent] = []
+    /// Namen bij de activiteitenlijst, zodat er "Ayman · donderdag 27 augustus"
+    /// staat en niet een kaal record-id.
+    @Published private(set) var namen: [String: String] = [:]
+
+    var isEmpty: Bool {
+        loaded && pending.isEmpty && expired.isEmpty && notices.isEmpty
+            && eigenAanvragen.isEmpty && teamActiviteit.isEmpty
+    }
+
+    /// Alleen de beheerder ziet de teamlijst — dezelfde grens als de plus-knop.
+    var toontTeamActiviteit: Bool { role == .admin || role == .manager }
+
+    func naam(voor userId: String) -> String { namen[userId] ?? "" }
     var canSubmit: Bool { !composeBody.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && !posting }
 
     func canDelete(_ notice: Notice) -> Bool { notice.author == userId }
@@ -67,6 +85,8 @@ final class MeldingenViewModel: ObservableObject {
             let moment = now()
             pending = AssignmentHelpers.pendingEvents(events, userId: userId, now: moment)
             expired = AssignmentHelpers.expiredPendingEvents(events, userId: userId, now: moment)
+            eigenAanvragen = AanvraagStatus.eigenAanvragen(events, userId: userId, now: moment)
+            teamActiviteit = TeamActiviteit.recent(events, userId: userId, orgId: orgId, now: moment)
             loadFailed = false
         } else {
             // Vorige kaarten laten staan (4a).
@@ -93,6 +113,11 @@ final class MeldingenViewModel: ObservableObject {
 
         if let membership = try? await companyRepository.listMembers(token: token) {
             role = membership.items.first { $0.userId == userId }?.role
+            // Namen erbij: de activiteitenlijst noemt de collega die het invoerde.
+            namen = Dictionary(
+                membership.items.map { ($0.userId, $0.naam.isEmpty ? $0.email : $0.naam) },
+                uniquingKeysWith: { eerste, _ in eerste }
+            )
         } else {
             role = nil
         }
@@ -127,7 +152,7 @@ final class MeldingenViewModel: ObservableObject {
 
     /// Valkuil B: reageert exact als EventDetailViewModel.respond — optimistisch uit
     /// de wachtlijst, terugzetten bij falen.
-    func respond(_ event: AgendaEvent, status: String) async {
+    func respond(_ event: AgendaEvent, status: String, notitie: String = "") async {
         guard answeringId == nil else { return }
         answeringId = event.id
         // Bij een herhaling schrijft het antwoord naar het serie-record, dus élke
@@ -138,7 +163,9 @@ final class MeldingenViewModel: ObservableObject {
         let rest = pending.filter { EventHelpers.eventRecordId($0) != recordId }
         pending = rest
         do {
-            _ = try await eventRepository.respondToAssignment(event: event, userId: userId, status: status, token: token)
+            _ = try await eventRepository.respondToAssignment(
+                event: event, userId: userId, status: status, token: token, notitie: notitie
+            )
         } catch {
             pending = [event] + rest
             respondFailedAlert = true

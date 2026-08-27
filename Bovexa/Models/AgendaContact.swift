@@ -11,17 +11,21 @@ struct AgendaContact: Decodable, Identifiable, Equatable {
     let naam: String
     let telefoon: String
     let notitie: String
+    /// Bedrijf waar dit contact bij hoort. Leeg = privé, alleen van de eigenaar.
+    /// Een gevulde waarde hoort bij het bedrijf, zodat collega's hem ook zien.
+    let org: String
 
     enum CodingKeys: String, CodingKey {
-        case id, eigenaar, naam, telefoon, notitie
+        case id, eigenaar, naam, telefoon, notitie, org
     }
 
-    init(id: String, eigenaar: String, naam: String, telefoon: String, notitie: String) {
+    init(id: String, eigenaar: String, naam: String, telefoon: String, notitie: String, org: String = "") {
         self.id = id
         self.eigenaar = eigenaar
         self.naam = naam
         self.telefoon = telefoon
         self.notitie = notitie
+        self.org = org
     }
 
     /// Defensief decoderen, zelfde stijl als AgendaLabel/AgendaTask: onverwachte of
@@ -33,5 +37,6 @@ struct AgendaContact: Decodable, Identifiable, Equatable {
         naam = (try? c.decode(String.self, forKey: .naam)) ?? ""
         telefoon = (try? c.decode(String.self, forKey: .telefoon)) ?? ""
         notitie = (try? c.decode(String.self, forKey: .notitie)) ?? ""
+        org = (try? c.decode(String.self, forKey: .org)) ?? ""
     }
 }

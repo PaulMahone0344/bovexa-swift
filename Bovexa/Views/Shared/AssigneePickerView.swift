@@ -1,7 +1,8 @@
 import SwiftUI
 
 /// "Toegewezen aan" — samenvattingsrij die open/dichtklapt naar een selecteerbare
-/// ledenlijst. Favorieten (ster) staan bovenaan; vanaf 6 leden verschijnt een zoekbalk.
+/// ledenlijst; je kunt er meerdere aanvinken. Favorieten (bolletje) staan bovenaan;
+/// vanaf 6 leden verschijnt een zoekbalk.
 struct AssigneePickerView: View {
     let members: [Member]
     let currentUserId: String
@@ -65,7 +66,7 @@ struct AssigneePickerView: View {
                 if members.count >= Self.searchFrom { searchField }
 
                 if query.isEmpty {
-                    memberRow(label: "Niemand", checked: selectedIds.isEmpty, starred: nil, onToggle: {
+                    memberRow(label: "Niemand", checked: selectedIds.isEmpty, onToggle: {
                         // De ledenrijen gaven wél terugkoppeling, deze niet (5b).
                         Haptics.selection()
                         selectedIds = []
@@ -78,12 +79,14 @@ struct AssigneePickerView: View {
                         .foregroundStyle(BovexaTheme.Colors.muted)
                 } else {
                     ForEach(shown, id: \.userId) { member in
+                        // Geen bolletje meer naast de naam: het vinkje links zegt
+                        // al of iemand de taak krijgt, en een tweede markering
+                        // ernaast leverde alleen de vraag op wat het verschil was.
+                        // De favorietenvolgorde blijft, die bepaalt wie bovenaan staat.
                         memberRow(
                             label: member.naam.isEmpty ? member.email : member.naam,
                             checked: selectedIds.contains(member.userId),
-                            starred: favorites.contains(member.userId),
-                            onToggle: { toggle(member.userId) },
-                            onStar: { star(member.userId) }
+                            onToggle: { toggle(member.userId) }
                         )
                     }
                 }
@@ -121,7 +124,7 @@ struct AssigneePickerView: View {
     }
 
     @ViewBuilder
-    private func memberRow(label: String, checked: Bool, starred: Bool?, onToggle: @escaping () -> Void, onStar: (() -> Void)? = nil) -> some View {
+    private func memberRow(label: String, checked: Bool, onToggle: @escaping () -> Void) -> some View {
         HStack(spacing: BovexaTheme.Space.sm) {
             Button(action: onToggle) {
                 HStack(spacing: BovexaTheme.Space.sm) {
@@ -152,17 +155,6 @@ struct AssigneePickerView: View {
             }
             .buttonStyle(.plain)
             .disabled(disabled)
-
-            if let starred, let onStar {
-                Button(action: onStar) {
-                    Image(systemName: starred ? "star.fill" : "star")
-                        .foregroundStyle(starred ? BovexaTheme.Colors.categoryAmber : BovexaTheme.Colors.muted)
-                        .minTapTarget()
-                }
-                .buttonStyle(.plain)
-                .disabled(disabled)
-                .accessibilityLabel(starred ? "Verwijder uit favorieten" : "Markeer als favoriet")
-            }
         }
     }
 }

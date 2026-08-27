@@ -9,6 +9,8 @@ struct MeldingenView: View {
     @StateObject private var viewModel: MeldingenViewModel
     @Environment(\.dismiss) private var dismiss
     @State private var deleteTarget: Notice?
+    /// Notitie per aanvraag, zolang de beheerder nog niet heeft geantwoord.
+    @State private var notities: [String: String] = [:]
 
     init(userId: String, orgId: String?, token: String) {
         _viewModel = StateObject(wrappedValue: MeldingenViewModel(userId: userId, orgId: orgId, token: token))
@@ -41,8 +43,16 @@ struct MeldingenView: View {
                             pendingSection
                         }
 
+                        if !viewModel.eigenAanvragen.isEmpty {
+                            aanvraagSection
+                        }
+
                         if !viewModel.expired.isEmpty {
                             expiredSection
+                        }
+
+                        if viewModel.toontTeamActiviteit, !viewModel.teamActiviteit.isEmpty {
+                            teamActiviteitSection
                         }
 
                         if viewModel.isEmpty, !viewModel.loadFailed {
@@ -207,22 +217,34 @@ struct MeldingenView: View {
                     .font(BovexaTheme.TypeStyle.footnote)
                     .foregroundStyle(BovexaTheme.Colors.inkSoft)
 
+                // Ruimte voor een woordje uitleg bij je antwoord; die komt bij de
+                // aanvrager onder de uitslag te staan.
+                TextField("Notitie (optioneel)", text: Binding(
+                    get: { notities[event.id] ?? "" },
+                    set: { notities[event.id] = $0 }
+                ))
+                .textFieldStyle(.plain)
+                .padding(BovexaTheme.Space.sm)
+                .background(BovexaTheme.Colors.glassSoft)
+                .clipShape(RoundedRectangle(cornerRadius: BovexaTheme.Radius.sm, style: .continuous))
+                .padding(.top, BovexaTheme.Space.xs)
+
                 HStack(spacing: BovexaTheme.Space.sm) {
                     Button {
                         Task {
-                            await viewModel.respond(event, status: "declined")
+                            await viewModel.respond(event, status: "declined", notitie: notities[event.id] ?? "")
                             // Accepteren gaf wel terugkoppeling, weigeren niet (4h).
                             if !viewModel.respondFailedAlert { Haptics.selection() }
                         }
                     } label: {
                         Text("Weigeren").frame(maxWidth: .infinity, minHeight: 42)
                     }
-                    .buttonStyle(.glassSecondaryBrand)
+                    .buttonStyle(.glassSecondaryDanger)
                     .disabled(viewModel.answeringId == event.id)
 
                     Button {
                         Task {
-                            await viewModel.respond(event, status: "accepted")
+                            await viewModel.respond(event, status: "accepted", notitie: notities[event.id] ?? "")
                             if !viewModel.respondFailedAlert { Haptics.success() }
                         }
                     } label: {
@@ -237,6 +259,105 @@ struct MeldingenView: View {
                 }
                 .padding(.top, BovexaTheme.Space.xs)
             }
+        }
+    }
+
+    /// Wat jij hebt doorgegeven en wat de beheerder ermee deed.
+    /// Wat medewerkers zelf in de agenda hebben gezet. Geen knoppen: dit is een
+    /// overzicht, geen verzoek — tikken opent de afspraak, verder hoeft er niets.
+    private var teamActiviteitSection: some View {
+        VStack(alignment: .leading, spacing: BovexaTheme.Space.sm) {
+            Text("INGEVOERD DOOR HET TEAM")
+                .font(BovexaTheme.TypeStyle.caption.weight(.bold))
+                .foregroundStyle(BovexaTheme.Colors.accent)
+                .tracking(0.3)
+
+            GlassCard(padding: BovexaTheme.Space.xs, emphasis: .quiet) {
+                VStack(alignment: .leading, spacing: 0) {
+                    ForEach(Array(viewModel.teamActiviteit.enumerated()), id: \.element.id) { index, event in
+                        if index > 0 {
+                            Divider().overlay(BovexaTheme.Colors.edge)
+                        }
+                        teamActiviteitRij(event)
+                    }
+                }
+            }
+        }
+    }
+
+    private func teamActiviteitRij(_ event: AgendaEvent) -> some View {
+        HStack(spacing: BovexaTheme.Space.sm) {
+            RoundedRectangle(cornerRadius: 2, style: .continuous)
+                .fill(event.category.map { BovexaTheme.categoryColor(for: $0) } ?? BovexaTheme.Colors.blue)
+                .frame(width: 4, height: 34)
+            VStack(alignment: .leading, spacing: 2) {
+                Text(event.title.isEmpty ? "Afspraak" : event.title)
+                    .font(BovexaTheme.TypeStyle.subheadline.weight(.semibold))
+                    .foregroundStyle(BovexaTheme.Colors.ink)
+                    .lineLimit(1)
+                Text(TeamActiviteit.omschrijving(event, naam: viewModel.naam(voor: event.owner)))
+                    .font(BovexaTheme.TypeStyle.footnote)
+                    .foregroundStyle(BovexaTheme.Colors.inkSoft)
+                    .lineLimit(1)
+            }
+            Spacer(minLength: 0)
+        }
+        .padding(.vertical, BovexaTheme.Space.xs)
+        .padding(.horizontal, BovexaTheme.Space.sm)
+    }
+
+    private var aanvraagSection: some View {
+        VStack(alignment: .leading, spacing: BovexaTheme.Space.sm) {
+            Text("JE EIGEN AANVRAGEN")
+                .font(BovexaTheme.TypeStyle.caption.weight(.bold))
+                .foregroundStyle(BovexaTheme.Colors.accent)
+                .tracking(0.3)
+
+            ForEach(viewModel.eigenAanvragen) { event in
+                aanvraagKaart(event)
+            }
+        }
+    }
+
+    private func aanvraagKaart(_ event: AgendaEvent) -> some View {
+        let stand = AanvraagStatus.stand(event)
+        return GlassCard(emphasis: .quiet) {
+            VStack(alignment: .leading, spacing: BovexaTheme.Space.xs) {
+                HStack(alignment: .firstTextBaseline) {
+                    Text(event.title)
+                        .font(BovexaTheme.TypeStyle.headline)
+                        .foregroundStyle(BovexaTheme.Colors.ink)
+                    Spacer(minLength: BovexaTheme.Space.sm)
+                    Text(stand.label)
+                        .font(BovexaTheme.TypeStyle.caption.weight(.bold))
+                        .foregroundStyle(standKleur(stand))
+                        .padding(.horizontal, BovexaTheme.Space.sm)
+                        .padding(.vertical, 4)
+                        .background(standKleur(stand).opacity(0.15))
+                        .clipShape(Capsule())
+                }
+
+                Text("\(EventHelpers.longDay(event.start)) · \(EventHelpers.rowTimeText(event))")
+                    .font(BovexaTheme.TypeStyle.footnote)
+                    .foregroundStyle(BovexaTheme.Colors.inkSoft)
+
+                // De beheerder kan er een reden bij zetten; die staat in het
+                // notitieveld van de afspraak.
+                if let notitie = event.notes, !notitie.isEmpty {
+                    Text(notitie)
+                        .font(BovexaTheme.TypeStyle.footnote)
+                        .foregroundStyle(BovexaTheme.Colors.muted)
+                        .padding(.top, 2)
+                }
+            }
+        }
+    }
+
+    private func standKleur(_ stand: AanvraagStand) -> Color {
+        switch stand {
+        case .wacht: return BovexaTheme.Colors.muted
+        case .goedgekeurd: return BovexaTheme.Colors.categoryGreen
+        case .afgewezen: return BovexaTheme.Colors.danger
         }
     }
 

@@ -116,7 +116,10 @@ struct RootTabView: View {
             .badge(badgeStore.total)
         }
         .tint(BovexaTheme.Colors.blue)
-        .tabBarMinimizeBehavior(.onScrollDown)
+        // Vast onderin. Met .onScrollDown kromp de balk bij naar beneden scrollen
+        // tot één rondje en waren Vandaag/Agenda/Dagtaken/Bedrijf/Profiel weg;
+        // de opdrachtgever wil de vijf tabs altijd zien.
+        .tabBarMinimizeBehavior(.never)
         .onAppear { Self.applyTabBarAppearance() }
         .onChange(of: joinCoordinator.outcome) { _, outcome in
             guard outcome == .joined else { return }

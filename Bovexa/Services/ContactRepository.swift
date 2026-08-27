@@ -16,11 +16,13 @@ final class ContactRepository {
         )
     }
 
-    func createContact(eigenaar: String, naam: String, telefoon: String, notitie: String, token: String) async throws -> AgendaContact {
-        try await client.createRecord(
-            AgendaContact.self, collection: Self.collection,
-            body: ["eigenaar": eigenaar, "naam": naam, "telefoon": telefoon, "notitie": notitie], token: token
-        )
+    /// `org` leeg (of nil) maakt een privécontact; een org-id maakt een contact van
+    /// dat bedrijf. Het veld `org` moet daarvoor wel op `agenda_contacten` bestaan —
+    /// zie MEERDERE-BEDRIJVEN-SERVER.txt.
+    func createContact(eigenaar: String, naam: String, telefoon: String, notitie: String, org: String? = nil, token: String) async throws -> AgendaContact {
+        var body: [String: Any] = ["eigenaar": eigenaar, "naam": naam, "telefoon": telefoon, "notitie": notitie]
+        if let org, !org.isEmpty { body["org"] = org }
+        return try await client.createRecord(AgendaContact.self, collection: Self.collection, body: body, token: token)
     }
 
     func updateContact(id: String, naam: String, telefoon: String, notitie: String, token: String) async throws -> AgendaContact {

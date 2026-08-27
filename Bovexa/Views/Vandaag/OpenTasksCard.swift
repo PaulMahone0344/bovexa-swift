@@ -9,14 +9,14 @@ import SwiftUI
 /// Bewust alleen tonen en doorverwijzen: afvinken gebeurt op Dagtaken, zodat er
 /// één plek is waar een taak verandert.
 struct OpenTasksCard: View {
-    let tasks: [PlanningNote]
+    let tasks: [DagtaakRegel]
     let onOpenDagtaken: () -> Void
 
     /// Meer dan drie wordt een tweede takenlijst; de rest staat als aantal onder
     /// de knop.
     private static let maxShown = 3
 
-    private var shown: [PlanningNote] { Array(tasks.prefix(Self.maxShown)) }
+    private var shown: [DagtaakRegel] { Array(tasks.prefix(Self.maxShown)) }
     private var remaining: Int { max(0, tasks.count - Self.maxShown) }
 
     var body: some View {
@@ -67,7 +67,7 @@ struct OpenTasksCard: View {
 
     /// De rij begint met een rondje dat als afvinkvakje leest, maar deed niets
     /// (4i). Afvinken blijft bewust op Dagtaken; de tik gaat daarheen.
-    private func row(_ task: PlanningNote) -> some View {
+    private func row(_ task: DagtaakRegel) -> some View {
         Button {
             Haptics.selection()
             onOpenDagtaken()
@@ -79,7 +79,7 @@ struct OpenTasksCard: View {
         .accessibilityHint("Opent Dagtaken")
     }
 
-    private func rowContent(_ task: PlanningNote) -> some View {
+    private func rowContent(_ task: DagtaakRegel) -> some View {
         HStack(alignment: .top, spacing: BovexaTheme.Space.sm) {
             Image(systemName: "circle")
                 .font(.system(size: 15, weight: .medium))
@@ -87,10 +87,24 @@ struct OpenTasksCard: View {
                 .padding(.top, 1)
 
             VStack(alignment: .leading, spacing: 2) {
-                Text(task.title)
-                    .font(BovexaTheme.TypeStyle.body.weight(.medium))
-                    .foregroundStyle(BovexaTheme.Colors.ink)
-                    .lineLimit(1)
+                HStack(spacing: BovexaTheme.Space.xs) {
+                    Text(task.title)
+                        .font(BovexaTheme.TypeStyle.body.weight(.medium))
+                        .foregroundStyle(BovexaTheme.Colors.ink)
+                        .lineLimit(1)
+
+                    // Welke lijst de taak uit komt — zonder dit staan een privé-
+                    // taak en een bedrijfstaak er identiek onder elkaar.
+                    if let bron = task.bron {
+                        Text(bron)
+                            .font(BovexaTheme.TypeStyle.caption.weight(.semibold))
+                            .foregroundStyle(BovexaTheme.Colors.accent)
+                            .lineLimit(1)
+                            .padding(.horizontal, 6)
+                            .padding(.vertical, 2)
+                            .background(BovexaTheme.Colors.glassSoft, in: Capsule())
+                    }
+                }
 
                 if !task.body.isEmpty {
                     Text(task.body)

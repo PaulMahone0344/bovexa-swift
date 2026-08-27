@@ -4,7 +4,9 @@ import Foundation
 /// veld "source" nooit aanraken, datums in PocketBase-formaat (UTC).
 struct EventUpdatePayload {
     let title: String
-    let category: BovexaTheme.Category
+    /// Leeg mag: "Leeg" in de categorierij stuurt een lege waarde mee, zodat de
+    /// afspraak zonder categorie in de agenda staat.
+    let category: BovexaTheme.Category?
     let start: Date
     let end: Date
     let notes: String
@@ -20,11 +22,16 @@ struct EventUpdatePayload {
     /// Gekozen contact-id (m8). Aanwezig ⇒ klant_naam/klant_telefoon blijven weg
     /// (valkuil D: die twee zijn alleen voor afspraken zonder contact).
     let contact: String?
+    /// Wie de afspraak mag zien. Nil laat het veld weg: alleen het bewerkscherm van
+    /// een bedrijfsafspraak toont die knoppen, en zonder bedrijf is er niets te
+    /// kiezen. Viewers gaan hierboven al mee, dus die blijven kloppen.
+    let visibility: String?
 
     init(
-        title: String, category: BovexaTheme.Category, start: Date, end: Date, notes: String,
+        title: String, category: BovexaTheme.Category?, start: Date, end: Date, notes: String,
         klantNaam: String, klantTelefoon: String, reminderMin: Int, assignee: [String],
-        viewers: [String], assigneeStatus: [String: String], label: String? = nil, contact: String? = nil
+        viewers: [String], assigneeStatus: [String: String], label: String? = nil, contact: String? = nil,
+        visibility: String? = nil
     ) {
         self.title = title
         self.category = category
@@ -39,12 +46,13 @@ struct EventUpdatePayload {
         self.assigneeStatus = assigneeStatus
         self.label = label
         self.contact = contact
+        self.visibility = visibility
     }
 
     var requestBody: [String: Any] {
         var body: [String: Any] = [
             "title": title,
-            "category": category.rawValue,
+            "category": category?.rawValue ?? "",
             "start": PBDate.format(start),
             "end": PBDate.format(end),
             "notes": notes,
@@ -61,6 +69,7 @@ struct EventUpdatePayload {
         body["klant_telefoon"] = klantTelefoon
         if let contact { body["contact"] = contact }
         if let label { body["label"] = label }
+        if let visibility { body["visibility"] = visibility }
         return body
     }
 }

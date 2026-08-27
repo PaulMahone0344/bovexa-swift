@@ -34,6 +34,10 @@ struct MonthGridView: View {
                         onTap: {
                             Haptics.selection()
                             viewModel.openDaySheet(cell.date)
+                        },
+                        onDoubleTap: {
+                            Haptics.selection()
+                            viewModel.openDaySheet(cell.date, uitgeklapt: true)
                         }
                     )
                 }

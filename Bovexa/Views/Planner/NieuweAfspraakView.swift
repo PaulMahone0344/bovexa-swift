@@ -45,6 +45,7 @@ struct NieuweAfspraakView: View {
                     )
                     .padding(BovexaTheme.Space.xl)
                 }
+                .scrollDismissesKeyboard(.interactively)
             }
             .navigationTitle("Nieuwe afspraak")
             .navigationBarTitleDisplayMode(.inline)

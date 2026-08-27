@@ -18,6 +18,10 @@ final class VandaagViewModel: ObservableObject {
     /// opgeslagen (UserDefaults), dus geen netwerkverzoek — wel opnieuw inlezen
     /// bij elke focus, want op de Dagtaken-tab kan er intussen iets afgevinkt zijn.
     @Published private(set) var openTasks: [PlanningNote] = []
+    /// Openstaande bedrijfstaken die jou aangaan: van jou, aan jou toegewezen, of
+    /// voor het hele bedrijf. Tot 25 augustus toonde Vandaag alleen de lokale
+    /// lijst, dus een taak die een collega je gaf zag je hier niet staan.
+    @Published private(set) var openTeamTasks: [AgendaTask] = []
     /// Toewijzingen die op jouw akkoord wachten. Voedt de badge op de Profiel-tab
     /// (6b) — zonder dit verscheen die pas nadat je Profiel een keer opende.
     @Published private(set) var pendingAssignmentCount = 0
@@ -31,6 +35,7 @@ final class VandaagViewModel: ObservableObject {
     let labelStore: LabelStore
 
     private let repository: EventRepository
+    private let taskRepository: TaskRepository
     private let labelRepository: LabelRepository
     private let externalCalendarService: ExternalCalendarService
     private let planningStore: PlanningNoteStore
@@ -41,6 +46,7 @@ final class VandaagViewModel: ObservableObject {
 
     init(
         repository: EventRepository = EventRepository(), memberColors: MemberColors = MemberColors(),
+        taskRepository: TaskRepository = TaskRepository(),
         labelRepository: LabelRepository = LabelRepository(), labelStore: LabelStore = LabelStore(),
         externalCalendarService: ExternalCalendarService = ExternalCalendarService(),
         planningStore: PlanningNoteStore = PlanningNoteStore(),
@@ -48,6 +54,7 @@ final class VandaagViewModel: ObservableObject {
     ) {
         self.repository = repository
         self.memberColors = memberColors
+        self.taskRepository = taskRepository
         self.labelRepository = labelRepository
         self.labelStore = labelStore
         self.externalCalendarService = externalCalendarService
@@ -63,6 +70,33 @@ final class VandaagViewModel: ObservableObject {
         openTasks = planningStore.notes.filter { !$0.done && !$0.archived }
     }
 
+    /// Bedrijfstaken erbij, maar alleen die van jou zijn: alles van het hele
+    /// bedrijf zou Vandaag veranderen in de bedrijfslijst. Faalt stil — geen
+    /// bedrijf of geen bereik betekent gewoon alleen je eigen lijst.
+    func reloadTeamTasks(userId: String, orgId: String?, token: String) async {
+        guard orgId != nil, !token.isEmpty else {
+            openTeamTasks = []
+            return
+        }
+        guard let tasks = try? await taskRepository.fetchTasks(token: token) else { return }
+        openTeamTasks = tasks.filter { task in
+            guard task.status != .klaar else { return false }
+            if task.owner == userId { return true }
+            if task.viewers.contains(userId) { return true }
+            return task.visibility == .company
+        }
+    }
+
+    /// De twee lijsten door elkaar, jouw eigen taken eerst: die staan er al het
+    /// langst en zijn waar dit scherm om begon. Zonder bedrijf blijft het label
+    /// weg — dan valt er niets te onderscheiden.
+    func dagtaakRegels(orgNaam: String?) -> [DagtaakRegel] {
+        let heeftBedrijf = orgNaam != nil
+        let eigen = openTasks.map { DagtaakRegel(note: $0, bron: heeftBedrijf ? "Privé" : nil) }
+        let team = openTeamTasks.map { DagtaakRegel(task: $0, bron: orgNaam) }
+        return eigen + team
+    }
+
     func load(userId: String, orgId: String?, token: String) async {
         reloadOpenTasks(userId: userId)
         isLoading = true
@@ -73,15 +107,19 @@ final class VandaagViewModel: ObservableObject {
 
         async let eventsResult = try? repository.fetchAllEvents(userId: userId, orgId: orgId, token: token)
         async let membersResult = repository.listMembers(token: token)
+        async let teamTasksResult: Void = reloadTeamTasks(userId: userId, orgId: orgId, token: token)
         async let externalResult = externalCalendarService.events(
             in: ExternalCalendarMerge.fetchInterval(around: now()),
             calendarIds: ExternalCalendarSelectionPreference.selectedIds(defaults: defaults)
         )
 
+        await teamTasksResult
+
         let events: [AgendaEvent]
         if let fetched = await eventsResult {
-            events = fetched
-            lastEvents = fetched
+            let zichtbaar = fetched.onlyAccepted(for: userId)
+            events = zichtbaar
+            lastEvents = zichtbaar
             loadFailed = false
         } else {
             // Vorige set laten staan in plaats van een lege dag tonen.

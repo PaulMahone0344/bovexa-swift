@@ -160,7 +160,7 @@ struct DagtakenView: View {
         // gearchiveerd" en telde afgevinkte gewoon mee (4l).
         scope == .mijn
             ? viewModel.openNotes.filter { !$0.done }.count
-            : TeamTaskGrouping.split(viewModel.teamTasks).open.count
+            : TeamTaskGrouping.split(viewModel.zichtbareTeamTasks(userId: currentUser?.id ?? "")).open.count
     }
 
     /// De composer zit sinds 27 juli achter de +-knop: als vaste kaart bovenaan
@@ -199,7 +199,10 @@ struct DagtakenView: View {
         GlassCard(emphasis: .hero) {
             VStack(alignment: .leading, spacing: BovexaTheme.Space.md) {
                 TextField("Titel op de eerste regel\nExtra tekst eronder…", text: $viewModel.draft, axis: .vertical)
-                    .keyboardDone(focused: $draftFocused)
+                    // Geen "Klaar"-knop boven het toetsenbord: die bleef rechtsonder
+                    // naast "Toevoegen" hangen als het toetsenbord al weg was.
+                    // Wegvegen door te scrollen doet hetzelfde werk.
+                    .focused($draftFocused)
                     .font(BovexaTheme.TypeStyle.body)
                     .foregroundStyle(BovexaTheme.Colors.ink)
                     .lineLimit(4...8)
@@ -213,6 +216,13 @@ struct DagtakenView: View {
                         companyName: viewModel.orgName ?? "Bedrijf"
                     ) { value in
                         viewModel.visibility = TaskVisibility(rawValue: value) ?? .private
+                    }
+
+                    // Alleen bij een bedrijfstaak valt er iemand aan te wijzen.
+                    // Bij een privétaak stonden de collega's er ook tussen, en die
+                    // horen daar niet: privé is van jou alleen.
+                    if viewModel.visibility != .private {
+                        assigneeBlock(for: user)
                     }
                 }
 
@@ -228,6 +238,41 @@ struct DagtakenView: View {
                 }
                 .buttonStyle(.glassProminentBrand)
                 .disabled(!viewModel.canSubmit)
+            }
+        }
+    }
+
+    /// "Toegewezen aan" in de composer. Staat er ook als je Privé koos: wijs je
+    /// iemand aan, dan gaat de taak alsnog naar die persoon en niet naar de rest
+    /// van het bedrijf. De regel eronder zegt dat, want anders is het verschil
+    /// tussen Privé-met-persoon en Bedrijf niet te zien.
+    @ViewBuilder
+    private func assigneeBlock(for user: AgendaUser) -> some View {
+        let members = viewModel.memberColors.members.filter { $0.userId != user.id }
+
+        if !members.isEmpty {
+            GlassCard {
+                VStack(alignment: .leading, spacing: BovexaTheme.Space.md) {
+                    Text("Toegewezen aan")
+                        .font(BovexaTheme.TypeStyle.caption.weight(.bold))
+                        .foregroundStyle(BovexaTheme.Colors.accent)
+                        .textCase(.uppercase)
+                        .tracking(0.3)
+
+                    AssigneePickerView(
+                        members: viewModel.memberColors.members,
+                        currentUserId: user.id,
+                        selectedIds: $viewModel.assignees
+                    )
+
+                    if !viewModel.assignees.isEmpty {
+                        Text(viewModel.visibility == .private
+                             ? "Komt op hun scherm te staan; de rest van \(viewModel.orgName ?? "het bedrijf") ziet hem niet."
+                             : "Komt op hun scherm te staan.")
+                            .font(BovexaTheme.TypeStyle.footnote)
+                            .foregroundStyle(BovexaTheme.Colors.inkSoft)
+                    }
+                }
             }
         }
     }
@@ -322,7 +367,10 @@ struct DagtakenView: View {
     @ViewBuilder
     private func teamSection(for user: AgendaUser) -> some View {
         if user.defaultOrg != nil {
-            let groups = TeamTaskGrouping.split(viewModel.teamTasks)
+            // Alleen wat aan deze gebruiker is gericht: een medewerker hoort de
+            // dagtaken van een collega niet in zijn lijst te hebben.
+            let mijne = viewModel.zichtbareTeamTasks(userId: user.id)
+            let groups = TeamTaskGrouping.split(mijne)
 
             VStack(alignment: .leading, spacing: BovexaTheme.Space.lg) {
                 VStack(alignment: .leading, spacing: BovexaTheme.Space.sm) {
@@ -344,9 +392,9 @@ struct DagtakenView: View {
                         ProgressView()
                             .tint(BovexaTheme.Colors.accent)
                             .frame(maxWidth: .infinity, alignment: .leading)
-                    } else if viewModel.teamTasks.isEmpty, viewModel.loadFailed {
+                    } else if mijne.isEmpty, viewModel.loadFailed {
                         LoadFailedNote(text: "Kon de bedrijfslijst niet laden.")
-                    } else if viewModel.teamTasks.isEmpty {
+                    } else if mijne.isEmpty {
                         Text("Nog geen gedeelde dagtaken. Kies “\(viewModel.orgName ?? "Bedrijf")” bij het toevoegen.")
                             .font(BovexaTheme.TypeStyle.footnote)
                             .foregroundStyle(BovexaTheme.Colors.inkSoft)
@@ -409,6 +457,8 @@ struct DagtakenView: View {
                     task: task,
                     canToggle: TaskPermissions.canToggle(task, userId: user.id),
                     ownerLabel: task.owner == user.id ? "Jij" : (viewModel.memberColors.firstName(for: task.owner) ?? "Collega"),
+                    assigneeLabel: viewModel.assigneeLabel(for: task, currentUserId: user.id),
+                    afgevinktDoor: viewModel.afgevinktDoor(task, currentUserId: user.id),
                     onToggle: { Task { await viewModel.toggleTeamTask(task, userId: user.id, token: authStore.token ?? "") } },
                     onOpen: { openTeamTask = task }
                 )
@@ -421,7 +471,8 @@ struct DagtakenView: View {
     /// voor het bedrijf zet meteen de bedrijfslijst aan: anders komt hij terecht in
     /// een lijst die je op dat moment niet ziet.
     private func submitFromComposer(user: AgendaUser) async {
-        let wasTeamTask = user.defaultOrg != nil && viewModel.visibility != .private && !viewModel.isEditing
+        let wasTeamTask = user.defaultOrg != nil && !viewModel.isEditing
+            && (viewModel.visibility != .private || !viewModel.assignees.isEmpty)
         await viewModel.submit(userId: user.id, org: user.defaultOrg, token: authStore.token ?? "")
 
         guard !viewModel.createFailedAlert, viewModel.draft.isEmpty else { return }

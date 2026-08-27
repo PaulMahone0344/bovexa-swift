@@ -4,6 +4,16 @@ import Foundation
 /// of bij een oudere dag "Klaar gisteren om 09:10". Geldt voor zowel lokale
 /// dagtaken (PlanningNote) als team-dagtaken (AgendaTask).
 enum TaskCompletionFormatting {
+    /// Met `door` erbij: "Gedaan door Ayman om 14:32" — dat is wat de beheerder
+    /// wil zien bij een taak die hij aan iemand heeft gegeven. Zonder naam blijft
+    /// het de oude tekst.
+    static func label(completedAt: Date, door: String, now: Date = Date(), calendar: Calendar = .current) -> String {
+        let basis = label(completedAt: completedAt, now: now, calendar: calendar)
+        guard !door.isEmpty else { return basis }
+        let staart = basis.replacingOccurrences(of: "Klaar ", with: "")
+        return door == "Jij" ? "Door jou gedaan \(staart)" : "Gedaan door \(door) \(staart)"
+    }
+
     static func label(completedAt: Date, now: Date = Date(), calendar: Calendar = .current) -> String {
         let time = timeString(completedAt)
         // Vergelijken met `now` en niet met de systeemklok (isDateInToday): die

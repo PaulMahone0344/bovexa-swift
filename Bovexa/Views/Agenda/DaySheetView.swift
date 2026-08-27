@@ -15,6 +15,12 @@ struct DaySheetView: View {
     let onOpenDay: () -> Void
     let onSelectEvent: (AgendaEvent) -> Void
     var onPlanAppointment: () -> Void = {}
+    /// Hoogte waarop de balk binnenschuift: de ruimte onder het maandraster. De
+    /// caller meet dat, want alleen daar is bekend hoeveel weken de maand heeft.
+    var hoogte: CGFloat = 300
+    /// Welke stand de balk nu heeft. De caller kiest de beginstand: een gewone tik
+    /// zet hem onder de kalender, een dubbeltik meteen op volle hoogte.
+    @Binding var stand: PresentationDetent
 
     var body: some View {
         ZStack {
@@ -34,9 +40,13 @@ struct DaySheetView: View {
                 .padding(BovexaTheme.Space.xl)
             }
         }
-        // Halfhoog openen: zo blijft de maand waar je vandaan komt zichtbaar, en
-        // een drukke dag kun je uitklappen.
-        .presentationDetents([.medium, .large])
+        // Twee standen. Een gewone tik houdt de balk precies onder de kalender —
+        // op halve hoogte dekte hij de onderste weken af, en juist die dagen wil
+        // je zien terwijl je dagen aantikt. Omhoog schuiven of een dubbeltik op de
+        // dag zet hem op volle hoogte, want dan ga je de dag echt lezen.
+        .presentationDetents([.height(hoogte), .large], selection: $stand)
         .presentationDragIndicator(.visible)
+        // Bladeren door de maand blijft zo altijd mogelijk.
+        .presentationBackgroundInteraction(.enabled(upThrough: .height(hoogte)))
     }
 }

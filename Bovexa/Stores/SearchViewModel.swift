@@ -17,7 +17,8 @@ final class SearchViewModel: ObservableObject {
     }
 
     func load(userId: String, orgId: String?, token: String) async {
-        allEvents = (try? await repository.fetchAllEvents(userId: userId, orgId: orgId, token: token)) ?? []
+        allEvents = ((try? await repository.fetchAllEvents(userId: userId, orgId: orgId, token: token)) ?? [])
+            .onlyAccepted(for: userId)
     }
 
     /// Na verwijderen vanuit het detail: bij een herhaling verdwijnen alle

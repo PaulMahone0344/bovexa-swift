@@ -8,6 +8,8 @@ struct MonthDayCellView: View {
     let density: AgendaViewKind
     @ObservedObject var labelStore: LabelStore
     let onTap: () -> Void
+    /// Dubbeltik: zelfde dag, maar de balk gaat meteen helemaal open.
+    var onDoubleTap: (() -> Void)?
 
     var body: some View {
         Button(action: onTap) {
@@ -28,6 +30,9 @@ struct MonthDayCellView: View {
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
+        // Dubbeltik vóór de gewone tik: SwiftUI geeft een count-2-gebaar voorrang
+        // op de knop, dus één tik houdt de balk laag en twee tikken openen hem.
+        .simultaneousGesture(TapGesture(count: 2).onEnded { onDoubleTap?() })
         // VoiceOver las alleen "15": geen maand, geen weekdag, geen aantal (5a).
         .accessibilityLabel("\(EventHelpers.longDay(cell.date)), \(events.count == 1 ? "1 afspraak" : "\(events.count) afspraken")")
         .accessibilityAddTraits(cell.isToday ? .isSelected : [])

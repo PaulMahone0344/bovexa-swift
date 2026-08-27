@@ -38,6 +38,8 @@ final class AgendaViewModel: ObservableObject {
     /// meekomt in de ledenlijst die deze view toch al ophaalt.
     @Published private(set) var canSeeOthersAgenda = false
     @Published var daySheetTarget: DaySheetTarget?
+    /// Of de dagbalk bij het openen meteen helemaal open moet (dubbeltik).
+    @Published var dagbalkUitgeklapt = false
     @Published var dayViewFocusDate: Date
 
     let memberColors: MemberColors
@@ -98,7 +100,7 @@ final class AgendaViewModel: ObservableObject {
         )
 
         if let fetched = await eventsResult {
-            ownEvents = fetched
+            ownEvents = fetched.onlyAccepted(for: userId)
             loadFailed = false
         } else {
             loadFailed = true
@@ -134,7 +136,10 @@ final class AgendaViewModel: ObservableObject {
         events.removeAll { EventHelpers.eventRecordId($0) == recordId }
     }
 
-    func openDaySheet(_ day: Date) {
+    /// `uitgeklapt` komt van een dubbeltik: dan gaat de dagbalk meteen op volle
+    /// hoogte open in plaats van net onder de kalender te blijven staan.
+    func openDaySheet(_ day: Date, uitgeklapt: Bool = false) {
+        dagbalkUitgeklapt = uitgeklapt
         daySheetTarget = DaySheetTarget(day: day)
     }
 

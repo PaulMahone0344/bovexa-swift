@@ -8,15 +8,29 @@ struct PersoonFormView: View {
         case edit(AgendaContact)
     }
 
+    /// Wat er nodig is om de afspraken van deze persoon op te halen. Nil laat het
+    /// inzet-overzicht weg — bij "Persoon toevoegen" bestaat er nog niets om te tonen.
+    struct InzetBron {
+        let userId: String
+        let orgId: String?
+        let token: String
+    }
+
     let mode: Mode
+    /// Waar de nieuwe persoon terechtkomt ("Privé" of de bedrijfsnaam). Staat als
+    /// regel boven het formulier, zodat je na het aantikken van een van de twee
+    /// plusknoppen nog ziet welke je had.
+    var doelNaam: String?
     let onSave: (String, String, String) async -> Bool
     var onDelete: (() async -> Void)?
     /// De foutmelding stond als `.alert` op MensenView, ónder deze sheet — SwiftUI
     /// presenteert die dan niet: de spinner flitste en er gebeurde niets. De tekst
     /// hoort hier, bij de knop die faalde.
     var errorText: String?
+    var inzetBron: InzetBron?
 
     @Environment(\.dismiss) private var dismiss
+    @StateObject private var inzet = PersoonInzetViewModel()
     @State private var naam: String
     @State private var telefoon: String
     @State private var notitie: String
@@ -25,14 +39,18 @@ struct PersoonFormView: View {
 
     init(
         mode: Mode,
+        doelNaam: String? = nil,
         onSave: @escaping (String, String, String) async -> Bool,
         onDelete: (() async -> Void)? = nil,
-        errorText: String? = nil
+        errorText: String? = nil,
+        inzetBron: InzetBron? = nil
     ) {
         self.mode = mode
+        self.doelNaam = doelNaam
         self.onSave = onSave
         self.onDelete = onDelete
         self.errorText = errorText
+        self.inzetBron = inzetBron
         switch mode {
         case .add:
             _naam = State(initialValue: "")
@@ -59,6 +77,13 @@ struct PersoonFormView: View {
 
                 ScrollView {
                     VStack(spacing: BovexaTheme.Space.md) {
+                        if let doelNaam {
+                            Text("Komt bij: \(doelNaam)")
+                                .font(BovexaTheme.TypeStyle.footnote.weight(.semibold))
+                                .foregroundStyle(BovexaTheme.Colors.accent)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                        }
+
                         GlassCard {
                             VStack(alignment: .leading, spacing: BovexaTheme.Space.md) {
                                 field(label: "Naam", text: $naam, keyboard: .default)
@@ -72,6 +97,16 @@ struct PersoonFormView: View {
                                 .font(BovexaTheme.TypeStyle.footnote.weight(.semibold))
                                 .foregroundStyle(BovexaTheme.Colors.danger)
                                 .frame(maxWidth: .infinity, alignment: .leading)
+                        }
+
+                        if case .edit(let contact) = mode, let bron = inzetBron {
+                            inzetKaart
+                                .task(id: contact.id) {
+                                    await inzet.load(
+                                        contact: contact, userId: bron.userId,
+                                        orgId: bron.orgId, token: bron.token
+                                    )
+                                }
                         }
 
                         if case .edit = mode {
@@ -121,6 +156,86 @@ struct PersoonFormView: View {
                 Text("Dit contact wordt definitief verwijderd.")
             }
         }
+    }
+
+    /// Uren en dagen van deze persoon. Alles komt uit de agenda (ContactInzet) —
+    /// er valt hier niets in te vullen, het is een overzicht.
+    private var inzetKaart: some View {
+        GlassCard {
+            VStack(alignment: .leading, spacing: BovexaTheme.Space.md) {
+                Text("INGEPLAND")
+                    .font(BovexaTheme.TypeStyle.caption.weight(.bold))
+                    .foregroundStyle(BovexaTheme.Colors.accent)
+
+                if inzet.loading {
+                    ProgressView().tint(BovexaTheme.Colors.accent)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                } else if inzet.loadFailed {
+                    Text("Kon de afspraken niet laden.")
+                        .font(BovexaTheme.TypeStyle.footnote)
+                        .foregroundStyle(BovexaTheme.Colors.danger)
+                } else if inzet.regels.isEmpty {
+                    Text("Deze persoon staat nergens ingepland.")
+                        .font(BovexaTheme.TypeStyle.footnote)
+                        .foregroundStyle(BovexaTheme.Colors.muted)
+                } else {
+                    HStack(spacing: BovexaTheme.Space.lg) {
+                        teller("Geweest", ContactInzet.urenTekst(minuten: inzet.geweestMinuten))
+                        teller("Nog gepland", ContactInzet.urenTekst(minuten: inzet.geplandMinuten))
+                    }
+
+                    VStack(alignment: .leading, spacing: 0) {
+                        ForEach(inzet.regels) { regel in
+                            inzetRij(regel)
+                            if regel.id != inzet.regels.last?.id {
+                                Divider().overlay(BovexaTheme.Colors.edge)
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    private func teller(_ label: String, _ waarde: String) -> some View {
+        VStack(alignment: .leading, spacing: 2) {
+            Text(waarde)
+                .font(BovexaTheme.TypeStyle.headline)
+                .foregroundStyle(BovexaTheme.Colors.ink)
+            Text(label)
+                .font(BovexaTheme.TypeStyle.caption)
+                .foregroundStyle(BovexaTheme.Colors.muted)
+        }
+    }
+
+    private func inzetRij(_ regel: ContactInzet.Regel) -> some View {
+        HStack(alignment: .firstTextBaseline, spacing: BovexaTheme.Space.sm) {
+            VStack(alignment: .leading, spacing: 1) {
+                Text(EventHelpers.longDay(regel.start))
+                    .font(BovexaTheme.TypeStyle.subheadline.weight(.semibold))
+                    .foregroundStyle(BovexaTheme.Colors.ink)
+                Text(tijdTekst(regel))
+                    .font(BovexaTheme.TypeStyle.caption)
+                    .foregroundStyle(BovexaTheme.Colors.muted)
+                    .lineLimit(1)
+            }
+            Spacer(minLength: BovexaTheme.Space.sm)
+            // Een afspraak zonder eindtijd levert nul minuten op; dan liever niets
+            // dan een misleidende "0 uur".
+            if regel.minuten > 0 {
+                Text(ContactInzet.urenTekst(minuten: regel.minuten))
+                    .font(BovexaTheme.TypeStyle.footnote.weight(.semibold))
+                    .foregroundStyle(regel.geweest ? BovexaTheme.Colors.inkSoft : BovexaTheme.Colors.accent)
+            }
+        }
+        .padding(.vertical, BovexaTheme.Space.xs)
+    }
+
+    private func tijdTekst(_ regel: ContactInzet.Regel) -> String {
+        if regel.heleDag { return "Hele dag · \(regel.titel)" }
+        let van = EventHelpers.fmtTime(regel.start)
+        guard let einde = regel.einde else { return "\(van) · \(regel.titel)" }
+        return "\(van) - \(EventHelpers.fmtTime(einde)) · \(regel.titel)"
     }
 
     private func field(label: String, text: Binding<String>, keyboard: UIKeyboardType) -> some View {

@@ -7,7 +7,8 @@ struct AppointmentCreatePayload {
     let owner: String
     let org: String
     let title: String
-    let category: BovexaTheme.Category
+    /// Leeg mag: een afspraak zonder categorie ("Leeg" in de categorierij).
+    let category: BovexaTheme.Category?
     let calendar: String // "work" | "private"
     let location: String
     let recurrence: String
@@ -36,7 +37,7 @@ struct AppointmentCreatePayload {
     let notes: String?
 
     init(
-        owner: String, org: String, title: String, category: BovexaTheme.Category, calendar: String,
+        owner: String, org: String, title: String, category: BovexaTheme.Category?, calendar: String,
         location: String, recurrence: String, klantNaam: String, klantTelefoon: String, start: Date, end: Date,
         visibility: String, viewers: [String], assignee: [String], rawInput: String, reminderMin: Int,
         assigneeStatus: [String: String], source: String = "nl", label: String? = nil, contact: String? = nil,
@@ -70,7 +71,7 @@ struct AppointmentCreatePayload {
             "owner": owner,
             "org": org,
             "title": title,
-            "category": category.rawValue,
+            "category": category?.rawValue ?? "",
             "calendar": calendar,
             "location": location,
             "recurrence": recurrence,

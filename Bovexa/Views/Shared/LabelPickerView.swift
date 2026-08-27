@@ -18,6 +18,7 @@ struct LabelPickerView: View {
     @State private var newLabelColor = BovexaTheme.LabelPalette.options[0].hex
     @State private var isCreating = false
     @State private var createError: String?
+    @State private var verwijderError: String?
     /// Vrije kleur (systeem-ColorPicker) naast de vaste swatches — commit pas
     /// bij "Toevoegen", dus geen debounce nodig.
     @State private var newCustomColor = Color(hex: BovexaTheme.LabelPalette.options[0].hex)
@@ -30,6 +31,11 @@ struct LabelPickerView: View {
                     labelChip(label)
                 }
                 newLabelChip
+            }
+            if let verwijderError {
+                Text(verwijderError)
+                    .font(BovexaTheme.TypeStyle.footnote.weight(.semibold))
+                    .foregroundStyle(BovexaTheme.Colors.danger)
             }
             if showNewLabelForm {
                 newLabelForm
@@ -46,6 +52,30 @@ struct LabelPickerView: View {
     private func labelChip(_ label: AgendaLabel) -> some View {
         chip(title: label.naam, color: Color(hex: label.kleur), active: selectedLabelId == label.id) {
             selectedLabelId = selectedLabelId == label.id ? nil : label.id
+        }
+        // Weghalen kon alleen in de Legende; wie hier een label ziet dat weg mag,
+        // moest daarvoor het scherm uit. Een kruisje op elke chip zou de rij laten
+        // struikelen, dus zit het achter lang drukken — zelfde als bij de eigen
+        // categorieën.
+        .contextMenu {
+            Button("Verwijderen", role: .destructive) {
+                Task { await verwijder(label) }
+            }
+        }
+    }
+
+    /// Labels zijn van het bedrijf: weghalen geldt voor iedereen. Afspraken met dit
+    /// label blijven staan en vallen terug op hun categoriekleur (valkuil H).
+    private func verwijder(_ label: AgendaLabel) async {
+        verwijderError = nil
+        do {
+            try await labelRepository.deleteLabel(id: label.id, token: token)
+            if selectedLabelId == label.id { selectedLabelId = nil }
+            labelStore.remove(id: label.id)
+            Haptics.success()
+        } catch {
+            Haptics.warning()
+            verwijderError = "Kon het label niet verwijderen. Probeer het opnieuw."
         }
     }
 

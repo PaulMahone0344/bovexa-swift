@@ -8,6 +8,12 @@ struct TeamTaskRowView: View {
     let task: AgendaTask
     let canToggle: Bool
     let ownerLabel: String
+    /// Namen van de mensen aan wie de taak is toegewezen (viewers, zonder de
+    /// eigenaar zelf). Leeg = een taak voor het hele bedrijf, dan staat er niets.
+    var assigneeLabel: String = ""
+    /// Wie de taak heeft afgevinkt. Leeg als dat niet te herleiden is (een taak
+    /// voor het hele team); dan blijft alleen het tijdstip staan.
+    var afgevinktDoor: String = ""
     let onToggle: () -> Void
     let onOpen: () -> Void
 
@@ -63,14 +69,24 @@ struct TeamTaskRowView: View {
                                     .lineLimit(1)
                             }
 
+                            if !assigneeLabel.isEmpty {
+                                Label(assigneeLabel, systemImage: "person.fill")
+                                    .font(BovexaTheme.TypeStyle.caption.weight(.semibold))
+                                    .foregroundStyle(BovexaTheme.Colors.accent)
+                                    .lineLimit(1)
+                            }
+
                             Text(TaskAuthorFormatting.shortLabel(owner: ownerLabel, created: task.created))
                                 .font(BovexaTheme.TypeStyle.caption.weight(.bold))
                                 .foregroundStyle(BovexaTheme.Colors.muted)
 
                             if let completedAt = task.completedAt {
-                                Text(TaskCompletionFormatting.label(completedAt: completedAt))
-                                    .font(BovexaTheme.TypeStyle.caption.weight(.semibold))
-                                    .foregroundStyle(BovexaTheme.Colors.muted)
+                                Label(
+                                    TaskCompletionFormatting.label(completedAt: completedAt, door: afgevinktDoor),
+                                    systemImage: "checkmark.circle.fill"
+                                )
+                                .font(BovexaTheme.TypeStyle.caption.weight(.semibold))
+                                .foregroundStyle(BovexaTheme.Colors.categoryGreen)
                             }
                         }
 

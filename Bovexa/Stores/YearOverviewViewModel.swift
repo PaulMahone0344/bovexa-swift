@@ -17,7 +17,8 @@ final class YearOverviewViewModel: ObservableObject {
     func goToNextYear() { year += 1 }
 
     func load(userId: String, orgId: String?, token: String) async {
-        let events = (try? await repository.fetchAllEvents(userId: userId, orgId: orgId, token: token)) ?? []
+        let events = ((try? await repository.fetchAllEvents(userId: userId, orgId: orgId, token: token)) ?? [])
+            .onlyAccepted(for: userId)
         eventDays = EventDaySet.build(from: events)
     }
 

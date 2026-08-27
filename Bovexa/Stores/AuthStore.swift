@@ -110,8 +110,11 @@ final class AuthStore: ObservableObject {
     }
 
     func signIn(email: String, password: String) async {
+        // Plakken uit een mail of wachtwoordmanager levert vaak een spatie of een
+        // hoofdletter mee. De server vergelijkt exact, dus dat kost een login.
+        let schoonEmail = email.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
         do {
-            let response = try await client.authWithPassword(email: email, password: password)
+            let response = try await client.authWithPassword(email: schoonEmail, password: password)
             token = response.token
             tokenStore.save(response.token)
             setLoggedIn(response.record)
@@ -148,6 +151,8 @@ final class AuthStore: ObservableObject {
         tokenStore.clear()
         userCache.clear()
         reminderScheduler.cancelAll()
+        HerinneringStore.shared.wisAlles()
+        BeschikbaarheidStore.shared.wisAlles()
         token = nil
     }
 

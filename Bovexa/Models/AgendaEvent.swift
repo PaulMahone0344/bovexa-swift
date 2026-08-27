@@ -19,6 +19,9 @@ struct AgendaEvent: Decodable, Identifiable {
     let notes: String?
     let klantNaam: String?
     let assigneeStatus: [String: String]
+    /// Wanneer het record is aangemaakt (PocketBase `created`). Gebruikt om de
+    /// beheerder te laten zien wat er nieuw is ingevoerd door het team.
+    let created: Date?
     let seriesId: String?
     let occurrenceDate: String?
     let org: String?
@@ -48,6 +51,7 @@ struct AgendaEvent: Decodable, Identifiable {
         title: String, start: Date, end: Date?, allDay: Bool, recurrence: String?,
         location: String?, notes: String?, klantNaam: String?,
         assigneeStatus: [String: String], seriesId: String?, occurrenceDate: String?,
+        created: Date? = nil,
         org: String? = nil, visibilityRaw: String? = nil, viewers: [String] = [],
         assignee: [String] = [], reminderMin: Int? = nil, klantTelefoon: String? = nil,
         label: String? = nil, contact: String? = nil, expand: Expand? = nil,
@@ -66,6 +70,7 @@ struct AgendaEvent: Decodable, Identifiable {
         self.notes = notes
         self.klantNaam = klantNaam
         self.assigneeStatus = assigneeStatus
+        self.created = created
         self.seriesId = seriesId
         self.occurrenceDate = occurrenceDate
         self.org = org
@@ -87,7 +92,7 @@ struct AgendaEvent: Decodable, Identifiable {
             id: id, owner: owner, calendar: calendar, category: category, title: title,
             start: start, end: end, allDay: allDay, recurrence: recurrence, location: location,
             notes: notes, klantNaam: klantNaam, assigneeStatus: assigneeStatus,
-            seriesId: seriesId, occurrenceDate: occurrenceDate,
+            seriesId: seriesId, occurrenceDate: occurrenceDate, created: created,
             org: org, visibilityRaw: visibilityRaw, viewers: viewers,
             assignee: assignee, reminderMin: reminderMin, klantTelefoon: klantTelefoon, label: label,
             contact: contact, expand: expand, isExternal: isExternal
@@ -101,7 +106,7 @@ struct AgendaEvent: Decodable, Identifiable {
             id: id, owner: owner, calendar: calendar, category: category, title: title,
             start: start, end: end, allDay: allDay, recurrence: recurrence, location: location,
             notes: notes, klantNaam: klantNaam, assigneeStatus: assigneeStatus,
-            seriesId: seriesId, occurrenceDate: occurrenceDate,
+            seriesId: seriesId, occurrenceDate: occurrenceDate, created: created,
             org: org, visibilityRaw: visibilityRaw, viewers: viewers,
             assignee: assignee, reminderMin: reminderMin, klantTelefoon: klantTelefoon, label: label,
             contact: contact, expand: expand, isExternal: isExternal
@@ -115,7 +120,7 @@ struct AgendaEvent: Decodable, Identifiable {
             id: id, owner: owner, calendar: calendar, category: category, title: title,
             start: start, end: end, allDay: allDay, recurrence: recurrence, location: location,
             notes: notes, klantNaam: klantNaam, assigneeStatus: assigneeStatus,
-            seriesId: seriesId, occurrenceDate: occurrenceDate,
+            seriesId: seriesId, occurrenceDate: occurrenceDate, created: created,
             org: org, visibilityRaw: visibilityRaw, viewers: viewers,
             assignee: assignee, reminderMin: reminderMin, klantTelefoon: klantTelefoon, label: label,
             contact: contact, expand: expand, isExternal: isExternal
@@ -129,7 +134,7 @@ struct AgendaEvent: Decodable, Identifiable {
             id: id, owner: owner, calendar: calendar, category: category, title: title,
             start: start, end: end, allDay: allDay, recurrence: recurrence, location: location,
             notes: notes, klantNaam: klantNaam, assigneeStatus: assigneeStatus,
-            seriesId: seriesId, occurrenceDate: occurrenceDate,
+            seriesId: seriesId, occurrenceDate: occurrenceDate, created: created,
             org: org, visibilityRaw: visibilityRaw, viewers: viewers,
             assignee: assignee, reminderMin: reminderMin, klantTelefoon: klantTelefoon, label: label,
             contact: contact, expand: expand, isExternal: isExternal
@@ -144,7 +149,7 @@ struct AgendaEvent: Decodable, Identifiable {
             id: id, owner: owner, calendar: calendar, category: category, title: title,
             start: start, end: end, allDay: allDay, recurrence: recurrence, location: location,
             notes: notes, klantNaam: klantNaam, assigneeStatus: assigneeStatus,
-            seriesId: seriesId, occurrenceDate: occurrenceDate,
+            seriesId: seriesId, occurrenceDate: occurrenceDate, created: created,
             org: org, visibilityRaw: visibilityRaw, viewers: viewers,
             assignee: assignee, reminderMin: reminderMin, klantTelefoon: klantTelefoon, label: label,
             contact: contact, expand: nil, isExternal: isExternal
@@ -165,6 +170,7 @@ struct AgendaEvent: Decodable, Identifiable {
         case reminderMin = "reminder_min"
         case klantTelefoon = "klant_telefoon"
         case label, contact, expand
+        case created
     }
 
     init(from decoder: Decoder) throws {
@@ -185,6 +191,7 @@ struct AgendaEvent: Decodable, Identifiable {
         notes = Self.decodeOptional(c, .notes)
         klantNaam = Self.decodeOptional(c, .klantNaam)
         assigneeStatus = Self.decodeOptional(c, .assigneeStatus) ?? [:]
+        created = Self.decodeOptional(c, .created, as: String.self).flatMap(PBDate.parse)
         seriesId = Self.decodeOptional(c, .seriesId)
         occurrenceDate = Self.decodeOptional(c, .occurrenceDate)
         org = Self.decodeOptional(c, .org)

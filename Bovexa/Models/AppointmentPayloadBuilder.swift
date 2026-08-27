@@ -63,7 +63,7 @@ enum AppointmentPayloadBuilder {
     /// formulier niet en blijven leeg, net als bij een voorstel zonder die velden.
     static func buildManual(
         title: String,
-        category: BovexaTheme.Category,
+        category: BovexaTheme.Category?,
         start: Date,
         end: Date,
         ownerId: String,
@@ -106,7 +106,7 @@ enum AppointmentPayloadBuilder {
     /// één keer, voor beide takken.
     private static func make(
         title: String,
-        category: BovexaTheme.Category,
+        category: BovexaTheme.Category?,
         start: Date,
         end: Date,
         location: String,

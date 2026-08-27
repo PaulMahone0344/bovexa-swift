@@ -14,16 +14,34 @@ enum EditorMode {
 @MainActor
 final class EventEditorViewModel: ObservableObject {
     @Published var title: String
-    @Published var category: BovexaTheme.Category
+    /// nil = geen categorie ("Leeg" in de rij); de afspraak krijgt dan geen kleur
+    /// of stempel mee.
+    @Published var category: BovexaTheme.Category?
     @Published private(set) var start: Date
     @Published private(set) var durationMin: Int
     @Published var notes: String
     @Published var klantNaam: String
     @Published var klantTelefoon: String
-    @Published var reminderMin: Int
+    /// Alle gekozen herinneringen, gesorteerd. Meerdere tegelijk mag; de server
+    /// bewaart alleen de eerste (`reminder_min`), de rest staat in
+    /// HerinneringStore tot het serverveld een lijst wordt.
+    @Published var reminderMinuten: [Int]
+
+    /// De tijd die naar de server gaat: de dichtstbijzijnde. Blijft schrijfbaar
+    /// zodat één losse tijd zetten net zo werkt als voorheen.
+    var reminderMin: Int {
+        get { reminderMinuten.first ?? 0 }
+        set { reminderMinuten = newValue > 0 ? [newValue] : [] }
+    }
     @Published var assignee: [String]
     @Published var label: String?
-    @Published var contactId: String?
+    /// Gekozen contacten op volgorde van aantikken. De eerste is de klant van de
+    /// afspraak (klant_naam/klant_telefoon); de rest zijn medegenodigden.
+    @Published var contactIds: [String] = []
+    /// Het contact dat de server kent: `agenda_events.contact` is één relatie. De
+    /// extra genodigden staan tot die kant volgt naast de afspraak op het toestel
+    /// (zie MEERDERE-BEDRIJVEN-SERVER.txt, punt 13).
+    var contactId: String? { contactIds.first }
     /// Alleen in create-modus in beeld: bij bewerken wijzig je de zichtbaarheid in
     /// het afspraak-detail. Zonder org negeert de payload-bouwer deze keuze.
     @Published var visibility: String
@@ -36,9 +54,17 @@ final class EventEditorViewModel: ObservableObject {
     /// afspraak. Loslaten zet de oorspronkelijke tekst van de afspraak terug (bij een
     /// nieuwe afspraak is die er niet, dan blijft het leeg).
     func selectContact(_ contact: AgendaContact?) {
-        contactId = contact?.id
-        klantNaam = contact?.naam ?? originalEvent?.klantNaam ?? ""
-        klantTelefoon = contact?.telefoon ?? originalEvent?.klantTelefoon ?? ""
+        selectContacts(contact.map { [$0] } ?? [])
+    }
+
+    /// Meerdere contacten kiezen: de eerste vult klant_naam/klant_telefoon, de rest
+    /// hangt er als medegenodigde bij. Alles loslaten zet de oorspronkelijke tekst
+    /// van de afspraak terug.
+    func selectContacts(_ contacten: [AgendaContact]) {
+        contactIds = contacten.map(\.id)
+        let eerste = contacten.first
+        klantNaam = eerste?.naam ?? originalEvent?.klantNaam ?? ""
+        klantTelefoon = eerste?.telefoon ?? originalEvent?.klantTelefoon ?? ""
     }
 
     @Published private(set) var isSaving = false
@@ -88,17 +114,21 @@ final class EventEditorViewModel: ObservableObject {
         switch mode {
         case .edit(let event):
             title = event.title
-            category = event.category ?? .work
+            category = event.category
             start = event.start
             durationMin = event.end.map { max(15, Int($0.timeIntervalSince(event.start) / 60)) } ?? 30
             notes = event.notes ?? ""
             klantNaam = event.klantNaam ?? ""
             klantTelefoon = event.klantTelefoon ?? ""
-            reminderMin = event.reminderMin ?? 0
+            reminderMinuten = HerinneringStore.shared.minuten(voor: event.id).isEmpty
+                ? [event.reminderMin ?? 0].filter { $0 > 0 }
+                : HerinneringStore.shared.minuten(voor: event.id)
             assignee = event.assignee
             label = event.label
-            contactId = event.contact
-            visibility = "private"
+            contactIds = event.contact.map { [$0] } ?? []
+            // Overnemen wat de afspraak al is: het bewerkscherm toont de knoppen nu
+            // ook, en dan moet de huidige keuze aanstaan in plaats van altijd Privé.
+            visibility = event.visibilityRaw ?? "private"
         case .create(let seed):
             // Defaults gelijk aan de planner: privé, geen herinnering, geen
             // toewijzing, categorie werk.
@@ -114,10 +144,10 @@ final class EventEditorViewModel: ObservableObject {
             notes = ""
             klantNaam = ""
             klantTelefoon = ""
-            reminderMin = 0
+            reminderMinuten = []
             assignee = []
             label = nil
-            contactId = nil
+            contactIds = []
             visibility = "private"
         }
     }
@@ -143,6 +173,24 @@ final class EventEditorViewModel: ObservableObject {
 
     func changeDuration(by delta: Int) {
         durationMin = EventEditorStepping.clampDuration(durationMin, delta: delta)
+    }
+
+    /// Eindtijd volgt uit start + duur; het formulier toont hem als eigen rij
+    /// (in plaats van de duur, die de meeste mensen zelf moeten uitrekenen).
+    var end: Date {
+        start.addingTimeInterval(Double(durationMin) * 60)
+    }
+
+    /// Handmatig gekozen starttijd. De duur blijft staan, dus de afspraak
+    /// schuift in zijn geheel op — net als bij de pijltjes.
+    func setStart(_ date: Date) {
+        start = date
+    }
+
+    /// Handmatig gekozen eindtijd, omgerekend naar duur. Eindigt de keuze op of
+    /// vóór de start, dan houden we de ondergrens van een kwartier aan.
+    func setEnd(_ date: Date) {
+        durationMin = max(15, Int(date.timeIntervalSince(start) / 60))
     }
 
     /// Titel-check + dubbele-boeking-check. Bij overlap zet dit `overlapEvent` in
@@ -197,11 +245,14 @@ final class EventEditorViewModel: ObservableObject {
         let payload = EventEditorPayloadBuilder.build(
             title: title, category: category, start: start, end: end, notes: notes,
             klantNaam: klantNaam, klantTelefoon: klantTelefoon, reminderMin: reminderMin,
-            assignee: assignee, originalEvent: event, label: label, contact: contactId
+            assignee: assignee, originalEvent: event, label: label, contact: contactId,
+            // Zonder bedrijf staan de knoppen er niet, en dan het veld ook niet
+            // aanraken: alles is dan toch privé.
+            visibility: org.isEmpty ? nil : visibility
         )
         do {
             let updated = try await repository.updateEvent(recordId: EventHelpers.eventRecordId(event), payload: payload, token: token)
-            await reminderService.schedule(eventId: updated.id, title: updated.title, start: updated.start, minutesBefore: reminderMin)
+            await reminderService.schedule(eventId: updated.id, title: updated.title, start: updated.start, minuten: reminderMinuten)
             return updated
         } catch {
             saveFailedAlert = true
@@ -233,8 +284,8 @@ final class EventEditorViewModel: ObservableObject {
         )
         do {
             let created = try await repository.createEvent(body: payload.requestBody, token: token)
-            if reminderMin > 0 {
-                await reminderService.schedule(eventId: created.id, title: created.title, start: created.start, minutesBefore: reminderMin)
+            if !reminderMinuten.isEmpty {
+                await reminderService.schedule(eventId: created.id, title: created.title, start: created.start, minuten: reminderMinuten)
             }
             // De server bepaalt start en eind; het formulier kan afgerond hebben.
             await deviceCalendarService.sync(

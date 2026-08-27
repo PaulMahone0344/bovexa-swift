@@ -15,6 +15,22 @@ struct ReminderOption: Identifiable, Equatable {
     ]
 
     static func label(for minutes: Int) -> String {
-        all.first { $0.minutes == minutes }?.label ?? "Geen"
+        if let vast = all.first(where: { $0.minutes == minutes }) { return vast.label }
+        return vrijLabel(minutes: minutes)
+    }
+
+    /// Opschrift voor een zelfgekozen tijd, zodat "45" niet als kaal getal in beeld
+    /// komt: hele dagen en hele uren krijgen hun eigen woord, de rest minuten.
+    static func vrijLabel(minutes: Int) -> String {
+        guard minutes > 0 else { return "Geen" }
+        if minutes % 1440 == 0 {
+            let dagen = minutes / 1440
+            return dagen == 1 ? "1 dag vooraf" : "\(dagen) dagen vooraf"
+        }
+        if minutes % 60 == 0 {
+            let uren = minutes / 60
+            return uren == 1 ? "1 uur vooraf" : "\(uren) uur vooraf"
+        }
+        return "\(minutes) min vooraf"
     }
 }

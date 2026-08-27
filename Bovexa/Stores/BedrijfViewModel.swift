@@ -9,11 +9,23 @@ final class BedrijfViewModel: ObservableObject {
         case choice
         case name
         case code
+        /// Aanvraag om aan een bestaand bedrijf gekoppeld te worden. Sinds
+        /// 25 augustus de bovenste weg voor een nieuw account: zelf een bedrijf
+        /// starten hoort bij de beheerder, niet bij iedereen die zich aanmeldt.
+        case aanvraag
     }
 
     @Published var emptyMode: EmptyMode = .choice
     @Published var nameDraft = ""
     @Published var codeDraft = ""
+    /// Bedrijfsnaam in de koppelingsaanvraag; de beheerder moet weten om welk
+    /// bedrijf het gaat.
+    @Published var aanvraagNaam = ""
+    /// Vrije toelichting ("ik ben trainer bij de O13") — mag leeg blijven.
+    @Published var aanvraagToelichting = ""
+    /// Blijft op het toestel staan zodra de aanvraag geslaagd verstuurd is, zodat
+    /// het scherm na een herstart niet opnieuw om dezelfde aanvraag vraagt.
+    @Published private(set) var aanvraagVerstuurdVoor: String?
     @Published private(set) var busy = false
     @Published var errorMessage: String?
 
@@ -37,12 +49,31 @@ final class BedrijfViewModel: ObservableObject {
 
     let memberColors = MemberColors()
 
+    /// Mensen die bij het bedrijf horen maar geen account hebben — onder Mensen
+    /// aan het bedrijf gekoppeld. Ze staan bij het team, want ze horen erbij, maar
+    /// ze kunnen niets in de app.
+    @Published private(set) var bedrijfsContacten: [AgendaContact] = []
+
     private let repository: CompanyRepository
     private let favoritesStore: FavoritesStore
+    private let aanvraagStore: BedrijfAanvraagStore
+    private let contactRepository: ContactRepository
+    private let contactOrgStore: ContactOrgStore
 
-    init(repository: CompanyRepository = CompanyRepository(), favoritesStore: FavoritesStore = FavoritesStore()) {
+    init(
+        repository: CompanyRepository = CompanyRepository(),
+        favoritesStore: FavoritesStore = FavoritesStore(),
+        aanvraagStore: BedrijfAanvraagStore = BedrijfAanvraagStore(),
+        contactRepository: ContactRepository = ContactRepository(),
+        contactOrgStore: ContactOrgStore? = nil
+    ) {
+        self.contactRepository = contactRepository
+        // Niet als standaardwaarde in de signatuur: ContactOrgStore hangt aan de
+        // hoofdthread en die mag daar niet worden aangemaakt.
+        self.contactOrgStore = contactOrgStore ?? ContactOrgStore()
         self.repository = repository
         self.favoritesStore = favoritesStore
+        self.aanvraagStore = aanvraagStore
     }
 
     var hasLoadedCompany: Bool { membersResponse != nil }
@@ -52,10 +83,12 @@ final class BedrijfViewModel: ObservableObject {
     var joinCode: String? { membersResponse?.joinCode }
 
     /// Regel op de bedrijfskaart. seats_max 0 betekent onbeperkt (zelfde afspraak
-    /// als TeambeheerViewModel.full), dus dan geen "2 van 0 plekken" tonen.
+    /// als TeambeheerViewModel.full), dus dan geen "2 van 0 accounts" tonen.
+    /// Het gaat om accounts, niet om mensen: wie geen inlog heeft telt niet mee
+    /// tegen de limiet van het plan. Vandaar "2 van 3 accounts" bij vier leden.
     var seatsText: String? {
         guard let seatsMax, seatsMax > 0 else { return nil }
-        return "\(members.count) van \(seatsMax) plekken"
+        return "\(members.count) van \(seatsMax) accounts"
     }
 
     /// Favorieten bovenaan, daarna alfabetisch; zoekbalk verschijnt vanaf 6 leden
@@ -80,6 +113,7 @@ final class BedrijfViewModel: ObservableObject {
     }
 
     var canCreate: Bool { !nameDraft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && !busy }
+    var canRequest: Bool { aanvraagNaam.trimmingCharacters(in: .whitespacesAndNewlines).count >= 2 && !busy }
     var canJoin: Bool { !codeDraft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && !busy }
 
     func openMode(_ mode: EmptyMode) {
@@ -105,6 +139,49 @@ final class BedrijfViewModel: ObservableObject {
             errorMessage = Self.errorText(error, fallback: "Bedrijf aanmaken mislukt.")
             return false
         }
+    }
+
+    /// Verstuurt de koppelingsaanvraag. Lukt dat, dan onthoudt het toestel voor
+    /// welk bedrijf het was; de beheerder handelt de rest af en de gebruiker komt
+    /// binnen via de bedrijfscode of doordat hij wordt toegevoegd.
+    @discardableResult
+    func requestCompanyLink(userId: String, token: String) async -> Bool {
+        let naam = aanvraagNaam.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard naam.count >= 2 else {
+            errorMessage = "Vul de naam van het bedrijf in (min. 2 tekens)."
+            return false
+        }
+        errorMessage = nil
+        busy = true
+        defer { busy = false }
+        do {
+            _ = try await repository.requestCompanyLink(
+                companyName: naam,
+                note: aanvraagToelichting.trimmingCharacters(in: .whitespacesAndNewlines),
+                token: token
+            )
+            aanvraagStore.bewaar(naam: naam, userId: userId)
+            aanvraagVerstuurdVoor = naam
+            aanvraagToelichting = ""
+            return true
+        } catch {
+            errorMessage = Self.errorText(error, fallback: "Aanvraag versturen mislukt.")
+            return false
+        }
+    }
+
+    /// Leest de eerder verstuurde aanvraag terug; de view roept dit aan bij het
+    /// tonen van de lege staat.
+    func primeAanvraag(userId: String) {
+        aanvraagVerstuurdVoor = aanvraagStore.lees(userId: userId)
+    }
+
+    /// Aanvraag intrekken is puur lokaal: de beheerder ziet hem nog wel staan, maar
+    /// de gebruiker kan opnieuw beginnen (bijvoorbeeld bij een typefout in de naam).
+    func wisAanvraag(userId: String) {
+        aanvraagStore.wis(userId: userId)
+        aanvraagVerstuurdVoor = nil
+        aanvraagNaam = ""
     }
 
     @discardableResult
@@ -144,8 +221,23 @@ final class BedrijfViewModel: ObservableObject {
             // pull-to-refresh deed.
             loadFailed = true
         }
+        await laadBedrijfsContacten(userId: userId, token: token)
         loading = false
         refreshing = false
+    }
+
+    /// Faalt stil, net als de ledenlijst: geen contacten is geen foutmelding waard.
+    private func laadBedrijfsContacten(userId: String, token: String) async {
+        guard let orgId = membersResponse?.org?.id, !orgId.isEmpty else {
+            bedrijfsContacten = []
+            return
+        }
+        contactOrgStore.prime(userId: userId)
+        guard let contacten = try? await contactRepository.fetchContacts(userId: userId, token: token) else { return }
+        bedrijfsContacten = contacten.filter { contact in
+            let org = contact.org.isEmpty ? contactOrgStore.org(voor: contact.id) : contact.org
+            return org == orgId
+        }
     }
 
     func refresh(userId: String, token: String) async {

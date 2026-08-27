@@ -19,6 +19,13 @@ final class EigenCategorieStore: ObservableObject {
     static let shared = EigenCategorieStore()
 
     private static let key = "bovexaflow_eigen_categorieen"
+    /// Naam ⇒ kleur (hex). Aparte sleutel, zodat categorieën van vóór de kleuren
+    /// gewoon blijven staan; die krijgen de standaardkleur.
+    private static let kleurKey = "bovexaflow_eigen_categorie_kleuren"
+    /// Vaste knoppen die de gebruiker heeft weggehaald. Ze bestaan nog wel als
+    /// waarde (oude afspraken houden hun categorie), ze staan alleen niet meer
+    /// in de rij.
+    private static let verborgenKey = "bovexaflow_verborgen_vaste_categorieen"
 
     /// Grens op de rij knoppen: daarboven wordt de FlowLayout een muur van chips
     /// en is de vaste keuze niet meer terug te vinden.
@@ -31,19 +38,71 @@ final class EigenCategorieStore: ObservableObject {
     private static let vasteNamen = ["Werk", "Familie", "Sport", "Anders"]
 
     @Published private(set) var namen: [String]
+    /// Kleur per categorie, als hex. Alleen om de knop te tekenen — de afspraak
+    /// zelf gaat nog steeds onder `.focus` naar de server.
+    @Published private(set) var kleuren: [String: String]
+    /// Namen van vaste knoppen die niet meer in de rij horen.
+    @Published private(set) var verborgenVast: Set<String>
 
     private let defaults: UserDefaults
 
     init(defaults: UserDefaults = .standard) {
         self.defaults = defaults
         self.namen = defaults.stringArray(forKey: Self.key) ?? []
+        self.kleuren = defaults.dictionary(forKey: Self.kleurKey) as? [String: String] ?? [:]
+        self.verborgenVast = Set(defaults.stringArray(forKey: Self.verborgenKey) ?? [])
+    }
+
+    /// Haalt een vaste knop uit de rij, of zet hem terug.
+    func verbergVast(_ naam: String) {
+        verborgenVast.insert(naam)
+        bewaar()
+    }
+
+    func herstelVast(_ naam: String) {
+        verborgenVast.remove(naam)
+        bewaar()
+    }
+
+    func isVerborgen(_ naam: String) -> Bool {
+        verborgenVast.contains(naam)
+    }
+
+    /// Kleur wijzigen van een bestaande eigen categorie.
+    func zetKleur(_ kleur: String, voor naam: String) {
+        guard namen.contains(naam) else { return }
+        kleuren[naam] = kleur
+        bewaar()
+    }
+
+    /// Hernoemen houdt de knop op zijn plek in de rij; de kleur verhuist mee.
+    /// Geeft de bewaarde naam terug, of nil als de nieuwe naam leeg of bezet is.
+    @discardableResult
+    func hernoem(_ naam: String, naar nieuweNaam: String) -> String? {
+        let schoon = String(nieuweNaam.trimmingCharacters(in: .whitespacesAndNewlines).prefix(Self.maxTekens))
+        guard !schoon.isEmpty, let index = namen.firstIndex(of: naam) else { return nil }
+        if schoon.caseInsensitiveCompare(naam) != .orderedSame {
+            guard !bestaat(schoon) else { return nil }
+        }
+        namen[index] = schoon
+        if let kleur = kleuren[naam] {
+            kleuren[naam] = nil
+            kleuren[schoon] = kleur
+        }
+        bewaar()
+        return schoon
+    }
+
+    /// Kleur van een eigen categorie; nil als er nog geen gekozen is.
+    func kleur(voor naam: String) -> String? {
+        kleuren[naam]
     }
 
     /// Slaat een nieuwe categorie op. Geeft de bewaarde naam terug, of nil als er
     /// niets toegevoegd is (leeg, dubbel, of de lijst zit vol) — de aanroeper
     /// gebruikt dat om de zojuist gemaakte knop meteen te selecteren.
     @discardableResult
-    func voegToe(_ naam: String) -> String? {
+    func voegToe(_ naam: String, kleur: String? = nil) -> String? {
         let schoon = String(naam.trimmingCharacters(in: .whitespacesAndNewlines).prefix(Self.maxTekens))
         guard !schoon.isEmpty else { return nil }
         guard namen.count < Self.maxAantal else { return nil }
@@ -52,12 +111,14 @@ final class EigenCategorieStore: ObservableObject {
         guard !bestaat(schoon) else { return nil }
 
         namen.append(schoon)
+        if let kleur, !kleur.isEmpty { kleuren[schoon] = kleur }
         bewaar()
         return schoon
     }
 
     func verwijder(_ naam: String) {
         namen.removeAll { $0.caseInsensitiveCompare(naam) == .orderedSame }
+        kleuren = kleuren.filter { $0.key.caseInsensitiveCompare(naam) != .orderedSame }
         bewaar()
     }
 
@@ -69,5 +130,7 @@ final class EigenCategorieStore: ObservableObject {
 
     private func bewaar() {
         defaults.set(namen, forKey: Self.key)
+        defaults.set(kleuren, forKey: Self.kleurKey)
+        defaults.set(Array(verborgenVast), forKey: Self.verborgenKey)
     }
 }

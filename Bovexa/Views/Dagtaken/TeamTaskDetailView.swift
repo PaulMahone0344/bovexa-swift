@@ -13,6 +13,13 @@ struct TeamTaskDetailView: View {
 
     @State private var showDeleteConfirm = false
     @State private var isDeleting = false
+    /// Bewerken gebeurt in de titelkaart zelf; een tweede sheet bovenop deze
+    /// sheet leest als een ander scherm terwijl je maar twee velden aanpast.
+    @State private var isEditing = false
+    @State private var titelConcept = ""
+    @State private var notitieConcept = ""
+    @State private var isSaving = false
+    @State private var saveFailedAlert = false
 
     private var task: AgendaTask? {
         viewModel.teamTasks.first { $0.id == taskId }
@@ -26,7 +33,11 @@ struct TeamTaskDetailView: View {
                 if let task {
                     ScrollView {
                         VStack(alignment: .leading, spacing: BovexaTheme.Space.lg) {
-                            titleCard(task)
+                            if isEditing {
+                                editCard(task)
+                            } else {
+                                titleCard(task)
+                            }
                             metaCard(task)
                             actions(task)
                         }
@@ -43,6 +54,11 @@ struct TeamTaskDetailView: View {
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
                     Button("Sluiten") { dismiss() }
+                }
+                if let task, TaskPermissions.canEdit(task, userId: currentUserId), !isEditing {
+                    ToolbarItem(placement: .topBarTrailing) {
+                        Button("Bewerken") { startEdit(task) }
+                    }
                 }
             }
             .alert("Dagtaak wissen", isPresented: $showDeleteConfirm) {
@@ -66,6 +82,11 @@ struct TeamTaskDetailView: View {
             } message: {
                 Text("Kon de team-dagtaak niet wissen.")
             }
+            .alert("Mislukt", isPresented: $saveFailedAlert) {
+                Button("OK", role: .cancel) {}
+            } message: {
+                Text("Kon de dagtaak niet aanpassen.")
+            }
         }
     }
 
@@ -87,13 +108,67 @@ struct TeamTaskDetailView: View {
         }
     }
 
+    private func editCard(_ task: AgendaTask) -> some View {
+        GlassCard(emphasis: .hero) {
+            VStack(alignment: .leading, spacing: BovexaTheme.Space.md) {
+                TextField("Titel", text: $titelConcept)
+                    .font(BovexaTheme.TypeStyle.title3)
+                    .foregroundStyle(BovexaTheme.Colors.ink)
+
+                Divider().overlay(BovexaTheme.Colors.edge)
+
+                TextField("Notitie (optioneel)", text: $notitieConcept, axis: .vertical)
+                    .lineLimit(1...6)
+                    .font(BovexaTheme.TypeStyle.body)
+                    .foregroundStyle(BovexaTheme.Colors.inkSoft)
+
+                HStack(spacing: BovexaTheme.Space.sm) {
+                    Button("Annuleren") { isEditing = false }
+                        .buttonStyle(.glassSecondaryBrand)
+                        .frame(maxWidth: .infinity)
+
+                    Button("Bewaren") { bewaar(task) }
+                        .buttonStyle(.glassProminentBrand)
+                        .frame(maxWidth: .infinity)
+                        .disabled(isSaving || titelConcept.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                }
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+        }
+    }
+
+    private func startEdit(_ task: AgendaTask) {
+        titelConcept = task.title
+        notitieConcept = task.notes ?? ""
+        isEditing = true
+    }
+
+    private func bewaar(_ task: AgendaTask) {
+        Task {
+            isSaving = true
+            let gelukt = await viewModel.updateTeamTask(task, title: titelConcept, notes: notitieConcept, userId: currentUserId, token: token)
+            isSaving = false
+            if gelukt {
+                isEditing = false
+            } else {
+                saveFailedAlert = true
+            }
+        }
+    }
+
     private func metaCard(_ task: AgendaTask) -> some View {
         GlassCard {
             VStack(alignment: .leading, spacing: BovexaTheme.Space.sm) {
                 row(icon: "person", text: TaskAuthorFormatting.label(owner: ownerName(task), created: task.created))
 
                 if let completedAt = task.completedAt {
-                    row(icon: "checkmark.circle", text: TaskCompletionFormatting.label(completedAt: completedAt))
+                    row(
+                        icon: "checkmark.circle",
+                        text: TaskCompletionFormatting.label(
+                            completedAt: completedAt,
+                            door: viewModel.afgevinktDoor(task, currentUserId: currentUserId)
+                        )
+                    )
                 } else {
                     row(icon: "circle", text: "Nog niet afgevinkt")
                 }

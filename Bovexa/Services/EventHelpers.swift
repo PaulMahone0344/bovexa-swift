@@ -54,12 +54,16 @@ enum EventHelpers {
         return rest == 0 ? "\(hours) uur" : "\(hours) uur \(rest) min"
     }
 
-    /// Tijdregel voor het afspraak-detail: "Hele dag", "09:00" of "09:00 · 1 uur 30 min".
+    /// Tijdregel voor het afspraak-detail: "Hele dag", "09:00" of "09:00 - 10:30".
+    ///
+    /// Stond tot 26 augustus als "09:00 · 1 uur 30 min". Op verzoek van de
+    /// opdrachtgever noemen we overal de begin- en eindtijd: je wilt weten
+    /// wanneer je weer vrij bent, niet hoeveel minuten het duurt.
     static func detailTimeText(_ event: AgendaEvent) -> String {
         if event.allDay { return "Hele dag" }
         let start = fmtTime(event.start)
-        guard event.end != nil else { return start }
-        return "\(start) · \(durationLabel(event))"
+        guard let end = event.end else { return start }
+        return "\(start) - \(fmtTime(end))"
     }
 
     /// Tijdlabel voor een rij in een lijst (tijdlijn Vandaag, DaySheet,
@@ -71,9 +75,15 @@ enum EventHelpers {
         event.allDay ? "Hele dag" : fmtTime(event.start)
     }
 
-    /// Duur naast een rij. Bij een hele-dag-event zegt "24 uur" niets, dus leeg.
+    /// Rechterkant van een rij. De linkerkant toont de begintijd, hier komt de
+    /// eindtijd achteraan: samen lees je "01:00 … tot 02:00". Bij een hele dag
+    /// of een afspraak zonder eindtijd valt er niets te melden.
+    ///
+    /// Hier stond de duur ("1 uur"); eruit op verzoek van de opdrachtgever.
+    /// `durationLabel` blijft bestaan voor plekken die wél over lengte gaan.
     static func rowDurationLabel(_ event: AgendaEvent) -> String {
-        event.allDay ? "" : durationLabel(event)
+        guard !event.allDay, let end = event.end else { return "" }
+        return "tot \(fmtTime(end))"
     }
 
     static func sameDay(_ a: Date, _ b: Date, calendar: Calendar = .current) -> Bool {

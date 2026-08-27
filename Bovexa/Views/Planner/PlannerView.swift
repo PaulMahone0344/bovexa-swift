@@ -125,6 +125,7 @@ struct PlannerView: View {
                         }
                         .padding(BovexaTheme.Space.xl)
                     }
+                    .scrollDismissesKeyboard(.interactively)
                     .onChange(of: viewModel.thread.count) {
                         withAnimation(.snappy) { proxy.scrollTo("bottom", anchor: .bottom) }
                     }
@@ -431,23 +432,29 @@ struct PlannerView: View {
                             .foregroundStyle(BovexaTheme.Colors.accent)
                             .tracking(0.3)
                         ContactPickerView(
-                            selectedContactId: $viewModel.contactId,
+                            selectedContactIds: $viewModel.contactIds,
                             existingKlantNaam: viewModel.ready?.first?.klantNaam ?? "",
                             userId: viewModel.ownerId, token: token,
-                            onSelect: { viewModel.selectContact($0) }
+                            // Zelfde scheiding als in de gewone afspraak-editor:
+                            // bij Privé geen bedrijfscontacten in de rij.
+                            org: viewModel.visibility == "private" ? "" : viewModel.orgId,
+                            onSelect: { viewModel.selectContacts($0) }
                         )
                     }
                 }
             }
 
-            ReminderChipsView(minutesBefore: $viewModel.reminderMin)
+            ReminderChipsView(minuten: $viewModel.reminderMinuten)
         }
     }
 
     private var composer: some View {
         HStack(alignment: .bottom, spacing: BovexaTheme.Space.sm) {
             TextField("Typ je bericht…", text: $input, axis: .vertical)
-                .keyboardDone(focused: $inputFocused)
+                // Geen "Klaar"-knop boven het toetsenbord: die bleef rechtsonder
+                // in beeld hangen naast de verstuurpijl. Wegvegen door te
+                // scrollen doet hetzelfde werk.
+                .focused($inputFocused)
                 .lineLimit(1...5)
                 .font(BovexaTheme.TypeStyle.subheadline)
                 // Geen .submitLabel(.send)/.onSubmit: in een meerregelig veld maakt

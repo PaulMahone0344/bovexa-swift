@@ -71,11 +71,17 @@ final class EventRepository {
 
     /// Valkuil B + A: schrijft alleen JOUW sleutel in de assignee_status-map, en altijd
     /// naar het echte record-id (series-id bij een uitgeklapte herhaling).
-    func respondToAssignment(event: AgendaEvent, userId: String, status: String, token: String) async throws -> AgendaEvent {
+    /// `notitie` gaat mee als de beheerder er iets bij schrijft ("kan niet, we zijn
+    /// die week met te weinig"). Leeg laten raakt het notitieveld niet aan.
+    func respondToAssignment(
+        event: AgendaEvent, userId: String, status: String, token: String, notitie: String = ""
+    ) async throws -> AgendaEvent {
         var nextStatus = event.assigneeStatus
         nextStatus[userId] = status
         let recordId = EventHelpers.eventRecordId(event)
-        let body: [String: Any] = ["assignee_status": nextStatus]
+        var body: [String: Any] = ["assignee_status": nextStatus]
+        let schoon = notitie.trimmingCharacters(in: .whitespacesAndNewlines)
+        if !schoon.isEmpty { body["notes"] = schoon }
         return try await client.updateRecord(AgendaEvent.self, collection: Self.collection, id: recordId, body: body, token: token)
     }
 }

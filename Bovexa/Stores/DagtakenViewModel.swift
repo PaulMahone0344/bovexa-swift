@@ -7,6 +7,12 @@ import Foundation
 final class DagtakenViewModel: ObservableObject {
     @Published var draft = ""
     @Published var visibility: TaskVisibility = .private
+    /// Collega's die deze dagtaak op hun scherm moeten krijgen. Zodra hier iemand
+    /// in staat gaat de taak naar de server met visibility 'people' — ook als je
+    /// Privé koos: een taak die op het scherm van een ander hoort te komen kan
+    /// niet in de lokale UserDefaults blijven staan. Leeg = het oude gedrag
+    /// (privé blijft lokaal, bedrijf blijft company).
+    @Published var assignees: [String] = []
     @Published private(set) var editingId: String?
     @Published private(set) var busy = false
     @Published var createFailedAlert = false
@@ -106,6 +112,36 @@ final class DagtakenViewModel: ObservableObject {
         }
     }
 
+    /// De bedrijfslijst zoals één persoon hem hoort te zien: alleen wat aan hem is
+    /// toegewezen, plus wat hij zelf heeft aangemaakt. Een medewerker zag hiervoor
+    /// élke bedrijfstaak, ook die van een collega.
+    ///
+    /// Een taak zonder toegewezen personen is aan het hele team gericht en blijft
+    /// dus staan; die "krijg" je net zo goed.
+    func zichtbareTeamTasks(userId: String) -> [AgendaTask] {
+        teamTasks.filter { TaskPermissions.isGerichtAan(userId, task: $0) }
+    }
+
+    /// Wie de taak heeft afgevinkt, voor de regel onder de titel. De server houdt
+    /// alleen bij wannéér het gebeurde, dus dit werkt zolang de taak aan één
+    /// persoon is toegewezen — zie MEERDERE-BEDRIJVEN-SERVER.txt (completed_by).
+    /// Bij een teambrede taak valt er niets te herleiden en blijft dit leeg.
+    func afgevinktDoor(_ task: AgendaTask, currentUserId: String) -> String {
+        let toegewezen = task.viewers.filter { $0 != task.owner }
+        guard toegewezen.count == 1, let wie = toegewezen.first else { return "" }
+        return wie == currentUserId ? "Jij" : (memberColors.firstName(for: wie) ?? "Collega")
+    }
+
+    /// "Jan, Piet" voor een toegewezen taak; "Jij" als jij het bent. Leeg bij een
+    /// taak voor het hele bedrijf — daar hoort geen namenrij bij.
+    func assigneeLabel(for task: AgendaTask, currentUserId: String) -> String {
+        let others = task.viewers.filter { $0 != task.owner }
+        guard !others.isEmpty else { return "" }
+        return others
+            .map { $0 == currentUserId ? "Jij" : (memberColors.firstName(for: $0) ?? "Collega") }
+            .joined(separator: ", ")
+    }
+
     func startEdit(_ note: PlanningNote) {
         editingId = note.id
         draft = PlanningNoteFactory.draftText(for: note)
@@ -114,6 +150,7 @@ final class DagtakenViewModel: ObservableObject {
     func cancelEdit() {
         editingId = nil
         draft = ""
+        assignees = []
     }
 
     func toggleNote(_ id: String) {
@@ -180,6 +217,22 @@ final class DagtakenViewModel: ObservableObject {
         }
     }
 
+    /// Titel/notitie van een eigen team-dagtaak aanpassen. Geeft terug of het
+    /// lukte, zodat het detailscherm het bewerkveld pas sluit als de server mee is.
+    @discardableResult
+    func updateTeamTask(_ task: AgendaTask, title: String, notes: String, userId: String, token: String) async -> Bool {
+        guard TaskPermissions.canEdit(task, userId: userId) else { return false }
+        let schoon = title.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !schoon.isEmpty else { return false }
+        do {
+            let updated = try await taskRepository.updateTask(id: task.id, title: schoon, notes: notes, token: token)
+            teamTasks = teamTasks.map { $0.id == updated.id ? updated : $0 }
+            return true
+        } catch {
+            return false
+        }
+    }
+
     private func applyTeamTaskStatus(id: String, status: TaskStatus, completedAt: Date?) {
         teamTasks = teamTasks.map { $0.id == id ? $0.withStatus(status, completedAt: completedAt) : $0 }
     }
@@ -196,7 +249,10 @@ final class DagtakenViewModel: ObservableObject {
             return
         }
 
-        if org != nil, visibility != .private {
+        // Toegewezen personen wegen zwaarder dan de keuze Privé/Bedrijf: zij
+        // moeten de taak zien, dus hij gaat naar de server met visibility
+        // 'people' in plaats van in de lokale lijst te blijven.
+        if org != nil, visibility != .private || !assignees.isEmpty {
             await createTeamTask(userId: userId, org: org, token: token)
             return
         }
@@ -210,11 +266,20 @@ final class DagtakenViewModel: ObservableObject {
         guard let (title, body) = PlanningNoteFactory.parse(draft) else { return }
         busy = true
         defer { busy = false }
+        // Jezelf erbij: als eigenaar zie je hem toch al, maar de server-rule voor
+        // 'people' kijkt naar viewers en zonder jezelf verdween je eigen taak uit
+        // je lijst zodra je hem aan iemand toewees.
+        let viewers = assignees.isEmpty ? [] : Array(Set(assignees + [userId]))
+        let effectiveVisibility: TaskVisibility = assignees.isEmpty ? visibility : .people
         do {
-            let created = try await taskRepository.createTask(owner: userId, org: org, title: title, notes: body, visibility: visibility, token: token)
+            let created = try await taskRepository.createTask(
+                owner: userId, org: org, title: title, notes: body,
+                visibility: effectiveVisibility, viewers: viewers, token: token
+            )
             teamTasks = [created] + teamTasks
             draft = ""
             visibility = .private
+            assignees = []
         } catch {
             createFailedAlert = true
         }

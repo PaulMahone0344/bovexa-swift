@@ -35,6 +35,37 @@ final class CompanyRepository {
         }
     }
 
+    /// Aanvraag om aan een bedrijf gekoppeld te worden. Een nieuw account mag zelf
+    /// geen bedrijf meer starten (besluit 25 augustus): het vraagt koppeling aan en
+    /// de beheerder zet het door. Deze route bestaat nog niet op de server — zie
+    /// MEERDERE-BEDRIJVEN-SERVER.txt; tot die tijd mislukt hij met een nette tekst
+    /// en blijft de bedrijfscode de werkende weg naar binnen.
+    func requestCompanyLink(companyName: String, note: String, token: String) async throws -> CompanyLinkRequest {
+        try await run(fallback: "Aanvraag versturen mislukt. Probeer het later opnieuw.") {
+            try await self.client.postCustom(
+                CompanyLinkRequest.self, path: "/api/agenda/company/request",
+                body: ["companyName": companyName, "note": note], token: token
+            )
+        }
+    }
+
+    /// Bedrijven waar dit account lid van is. Deze route bestaat nog niet op de
+    /// server (zie MEERDERE-BEDRIJVEN-SERVER.txt); tot die tijd faalt hij en valt
+    /// de app terug op het actieve bedrijf plus wat er lokaal onthouden is.
+    func listMyOrgs(token: String) async throws -> MyOrgsResponse {
+        try await run(fallback: "Bedrijven ophalen mislukt.") {
+            try await self.client.postCustom(MyOrgsResponse.self, path: "/api/agenda/company/mine", token: token)
+        }
+    }
+
+    /// Maakt een ander bedrijf actief. Antwoord is het bijgewerkte account, zodat
+    /// de app daarna alles op de nieuwe `default_org` kan herladen.
+    func switchOrg(orgId: String, token: String) async throws -> AgendaUser {
+        try await run(fallback: "Wisselen van bedrijf mislukt.") {
+            try await self.client.postCustom(AgendaUser.self, path: "/api/agenda/company/switch", body: ["orgId": orgId], token: token)
+        }
+    }
+
     func listMembers(token: String) async throws -> CompanyMembersResponse {
         try await run(fallback: "Leden ophalen mislukt.") {
             try await self.client.postCustom(CompanyMembersResponse.self, path: "/api/agenda/company/members", token: token)

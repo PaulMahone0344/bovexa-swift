@@ -17,6 +17,27 @@ struct AgendaView: View {
     /// de eerste echt weg is.
     @State private var naKeuze: NaKeuze?
 
+    /// Onderkant van het maandraster en de schermhoogte, allebei in schermpunten.
+    /// Hieruit volgt hoe hoog de dagbalk mag worden: precies de ruimte onder de
+    /// kalender, zodat de dagen zichtbaar blijven in plaats van half afgedekt.
+    @State private var kalenderOnderkant: CGFloat = 0
+    @State private var schermHoogte: CGFloat = 0
+
+    /// Nooit lager dan dit: onder een volle maand blijft anders niet eens de
+    /// dagkop met de plan-knop over. Verder omhoog kan altijd met de greep.
+    private static let minimaleDagbalk: CGFloat = 260
+
+    /// De dagbalk vult de ruimte ónder de kalender, maar nooit meer dan de helft
+    /// van het scherm: bij een dag met veel blokken schoof hij anders over de
+    /// kalender heen. Wat er niet in past scrollt gewoon binnen de balk.
+    @State private var dagbalkStand: PresentationDetent = .large
+
+    private var dagbalkHoogte: CGFloat {
+        guard schermHoogte > 0, kalenderOnderkant > 0 else { return Self.minimaleDagbalk }
+        let ruimteOnderKalender = schermHoogte - kalenderOnderkant
+        return min(max(Self.minimaleDagbalk, ruimteOnderKalender), schermHoogte * 0.55)
+    }
+
     /// `.sheet(item:)` in plaats van een losse bool: de voorzet en het openen komen
     /// dan als één waarde binnen, en niet als twee @State-wijzigingen waarvan de
     /// tweede te laat kan zijn.
@@ -93,8 +114,15 @@ struct AgendaView: View {
                         // anders blijft hij onder de keuzesheet hangen.
                         viewModel.closeDaySheet()
                         openPlanKeuze(seed: .forDay(target.day))
-                    }
+                    },
+                    hoogte: dagbalkHoogte,
+                    stand: $dagbalkStand
                 )
+                .onAppear {
+                    // De stand hoort bij deze sheet, niet bij de vorige: zonder dit
+                    // opende de volgende dag nog in de stand waar je hem liet staan.
+                    dagbalkStand = viewModel.dagbalkUitgeklapt ? .large : .height(dagbalkHoogte)
+                }
             }
         }
         .sheet(isPresented: $showPlanner) {
@@ -193,6 +221,12 @@ struct AgendaView: View {
                                 agendaHeader
 
                                 MonthGridView(viewModel: viewModel, onYearTap: { showYearOverview = true })
+                                    // Waar het maandraster eindigt, mag de dagbalk
+                                    // beginnen. Zonder deze meting stond hij op een
+                                    // vaste halve hoogte en viel hij over de dagen.
+                                    .onGeometryChange(for: CGFloat.self) { proxy in
+                                        proxy.frame(in: .global).maxY
+                                    } action: { kalenderOnderkant = $0 }
 
                             }
                             .padding(.horizontal, BovexaTheme.Space.xl)
@@ -206,6 +240,11 @@ struct AgendaView: View {
                     }
                 }
                 .safeAreaInset(edge: .top, spacing: 0) { persoonFilterChip }
+                // Schermhoogte als maatstaf voor de dagbalk: die mag precies de
+                // ruimte onder het maandraster vullen.
+                .onGeometryChange(for: CGFloat.self) { proxy in
+                    proxy.frame(in: .global).maxY
+                } action: { schermHoogte = $0 }
             }
             // Eigen kop in plaats van de grote systeemtitel: de vier iconen
             // zweefden als losse pil boven "Agenda" zonder zichtbare relatie met

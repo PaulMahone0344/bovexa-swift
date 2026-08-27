@@ -264,3 +264,55 @@ struct CompanyProfileUpdate {
     var defaultDurationMin: Int?
     var openingHours: OpeningHours?
 }
+
+/// Eén bedrijf waar dit account lid van is. Komt van `company/mine`; zolang die
+/// route er niet is, bouwt de app deze regels zelf uit wat hij al weet (het
+/// actieve bedrijf) plus wat er lokaal onthouden is — zie `BekendeBedrijvenStore`.
+struct OrgSummary: Codable, Equatable, Identifiable {
+    let id: String
+    let name: String
+    var logo: String?
+    var role: CompanyRole?
+    var isDefault: Bool?
+
+    init(id: String, name: String, logo: String? = nil, role: CompanyRole? = nil, isDefault: Bool? = nil) {
+        self.id = id
+        self.name = name
+        self.logo = logo
+        self.role = role
+        self.isDefault = isDefault
+    }
+}
+
+/// Response van company/mine.
+struct MyOrgsResponse: Decodable, Equatable {
+    let orgs: [OrgSummary]
+}
+
+/// Antwoord van company/request: de aanvraag zoals de server hem heeft vastgelegd.
+/// `status` is 'open' zolang de beheerder nog niets heeft gedaan.
+struct CompanyLinkRequest: Decodable, Equatable {
+    let id: String
+    let companyName: String
+    let status: String
+
+    enum CodingKeys: String, CodingKey {
+        case id, status
+        case companyName = "company_name"
+    }
+
+    init(id: String, companyName: String, status: String) {
+        self.id = id
+        self.companyName = companyName
+        self.status = status
+    }
+
+    /// Defensief, zoals de rest van dit bestand: een server die alleen een id
+    /// teruggeeft hoort geen decodeerfout op te leveren.
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        id = (try? c.decode(String.self, forKey: .id)) ?? ""
+        companyName = (try? c.decode(String.self, forKey: .companyName)) ?? ""
+        status = (try? c.decode(String.self, forKey: .status)) ?? "open"
+    }
+}

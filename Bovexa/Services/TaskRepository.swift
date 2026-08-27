@@ -44,6 +44,17 @@ final class TaskRepository {
         return try await client.updateRecord(AgendaTask.self, collection: Self.collection, id: id, body: body, token: token)
     }
 
+    /// Titel en notitie aanpassen. Status, eigenaar en zichtbaarheid blijven
+    /// buiten de payload: die horen bij hun eigen knoppen.
+    @discardableResult
+    func updateTask(id: String, title: String, notes: String, token: String) async throws -> AgendaTask {
+        let body: [String: Any] = [
+            "title": title.trimmingCharacters(in: .whitespacesAndNewlines),
+            "notes": notes.trimmingCharacters(in: .whitespacesAndNewlines),
+        ]
+        return try await client.updateRecord(AgendaTask.self, collection: Self.collection, id: id, body: body, token: token)
+    }
+
     func deleteTask(id: String, token: String) async throws {
         try await client.deleteRecord(collection: Self.collection, id: id, token: token)
     }

@@ -73,6 +73,7 @@ struct EventDetailView: View {
                     .padding(BovexaTheme.Space.xl)
                 }
             }
+            .scrollDismissesKeyboard(.interactively)
         }
         .navigationTitle("")
         .navigationBarTitleDisplayMode(.inline)

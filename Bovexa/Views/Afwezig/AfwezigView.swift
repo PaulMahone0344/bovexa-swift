@@ -1,12 +1,28 @@
 import SwiftUI
 
-/// Afwezig-scherm: reden-chips, maandraster met periode-selectie, "Beschikbaarheid
-/// doorgeven". Geport uit afwezig.tsx (valkuil I). Hergebruikt MonthGridBuilder
-/// (dezelfde maandag-eerst-grid als de Agenda-maandweergave) i.p.v. een eigen grid.
+/// Beschikbaarheidsscherm: maandraster met periode-selectie en twee meldingen —
+/// "Beschikbaarheid doorgeven" (ik kán werken) en "Afwezigheid doorgeven" (ik ben
+/// weg, met de reden ernaast). Wat er is doorgegeven staat eronder in een lijst.
+/// Geport uit afwezig.tsx (valkuil I). Hergebruikt MonthGridBuilder (dezelfde
+/// maandag-eerst-grid als de Agenda-maandweergave) i.p.v. een eigen grid.
 struct AfwezigView: View {
     @StateObject private var viewModel: AfwezigViewModel
     @Environment(\.dismiss) private var dismiss
     private let hasOrg: Bool
+    /// Welke van de twee knoppen de spinner krijgt. `viewModel.saving` weet dat
+    /// zelf niet, dus zonder dit zouden ze allebei tegelijk draaien.
+    @State private var bezigeSoort: MeldSoort = .beschikbaar
+    /// De lijst onder de knoppen leest hieruit. Het viewmodel houdt dezelfde store
+    /// vast, maar geeft wijzigingen niet door — vandaar hier apart.
+    @ObservedObject private var store = BeschikbaarheidStore.shared
+    /// Keuzemenu met de reden; verschijnt pas als je op de rode knop tikt.
+    @State private var toonRedenKeuze = false
+    /// "Anders" vraagt eerst om een toelichting voordat er iets wordt opgeslagen.
+    @State private var toonAndersInvoer = false
+    /// Laatste stap: pas na "Doorgeven" gaat het naar de server.
+    @State private var toonBevestiging = false
+    /// De melding die de gebruiker wil intrekken; nil zolang er niets gekozen is.
+    @State private var intrekken: Beschikbaarheidsmelding?
 
     /// Twee letters, gelijk aan de maandweergave in de Agenda. Één letter gaf
     /// "M D W D V Z Z": twee keer D en twee keer Z, dus niet te zien of je op
@@ -28,17 +44,17 @@ struct AfwezigView: View {
                 ScrollView {
                     GlassCard {
                         VStack(alignment: .leading, spacing: BovexaTheme.Space.lg) {
-                            reasonSection
                             periodSection
-                            if viewModel.isSingleDaySelection {
-                                heleDagSection
-                            }
+                            herhaalSectie
+                            tijdSectie
+                            opmerkingSectie
                             if viewModel.tooLong {
                                 Text("Maximaal \(AfwezigRange.maxDays) dagen per keer.")
                                     .font(BovexaTheme.TypeStyle.footnote.weight(.semibold))
                                     .foregroundStyle(BovexaTheme.Colors.danger)
                             }
-                            submitButton
+                            afwezigKnop
+                            doorgegevenSectie
                         }
                     }
                     .padding(BovexaTheme.Space.xl)
@@ -58,67 +74,68 @@ struct AfwezigView: View {
                 // over de knoppen heen.
                 .scrollDismissesKeyboard(.interactively)
             }
+            // Wie de beheerder is bepaalt naar wie het blok gaat; zonder dit zou
+            // het privé blijven en zag niemand het.
+            .task { await viewModel.laadBeheerders() }
             .navigationTitle("Beschikbaarheid")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 SheetCloseButton { dismiss() }
             }
+            // Blijft open na "Oké": de doorgegeven periode verschijnt onderaan in
+            // de lijst, en dat mis je als het scherm meteen dichtklapt.
             .alert("Gelukt", isPresented: Binding(get: { viewModel.savedAlertMessage != nil }, set: { if !$0 { viewModel.savedAlertMessage = nil } })) {
-                Button("Oké") { dismiss() }
+                Button("Oké") {}
             } message: {
                 Text(viewModel.savedAlertMessage ?? "")
+            }
+            .confirmationDialog("Waarom ben je afwezig?", isPresented: $toonRedenKeuze, titleVisibility: .visible) {
+                ForEach(AfwezigReason.allCases) { reason in
+                    Button(reason.label) {
+                        viewModel.reason = reason
+                        if reason == .anders {
+                            toonAndersInvoer = true
+                        } else {
+                            toonBevestiging = true
+                        }
+                    }
+                }
+                Button("Annuleren", role: .cancel) {}
+            }
+            // Losse invoer, want een tekstveld kan niet in een confirmationDialog.
+            .alert("Waarvoor ben je weg?", isPresented: $toonAndersInvoer) {
+                TextField("Bijvoorbeeld: tandarts", text: $viewModel.andersToelichting)
+                Button("Verder") { toonBevestiging = true }
+                Button("Annuleren", role: .cancel) {}
+            }
+            // Laatste controle vóór het naar het team gaat: verkeerde dag of
+            // verkeerde reden is achteraf gedoe om weer weg te halen.
+            .confirmationDialog(bevestigingsTekst, isPresented: $toonBevestiging, titleVisibility: .visible) {
+                Button(bezigeSoort == .beschikbaar ? "Beschikbaarheid doorgeven" : "Afwezigheid doorgeven") {
+                    Task { await viewModel.save(soort: bezigeSoort) }
+                }
+                Button("Terug", role: .cancel) {}
+            }
+            .confirmationDialog(
+                "Deze melding intrekken?",
+                isPresented: Binding(get: { intrekken != nil }, set: { if !$0 { intrekken = nil } }),
+                titleVisibility: .visible
+            ) {
+                Button("Verwijderen", role: .destructive) {
+                    if let melding = intrekken {
+                        Task { await viewModel.trekIn(melding) }
+                    }
+                    intrekken = nil
+                }
+                Button("Laten staan", role: .cancel) { intrekken = nil }
+            } message: {
+                Text("De dagen verdwijnen ook uit de agenda van je beheerder.")
             }
             .alert("Mislukt", isPresented: $viewModel.saveFailedAlert) {
                 Button("Oké", role: .cancel) {}
             } message: {
                 Text("Kon je beschikbaarheid niet opslaan. Probeer het nog een keer.")
             }
-        }
-    }
-
-    private var reasonSection: some View {
-        VStack(alignment: .leading, spacing: BovexaTheme.Space.sm) {
-            Text("REDEN")
-                .font(BovexaTheme.TypeStyle.caption.weight(.bold))
-                .foregroundStyle(BovexaTheme.Colors.accent)
-                .tracking(0.3)
-
-            // FlowLayout, geen HStack: vier chips zijn samen ~310pt en er is op
-            // 375pt maar 291pt — "Vakantie" brak in tweeën (5c).
-            FlowLayout(spacing: BovexaTheme.Space.sm) {
-                ForEach(AfwezigReason.allCases) { reason in
-                    reasonChip(reason)
-                }
-            }
-
-            if viewModel.reason == .anders {
-                TextField("Toelichting (verplicht)", text: $viewModel.andersToelichting)
-                    .padding(.horizontal, BovexaTheme.Space.md)
-                    .frame(minHeight: 44)
-                    .background(BovexaTheme.Colors.glass)
-                    .overlay(
-                        RoundedRectangle(cornerRadius: BovexaTheme.Radius.md, style: .continuous)
-                            .strokeBorder(BovexaTheme.Colors.edge, lineWidth: 1)
-                    )
-                    .clipShape(RoundedRectangle(cornerRadius: BovexaTheme.Radius.md, style: .continuous))
-            }
-        }
-    }
-
-    private func reasonChip(_ reason: AfwezigReason) -> some View {
-        let active = viewModel.reason == reason
-        return Button {
-            Haptics.selection()
-            viewModel.reason = reason
-        } label: {
-            Text(reason.label)
-                .font(BovexaTheme.TypeStyle.subheadline.weight(.bold))
-                .foregroundStyle(active ? BovexaTheme.Colors.white : BovexaTheme.Colors.muted)
-                .padding(.horizontal, BovexaTheme.Space.md)
-                .frame(minHeight: 44)
-                .background(active ? BovexaTheme.categoryColor(for: .afwezig) : BovexaTheme.Colors.glass)
-                .clipShape(Capsule())
-                .overlay(Capsule().strokeBorder(active ? BovexaTheme.categoryColor(for: .afwezig) : BovexaTheme.Colors.edge, lineWidth: 1))
         }
     }
 
@@ -140,11 +157,14 @@ struct AfwezigView: View {
     }
 
     private var periodHint: String {
-        guard let from = viewModel.from else { return "Tik een dag in de kalender." }
-        if let to = viewModel.to, !Calendar.current.isDate(from, inSameDayAs: to) {
-            return "\(viewModel.range.count) dag\(viewModel.range.count == 1 ? "" : "en") geselecteerd"
+        let aantal = viewModel.range.count
+        guard let from = viewModel.from else {
+            return "Tik de dagen aan. Lang drukken kiest de hele week."
         }
-        return "\(EventHelpers.longDay(from)) — tik nog een dag voor een periode"
+        if aantal > 1 {
+            return "\(aantal) dagen gekozen — tik een dag nog eens om hem weg te halen"
+        }
+        return "\(EventHelpers.longDay(from)) — tik meer dagen aan als je er meer wilt"
     }
 
     private var monthNav: some View {
@@ -210,22 +230,191 @@ struct AfwezigView: View {
     private func dayCell(_ cell: MonthDayCell) -> some View {
         let past = cell.date < today
         let active = viewModel.isInRange(cell.date)
+        // Blauw wat je als beschikbaar hebt doorgegeven, rood wat je als
+        // afwezigheid hebt doorgegeven. Zo zie je in één blik wat er al staat.
+        let doorgegeven = viewModel.doorgegevenSoort(op: cell.date)
         return Button {
             Haptics.selection()
             viewModel.pickDay(cell.date)
         } label: {
             Text("\(Calendar.current.component(.day, from: cell.date))")
-                .font(BovexaTheme.TypeStyle.subheadline.weight(active ? .bold : .medium))
-                .foregroundStyle(past ? BovexaTheme.Colors.muted.opacity(0.5) : (active ? BovexaTheme.Colors.ink : BovexaTheme.Colors.ink))
+                .font(BovexaTheme.TypeStyle.subheadline.weight(active || doorgegeven != nil ? .bold : .medium))
+                .foregroundStyle(past ? BovexaTheme.Colors.muted.opacity(0.5) : dagKleur(doorgegeven))
                 .frame(maxWidth: .infinity, minHeight: 44)
-                .background(active ? BovexaTheme.categoryColor(for: .afwezig).opacity(0.35) : Color.clear)
+                .background(dagVulling(doorgegeven: doorgegeven, active: active))
                 .clipShape(RoundedRectangle(cornerRadius: BovexaTheme.Radius.sm, style: .continuous))
+                .overlay(
+                    RoundedRectangle(cornerRadius: BovexaTheme.Radius.sm, style: .continuous)
+                        .strokeBorder(active ? BovexaTheme.Colors.ink.opacity(0.45) : Color.clear, lineWidth: 2)
+                )
         }
         .disabled(past)
+        .contextMenu {
+            Button("Hele week kiezen") { viewModel.kiesHeleWeek(van: cell.date) }
+            if !viewModel.range.isEmpty {
+                Button("Selectie wissen", role: .destructive) { viewModel.wisSelectie() }
+            }
+        }
     }
 
-    private var heleDagSection: some View {
+    /// Samenvatting in de bevestiging: wát je doorgeeft, op welke dagen en welke
+    /// tijden.
+    private var bevestigingsTekst: String {
+        let aantal = viewModel.range.count
+        let wat = bezigeSoort == .beschikbaar ? "Beschikbaar" : viewModel.reason.label
+        let dagen = aantal == 1 ? "1 dag" : "\(aantal) dagen"
+        let tijd = viewModel.effectiveHeleDag
+            ? "hele dag"
+            : "\(EventHelpers.fmtTime(viewModel.startTime)) – \(EventHelpers.fmtTime(viewModel.endTime))"
+        return "\(wat) · \(dagen) · \(tijd)"
+    }
+
+    private func dagKleur(_ doorgegeven: MeldSoort?) -> Color {
+        switch doorgegeven {
+        case .beschikbaar: return BovexaTheme.Colors.accent
+        case .afwezig: return BovexaTheme.Colors.danger
+        case nil: return BovexaTheme.Colors.ink
+        }
+    }
+
+    private func dagVulling(doorgegeven: MeldSoort?, active: Bool) -> Color {
+        switch doorgegeven {
+        case .beschikbaar: return BovexaTheme.Colors.accent.opacity(0.22)
+        case .afwezig: return BovexaTheme.Colors.danger.opacity(0.22)
+        case nil: return active ? BovexaTheme.categoryColor(for: .afwezig).opacity(0.35) : Color.clear
+        }
+    }
+
+    /// Herhalen: elke dag, of alleen op de weekdagen die je aantikt, tot een
+    /// einddatum. Uit staat er niets extra's in beeld.
+    @ViewBuilder
+    private var herhaalSectie: some View {
         VStack(alignment: .leading, spacing: BovexaTheme.Space.sm) {
+            Toggle(isOn: $viewModel.herhalen.animation(.snappy)) {
+                Text("Herhalen")
+                    .font(BovexaTheme.TypeStyle.subheadline.weight(.semibold))
+                    .foregroundStyle(BovexaTheme.Colors.ink)
+            }
+            .tint(BovexaTheme.categoryColor(for: .afwezig))
+
+            if viewModel.herhalen {
+                HStack(spacing: BovexaTheme.Space.sm) {
+                    ForEach(AfwezigViewModel.HerhaalModus.allCases) { modus in
+                        modusKnop(modus)
+                    }
+                }
+
+                if viewModel.herhaalModus == .geselecteerdeDagen {
+                    HStack(spacing: 4) {
+                        ForEach(Array(Self.weekdagNummers.enumerated()), id: \.offset) { index, nummer in
+                            weekdagKnop(label: Self.weekLabels[index], nummer: nummer)
+                        }
+                    }
+                }
+
+                HStack {
+                    Text("Einddatum")
+                        .font(BovexaTheme.TypeStyle.footnote.weight(.semibold))
+                        .foregroundStyle(BovexaTheme.Colors.ink)
+                    Spacer()
+                    DatePicker(
+                        "Einddatum",
+                        selection: Binding(
+                            get: { viewModel.herhaalEinddatum ?? standaardEinddatum },
+                            set: { viewModel.herhaalEinddatum = $0 }
+                        ),
+                        displayedComponents: .date
+                    )
+                    .labelsHidden()
+                }
+
+                Text("\(viewModel.doorTeGevenDagen.count) dag\(viewModel.doorTeGevenDagen.count == 1 ? "" : "en") in deze reeks")
+                    .font(BovexaTheme.TypeStyle.caption)
+                    .foregroundStyle(BovexaTheme.Colors.muted)
+            }
+        }
+    }
+
+    /// Vier weken vooruit: zonder einddatum loopt de reeks tot daar, en dan wijst
+    /// de kiezer ook meteen die dag aan.
+    private var standaardEinddatum: Date {
+        let start = viewModel.range.first ?? today
+        return Calendar.current.date(byAdding: .day, value: 27, to: start) ?? start
+    }
+
+    /// Calendar telt zondag als 1; deze rij begint op maandag, net als de kalender.
+    private static let weekdagNummers = [2, 3, 4, 5, 6, 7, 1]
+
+    private func modusKnop(_ modus: AfwezigViewModel.HerhaalModus) -> some View {
+        let actief = viewModel.herhaalModus == modus
+        return Button {
+            Haptics.selection()
+            viewModel.herhaalModus = modus
+        } label: {
+            Text(modus.label)
+                .font(BovexaTheme.TypeStyle.footnote.weight(.bold))
+                .foregroundStyle(actief ? BovexaTheme.Colors.white : BovexaTheme.Colors.muted)
+                .frame(maxWidth: .infinity, minHeight: 40)
+                .background(actief ? BovexaTheme.categoryColor(for: .afwezig) : BovexaTheme.Colors.glass)
+                .clipShape(RoundedRectangle(cornerRadius: BovexaTheme.Radius.sm, style: .continuous))
+                .overlay(
+                    RoundedRectangle(cornerRadius: BovexaTheme.Radius.sm, style: .continuous)
+                        .strokeBorder(actief ? Color.clear : BovexaTheme.Colors.edge, lineWidth: 1)
+                )
+        }
+    }
+
+    private func weekdagKnop(label: String, nummer: Int) -> some View {
+        let actief = viewModel.herhaalWeekdagen.contains(nummer)
+        return Button {
+            Haptics.selection()
+            if actief {
+                viewModel.herhaalWeekdagen.remove(nummer)
+            } else {
+                viewModel.herhaalWeekdagen.insert(nummer)
+            }
+        } label: {
+            Text(label)
+                .font(BovexaTheme.TypeStyle.caption.weight(.bold))
+                .foregroundStyle(actief ? BovexaTheme.Colors.white : BovexaTheme.Colors.muted)
+                .frame(maxWidth: .infinity, minHeight: 40)
+                .background(actief ? BovexaTheme.categoryColor(for: .afwezig) : BovexaTheme.Colors.glass)
+                .clipShape(RoundedRectangle(cornerRadius: BovexaTheme.Radius.sm, style: .continuous))
+                .overlay(
+                    RoundedRectangle(cornerRadius: BovexaTheme.Radius.sm, style: .continuous)
+                        .strokeBorder(actief ? Color.clear : BovexaTheme.Colors.edge, lineWidth: 1)
+                )
+        }
+    }
+
+    /// Vrij veld voor een woordje uitleg; de beheerder leest het bij de aanvraag.
+    private var opmerkingSectie: some View {
+        VStack(alignment: .leading, spacing: BovexaTheme.Space.sm) {
+            Text("OPMERKING")
+                .font(BovexaTheme.TypeStyle.caption.weight(.bold))
+                .foregroundStyle(BovexaTheme.Colors.accent)
+                .tracking(0.3)
+
+            TextField("Bijvoorbeeld: tandarts", text: $viewModel.opmerking, axis: .vertical)
+                .lineLimit(2...4)
+                .textFieldStyle(.plain)
+                .padding(BovexaTheme.Space.sm)
+                .background(BovexaTheme.Colors.glassSoft)
+                .clipShape(RoundedRectangle(cornerRadius: BovexaTheme.Radius.sm, style: .continuous))
+                .overlay(
+                    RoundedRectangle(cornerRadius: BovexaTheme.Radius.sm, style: .continuous)
+                        .strokeBorder(BovexaTheme.Colors.edge, lineWidth: 1)
+                )
+        }
+    }
+
+    private var tijdSectie: some View {
+        VStack(alignment: .leading, spacing: BovexaTheme.Space.sm) {
+            Text("SELECTEER TIJD")
+                .font(BovexaTheme.TypeStyle.caption.weight(.bold))
+                .foregroundStyle(BovexaTheme.Colors.accent)
+                .tracking(0.3)
+
             Toggle(isOn: $viewModel.heleDag) {
                 Text("Hele dag")
                     .font(BovexaTheme.TypeStyle.subheadline.weight(.semibold))
@@ -252,19 +441,85 @@ struct AfwezigView: View {
         }
     }
 
-    private var submitButton: some View {
+    /// "Ik ben weg." De reden vraagt de app pas ná het tikken, in een keuzemenu:
+    /// een losse redenknop ernaast liet je iets instellen waarvan niet duidelijk
+    /// was waar het bij hoorde.
+    private var afwezigKnop: some View {
         Button {
-            Task { await viewModel.save() }
+            bezigeSoort = .afwezig
+            toonRedenKeuze = true
         } label: {
-            // Frame ín het label, ook in de ProgressView-tak (M11 patroon A).
-            if viewModel.saving {
-                ProgressView().tint(BovexaTheme.Colors.white).frame(maxWidth: .infinity)
+            if viewModel.saving && bezigeSoort == .afwezig {
+                ProgressView().tint(BovexaTheme.Colors.danger).frame(maxWidth: .infinity)
             } else {
-                Text("Beschikbaarheid doorgeven").frame(maxWidth: .infinity)
+                Text("Afwezigheid doorgeven").frame(maxWidth: .infinity)
             }
         }
-        .buttonStyle(.glassProminentBrand)
-        .disabled(!viewModel.canSave)
+        .buttonStyle(.glassSecondaryDanger)
+        .disabled(viewModel.saving || viewModel.from == nil || viewModel.tooLong)
+    }
+
+    /// Wat er al doorgegeven is, onder de knoppen. Vandaag en later; wat voorbij is
+    /// hoeft niemand meer te zien.
+    @ViewBuilder
+    private var doorgegevenSectie: some View {
+        let meldingen = store.komende()
+        if !meldingen.isEmpty {
+            VStack(alignment: .leading, spacing: BovexaTheme.Space.sm) {
+                Divider().overlay(BovexaTheme.Colors.edge)
+
+                Text("DOORGEGEVEN")
+                    .font(BovexaTheme.TypeStyle.caption.weight(.bold))
+                    .foregroundStyle(BovexaTheme.Colors.accent)
+                    .tracking(0.3)
+
+                ForEach(meldingen) { melding in
+                    meldingRij(melding)
+                }
+            }
+        }
+    }
+
+    private func meldingRij(_ melding: Beschikbaarheidsmelding) -> some View {
+        HStack(alignment: .top, spacing: BovexaTheme.Space.sm) {
+            Circle()
+                .fill(melding.soort == .beschikbaar ? BovexaTheme.Colors.accent : BovexaTheme.Colors.danger)
+                .frame(width: 8, height: 8)
+                .padding(.top, 6)
+
+            VStack(alignment: .leading, spacing: 2) {
+                Text(AfwezigMeldingTekst.dagen(melding))
+                    .font(BovexaTheme.TypeStyle.subheadline.weight(.semibold))
+                    .foregroundStyle(BovexaTheme.Colors.ink)
+                Text(AfwezigMeldingTekst.tijden(melding))
+                    .font(BovexaTheme.TypeStyle.footnote)
+                    .foregroundStyle(BovexaTheme.Colors.muted)
+            }
+
+            Spacer(minLength: BovexaTheme.Space.sm)
+
+            Text(melding.soortLabel)
+                .font(BovexaTheme.TypeStyle.footnote.weight(.semibold))
+                .foregroundStyle(melding.soort == .beschikbaar ? BovexaTheme.Colors.accent : BovexaTheme.Colors.danger)
+
+            // Intrekken haalt de dagen ook echt van de server af, niet alleen uit
+            // dit lijstje.
+            Button {
+                Haptics.selection()
+                intrekken = melding
+            } label: {
+                Image(systemName: "trash")
+                    .font(.system(size: 13, weight: .bold))
+                    .foregroundStyle(BovexaTheme.Colors.danger)
+                    .frame(width: 32, height: 32)
+                    .background(BovexaTheme.Colors.glass)
+                    .clipShape(Circle())
+                    .overlay(Circle().strokeBorder(BovexaTheme.Colors.edge, lineWidth: 1))
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel("Melding intrekken")
+        }
+        .contentShape(Rectangle())
     }
 }
 

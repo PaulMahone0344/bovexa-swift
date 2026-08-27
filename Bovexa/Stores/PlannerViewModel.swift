@@ -15,19 +15,38 @@ final class PlannerViewModel: ObservableObject {
     /// Zichtbaarheid bij bevestigen (alleen relevant met een org): "private"/"company".
     @Published var visibility = "private"
     @Published var viewers: [String] = []
-    @Published var reminderMin = 0
+    /// Alle gekozen herinneringen, gesorteerd — meerdere tegelijk mag. De server
+    /// bewaart alleen de eerste; zie HerinneringStore.
+    @Published var reminderMinuten: [Int] = []
+
+    /// De tijd die naar de server gaat: de dichtstbijzijnde. Blijft schrijfbaar
+    /// zodat één losse tijd zetten net zo werkt als voorheen.
+    var reminderMin: Int {
+        get { reminderMinuten.first ?? 0 }
+        set { reminderMinuten = newValue > 0 ? [newValue] : [] }
+    }
     @Published var assignee: [String] = []
     @Published var label: String?
-    @Published var contactId: String?
+    /// Gekozen contacten op volgorde van aantikken; de eerste is de klant van de
+    /// afspraak, de rest zijn medegenodigden.
+    @Published var contactIds: [String] = []
+    /// Het contact dat de server kent: `agenda_events.contact` is één relatie (zie
+    /// MEERDERE-BEDRIJVEN-SERVER.txt, punt 13).
+    var contactId: String? { contactIds.first }
     /// Naam/telefoon van het gekozen contact, meegeschreven als klant_naam zodat een
     /// collega de klant blijft zien — hij kan het privécontact zelf niet uitlezen.
     @Published private(set) var contactNaam: String?
     @Published private(set) var contactTelefoon: String?
 
     func selectContact(_ contact: AgendaContact?) {
-        contactId = contact?.id
-        contactNaam = contact?.naam
-        contactTelefoon = contact?.telefoon
+        selectContacts(contact.map { [$0] } ?? [])
+    }
+
+    /// Meerdere contacten kiezen: de eerste vult klant_naam/klant_telefoon.
+    func selectContacts(_ contacten: [AgendaContact]) {
+        contactIds = contacten.map(\.id)
+        contactNaam = contacten.first?.naam
+        contactTelefoon = contacten.first?.telefoon
     }
 
     @Published private(set) var saving = false
@@ -39,9 +58,14 @@ final class PlannerViewModel: ObservableObject {
     /// navigeert hierop terug naar Agenda en dismisst het scherm.
     @Published private(set) var confirmedDate: Date?
 
+    /// Het bedrijf van deze planner-sessie, voor schermen die de contactenlijst op
+    /// privé/bedrijf moeten scheiden. Leeg als er geen bedrijf is.
+    var orgId: String { org ?? "" }
+
     private let userId: String
     private let token: String
     private let org: String?
+
     private let api: PlannerAPI
     private let store: PlannerThreadStore
     private let repository: EventRepository
@@ -139,7 +163,7 @@ final class PlannerViewModel: ObservableObject {
         store.clear(userId: userId)
         visibility = "private"
         viewers = []
-        reminderMin = 0
+        reminderMinuten = []
         assignee = []
         label = nil
         // Zonder dit lift het contact van het vorige gesprek mee naar de volgende
@@ -254,8 +278,8 @@ final class PlannerViewModel: ObservableObject {
                     contactNaam: contactNaam, contactTelefoon: contactTelefoon
                 )
                 let created = try await repository.createEvent(body: payload.requestBody, token: token)
-                if reminderMin > 0 {
-                    await reminderService.schedule(eventId: created.id, title: created.title, start: created.start, minutesBefore: reminderMin)
+                if !reminderMinuten.isEmpty {
+                    await reminderService.schedule(eventId: created.id, title: created.title, start: created.start, minuten: reminderMinuten)
                 }
                 await deviceCalendarService.sync(appointment)
                 createdCount += 1
