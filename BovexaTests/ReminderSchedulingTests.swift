@@ -40,7 +40,10 @@ struct ReminderOptionTests {
         #expect(ReminderOption.label(for: 1440) == "1 dag vooraf")
     }
 
-    @Test func unknownValueFallsBackToGeen() {
-        #expect(ReminderOption.label(for: 999) == "Geen")
+    /// Een zelfgekozen tijd hoort niet als "Geen" te lezen; alleen 0 en minder is
+    /// echt geen herinnering.
+    @Test func aFreelyChosenValueGetsItsOwnLabel() {
+        #expect(ReminderOption.label(for: 999) == "999 min vooraf")
+        #expect(ReminderOption.label(for: 0) == "Geen")
     }
 }

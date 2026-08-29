@@ -239,14 +239,18 @@ struct BedrijfViewModelTests {
     @Test func successfulRoleChangeReloadsMembers() async {
         let vm = await loadedViewModel()
         let bram = vm.members.first { $0.userId == "u2" }!
-        var requestCount = 0
-        URLProtocolStub.requestHandler = { _ in
-            requestCount += 1
-            if requestCount == 1 {
+        // Op het pad tellen, niet op de volgorde: load() haalt naast de ledenlijst
+        // ook de bedrijfscontacten en de bedrijvenlijst op.
+        var memberReloads = 0
+        URLProtocolStub.requestHandler = { request in
+            let path = request.url?.path ?? ""
+            if path.contains("company/member/role") {
                 return (200, """
                 {"id":"m2","role":"admin"}
                 """.data(using: .utf8)!)
             }
+            guard path.contains("company/members") else { return (200, Data("{}".utf8)) }
+            memberReloads += 1
             // Herlaadactie (valkuil B): server-waarheid wint.
             return (200, """
             {
@@ -260,7 +264,7 @@ struct BedrijfViewModelTests {
             """.data(using: .utf8)!)
         }
         await vm.changeRole(bram, to: .admin, actingUserId: "u1", token: "tok")
-        #expect(requestCount == 2) // mutatie + herlaad
+        #expect(memberReloads == 1) // de rolwissel herlaadt de ledenlijst één keer
         #expect(vm.members.first { $0.userId == "u2" }?.role == .admin)
         #expect(vm.memberActionErrorMessage == nil)
     }
@@ -298,7 +302,7 @@ struct BedrijfViewModelTests {
 
     @Test func seatsTextShowsCountOfMax() async {
         let vm = await loadedViewModel()
-        #expect(vm.seatsText == "2 van 3 plekken")
+        #expect(vm.seatsText == "2 van 3 accounts")
     }
 
     /// seats_max 0 betekent onbeperkt (zie TeambeheerViewModel.full) — dan geen

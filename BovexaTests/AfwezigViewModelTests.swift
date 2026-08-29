@@ -2,8 +2,8 @@ import Testing
 import Foundation
 @testable import Bovexa
 
-/// AfwezigViewModel — pick-logica (1e tik = vanaf, 2e = t/m), max 31 dagen, en save()
-/// (per dag create, org-afhankelijk calendar/visibility). Geport uit afwezig.tsx.
+/// AfwezigViewModel — pick-logica (elke tik zet één dag aan of uit), max 31 dagen,
+/// en save() (per dag create, org-afhankelijk calendar/visibility).
 @MainActor
 struct AfwezigViewModelTests {
     init() {
@@ -27,48 +27,50 @@ struct AfwezigViewModelTests {
 
     // MARK: - pickDay
 
-    @Test func firstTapSetsFromOnly() {
+    @Test func firstTapSelectsThatDayOnly() {
         let vm = makeViewModel()
         vm.pickDay(day(3))
-        #expect(vm.range == [day(3, 8)].map { AfwezigRange.atNoon($0) })
+        #expect(vm.range == [day(3)])
     }
 
-    @Test func secondTapAfterFromSetsTo() {
+    /// Sinds 26 augustus zijn het losse dagen in plaats van een van–tot-periode:
+    /// twee tikken geven twee dagen, en wat ertussen ligt hoort er niet bij.
+    @Test func secondTapAddsALooseDayWithoutFillingTheGap() {
         let vm = makeViewModel()
         vm.pickDay(day(3))
         vm.pickDay(day(5))
-        #expect(vm.range.count == 3)
+        #expect(vm.range.count == 2)
+        #expect(vm.isInRange(day(3)))
+        #expect(vm.isInRange(day(5)))
+        #expect(!vm.isInRange(day(4)))
     }
 
-    /// Tikken vóór "vanaf" schuift alleen "vanaf" terug — "tot" blijft ongezet
-    /// (nog geen periode), exact zoals pick() in afwezig.tsx.
-    @Test func secondTapBeforeFromShiftsFromBackWithoutSettingTo() {
+    /// Volgorde maakt niet uit: een eerdere dag komt er gewoon bij.
+    @Test func tapOnAnEarlierDayAddsItToTheSelection() {
         let vm = makeViewModel()
         vm.pickDay(day(10))
         vm.pickDay(day(5))
-        #expect(vm.range.count == 1)
-        #expect(vm.isInRange(day(5)))
+        #expect(vm.range == [day(5), day(10)])
+    }
+
+    /// Nog een keer op dezelfde dag tikken haalt hem weer weg.
+    @Test func tappingTheSameDayAgainRemovesIt() {
+        let vm = makeViewModel()
+        vm.pickDay(day(10))
+        vm.pickDay(day(5))
+        vm.pickDay(day(10))
+        #expect(vm.range == [day(5)])
         #expect(!vm.isInRange(day(10)))
     }
 
-    @Test func thirdTapAfterShiftedFromCompletesRange() {
-        let vm = makeViewModel()
-        vm.pickDay(day(10))
-        vm.pickDay(day(5))
-        vm.pickDay(day(10))
-        #expect(vm.range.count == 6) // 5 t/m 10
-        #expect(vm.isInRange(day(5)))
-        #expect(vm.isInRange(day(10)))
-    }
-
-    @Test func tapAfterCompletedRangeStartsNewSelection() {
+    @Test func threeTapsSelectThreeLooseDays() {
         let vm = makeViewModel()
         vm.pickDay(day(3))
         vm.pickDay(day(5))
         vm.pickDay(day(20))
-        #expect(vm.range.count == 1)
+        #expect(vm.range.count == 3)
         #expect(vm.isInRange(day(20)))
-        #expect(!vm.isInRange(day(3)))
+        #expect(vm.isInRange(day(3)))
     }
 
     @Test func isInRangeIsFalseWithoutSelection() {
@@ -80,13 +82,13 @@ struct AfwezigViewModelTests {
 
     @Test func canSaveIsFalseWithoutSelection() {
         let vm = makeViewModel()
-        #expect(vm.canSave == false)
+        #expect(vm.canSave(soort: .afwezig) == false)
     }
 
     @Test func canSaveIsTrueWithValidSelection() {
         let vm = makeViewModel()
         vm.pickDay(day(3))
-        #expect(vm.canSave == true)
+        #expect(vm.canSave(soort: .afwezig) == true)
         #expect(vm.tooLong == false)
     }
 
@@ -96,7 +98,7 @@ struct AfwezigViewModelTests {
         let vm = makeViewModel()
         vm.pickDay(day(3))
         vm.reason = .anders
-        #expect(vm.canSave == false)
+        #expect(vm.canSave(soort: .afwezig) == false)
     }
 
     @Test func canSaveIsFalseWhenAndersToelichtingIsOnlyWhitespace() {
@@ -104,7 +106,7 @@ struct AfwezigViewModelTests {
         vm.pickDay(day(3))
         vm.reason = .anders
         vm.andersToelichting = "   "
-        #expect(vm.canSave == false)
+        #expect(vm.canSave(soort: .afwezig) == false)
     }
 
     @Test func canSaveIsTrueWhenAndersHasToelichting() {
@@ -112,7 +114,7 @@ struct AfwezigViewModelTests {
         vm.pickDay(day(3))
         vm.reason = .anders
         vm.andersToelichting = "Tandarts"
-        #expect(vm.canSave == true)
+        #expect(vm.canSave(soort: .afwezig) == true)
     }
 
     @Test func saveWithAndersUsesToelichtingAsTitleButRawInputStaysGeneric() async {
@@ -138,10 +140,10 @@ struct AfwezigViewModelTests {
 
     @Test func canSaveIsFalseWhenTooLong() {
         let vm = makeViewModel()
-        vm.pickDay(day(1))
-        vm.pickDay(day(1, 9)) // 32 dagen
+        for d in 1...31 { vm.pickDay(day(d)) } // hele augustus
+        vm.pickDay(day(1, 9)) // 32e dag
         #expect(vm.tooLong == true)
-        #expect(vm.canSave == false)
+        #expect(vm.canSave(soort: .afwezig) == false)
     }
 
     // MARK: - save()
@@ -161,10 +163,12 @@ struct AfwezigViewModelTests {
         }
         await vm.save()
 
-        #expect(createdBodies.count == 3)
+        #expect(createdBodies.count == 2)
         #expect(createdBodies.allSatisfy { $0["category"] as? String == "afwezig" })
         #expect(createdBodies.allSatisfy { $0["calendar"] as? String == "work" })
-        #expect(createdBodies.allSatisfy { $0["visibility"] as? String == "company" })
+        // Zonder geladen beheerders is er niemand om mee te kijken, en dan blijft
+        // het blok privé in plaats van teambreed.
+        #expect(createdBodies.allSatisfy { $0["visibility"] as? String == "private" })
         #expect(createdBodies.allSatisfy { $0["org"] as? String == "org1" })
         #expect(createdBodies.allSatisfy { $0["raw_input"] as? String == "afwezig: vakantie" })
         #expect(vm.savedAlertMessage != nil)
@@ -200,7 +204,7 @@ struct AfwezigViewModelTests {
         #expect(vm.savedAlertMessage == "Vakantie ingepland op 3 aug.")
     }
 
-    @Test func saveRangeMessageMentionsFromAndTo() async {
+    @Test func saveMessageListsTheSelectedDays() async {
         let vm = makeViewModel()
         vm.pickDay(day(3))
         vm.pickDay(day(5))
@@ -210,7 +214,8 @@ struct AfwezigViewModelTests {
             """.utf8))
         }
         await vm.save()
-        #expect(vm.savedAlertMessage == "Vakantie ingepland van 3 aug t/m 5 aug.")
+        // Losse dagen, dus het aantal en de opsomming — niet "van ... t/m ...".
+        #expect(vm.savedAlertMessage == "Vakantie ingepland op 2 dagen: 3 aug, 5 aug.")
     }
 
     @Test func saveFailureSetsAlertAndKeepsSelection() async {
@@ -230,20 +235,21 @@ struct AfwezigViewModelTests {
         #expect(vm.heleDag == true)
     }
 
-    @Test func effectiveHeleDagIsForcedTrueForMultiDaySelectionEvenIfToggledOff() {
+    /// Sinds 26 augustus geldt de hele-dag-schakelaar ook bij meerdere dagen:
+    /// drie dagen met 09:00-13:00 geeft elke gekozen dag dat tijdsblok. Eerder
+    /// werd hele dag vanaf de tweede dag afgedwongen.
+    @Test func effectiveHeleDagFollowsToggleForMultiDaySelection() {
         let vm = makeViewModel()
         vm.pickDay(day(3))
         vm.pickDay(day(5))
         vm.heleDag = false
-        #expect(vm.isSingleDaySelection == false)
-        #expect(vm.effectiveHeleDag == true)
+        #expect(vm.effectiveHeleDag == false)
     }
 
     @Test func effectiveHeleDagRespectsToggleForSingleDaySelection() {
         let vm = makeViewModel()
         vm.pickDay(day(3))
         vm.heleDag = false
-        #expect(vm.isSingleDaySelection == true)
         #expect(vm.effectiveHeleDag == false)
     }
 
@@ -253,7 +259,7 @@ struct AfwezigViewModelTests {
         vm.heleDag = false
         vm.startTime = day(3, hour: 17)
         vm.endTime = day(3, hour: 9)
-        #expect(vm.canSave == false)
+        #expect(vm.canSave(soort: .afwezig) == false)
     }
 
     @Test func canSaveIsTrueWhenPartialDayEndIsAfterStart() {
@@ -262,7 +268,7 @@ struct AfwezigViewModelTests {
         vm.heleDag = false
         vm.startTime = day(3, hour: 9)
         vm.endTime = day(3, hour: 17)
-        #expect(vm.canSave == true)
+        #expect(vm.canSave(soort: .afwezig) == true)
     }
 
     @Test func savePartialDaySendsAllDayFalseWithStartAndEnd() async {
@@ -289,7 +295,9 @@ struct AfwezigViewModelTests {
         #expect(capturedBody["end"] as? String == expectedEnd)
     }
 
-    @Test func saveMultiDayIgnoresHeleDagToggleAndStaysAllDay() async {
+    /// De hele-dag-schakelaar geldt sinds 26 augustus ook bij meerdere dagen:
+    /// elke gekozen dag krijgt hetzelfde tijdvak.
+    @Test func saveMultiDayAppliesTheSameTimeSlotToEveryDay() async {
         let vm = makeViewModel()
         vm.pickDay(day(3))
         vm.pickDay(day(5))
@@ -304,9 +312,9 @@ struct AfwezigViewModelTests {
         }
         await vm.save()
 
-        #expect(createdBodies.count == 3)
-        #expect(createdBodies.allSatisfy { $0["all_day"] as? Bool == true })
-        #expect(createdBodies.allSatisfy { $0["end"] == nil })
+        #expect(createdBodies.count == 2)
+        #expect(createdBodies.allSatisfy { $0["all_day"] as? Bool == false })
+        #expect(createdBodies.allSatisfy { $0["end"] != nil })
     }
 
     @Test func saveWhenCannotSaveDoesNothing() async {
@@ -341,6 +349,7 @@ struct AfwezigViewModelTests {
         let vm = makeViewModel()
         let start = Date(timeIntervalSince1970: 1_800_000_000)
         vm.pickDay(start)
+        vm.pickDay(start.addingTimeInterval(24 * 60 * 60))
         vm.pickDay(start.addingTimeInterval(2 * 24 * 60 * 60)) // drie dagen
 
         let counter = CreateCounter()
@@ -394,6 +403,9 @@ struct AfwezigViewModelTests {
         #expect(vm.saveFailedAlert)
 
         // Nieuwe periode van twee dagen: beide moeten opnieuw aangemaakt worden.
+        // De oude twee dagen eerst weer uittikken, anders staan ze er nog bij.
+        vm.pickDay(start)
+        vm.pickDay(start.addingTimeInterval(24 * 60 * 60))
         vm.pickDay(start.addingTimeInterval(10 * 24 * 60 * 60))
         vm.pickDay(start.addingTimeInterval(11 * 24 * 60 * 60))
         vm.saveFailedAlert = false

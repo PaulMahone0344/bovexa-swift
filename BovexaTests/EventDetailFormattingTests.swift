@@ -22,9 +22,11 @@ struct EventDetailFormattingTests {
         #expect(EventHelpers.detailTimeText(event) == "Hele dag")
     }
 
-    @Test func timedEventWithEndShowsStartAndDuration() {
+    /// Begin- en eindtijd, niet de duur: "tot wanneer" is wat je op het detail
+    /// zoekt, en de duur reken je zelf niet uit.
+    @Test func timedEventWithEndShowsStartAndEnd() {
         let event = makeEvent(start: date(9), end: date(10, 30), allDay: false)
-        #expect(EventHelpers.detailTimeText(event) == "09:00 · 1 uur 30 min")
+        #expect(EventHelpers.detailTimeText(event) == "09:00 - 10:30")
     }
 
     @Test func timedEventWithoutEndShowsOnlyStart() {
@@ -50,8 +52,10 @@ struct EventDetailFormattingTests {
         #expect(EventHelpers.rowDurationLabel(event) == "")
     }
 
-    @Test func timedEventKeepsDurationLabel() {
+    /// Rechterkant van een rij toont de eindtijd; samen met de begintijd links
+    /// lees je "09:00 … tot 10:00".
+    @Test func timedEventShowsEndTimeOnTheRight() {
         let event = makeEvent(start: date(9), end: date(10), allDay: false)
-        #expect(EventHelpers.rowDurationLabel(event) == "1 uur")
+        #expect(EventHelpers.rowDurationLabel(event) == "tot 10:00")
     }
 }
