@@ -13,43 +13,58 @@ struct VandaagHeaderArt: View {
 
     var body: some View {
         ZStack {
-            // De zon staat ónder de berg in de stapel, zodat hij er half achter
-            // wegzakt zoals in de mockup. Los ervóór hing hij als een bal in de
-            // lucht en trok hij meer aandacht dan de kaart eronder.
-            // Kleiner en zachter dan eerst: op 44pt en volle dekking trok de zon
-            // ongeveer evenveel aandacht als het woord "Vandaag" ernaast, terwijl
-            // dit een achtergrondtekening hoort te zijn.
+            // De zon zakt half achter de heuvel; de heuvel is dekkend genoeg om
+            // dat te laten zien (op 0.10 scheen de zon er dwars doorheen).
             Circle()
-                .fill(sunColor.opacity(0.72))
-                .frame(width: 37, height: 37)
-                .offset(x: 30, y: 2)
+                .fill(sunColor.opacity(0.8))
+                .frame(width: 34, height: 34)
+                .offset(x: 26, y: -8)
 
+            // Bodem van de heuvel valt precies op de framerand, zodat er geen
+            // harde afsnijlijn meer onder hangt.
             Mountain()
-                .fill(BovexaTheme.Colors.blue.opacity(0.10))
-                .frame(width: 190, height: 52)
-                .offset(y: 22)
+                .fill(BovexaTheme.Colors.blue.opacity(0.16))
+                .frame(width: 190, height: 50)
+                .offset(y: 7)
+
+            // Wolken zoals in de iPhone Weer-app: een grote half vóór de zon,
+            // en een kleinere die los in de lucht hangt.
+            Wolk()
+                .opacity(0.95)
+                .offset(x: 42, y: 6)
+
+            Wolk()
+                .scaleEffect(0.62)
+                .opacity(0.7)
+                .offset(x: -44, y: -14)
 
             Image(systemName: "sparkle")
-                .font(.system(size: 13, weight: .medium))
-                .foregroundStyle(BovexaTheme.Colors.white.opacity(0.95))
-                .offset(x: -28, y: -10)
-
-            Image(systemName: "sparkle")
-                .font(.system(size: 8, weight: .medium))
-                .foregroundStyle(BovexaTheme.Colors.white.opacity(0.85))
-                .offset(x: -8, y: 10)
-
-            Image(systemName: "sparkle")
-                .font(.system(size: 7, weight: .medium))
-                .foregroundStyle(BovexaTheme.Colors.white.opacity(0.8))
-                .offset(x: 58, y: 6)
+                .font(.system(size: 11, weight: .medium))
+                .foregroundStyle(BovexaTheme.Colors.white.opacity(0.9))
+                .offset(x: -8, y: 2)
         }
         // Laag gehouden: hoger gaf een gat tussen de datum en de eerste kaart en
         // ging de tekening als een eigen blok lezen.
-        .frame(width: 180, height: 62)
+        .frame(width: 180, height: 64)
         .clipped()
         .allowsHitTesting(false)
         .accessibilityHidden(true)
+    }
+}
+
+/// Bolwolkje in de stijl van het Weer-app-icoon: drie bollen op een afgeronde
+/// basis. `compositingGroup` zorgt dat de dekking over het geheel gaat, anders
+/// tekenen de overlappende bollen zich donkerder af.
+private struct Wolk: View {
+    var body: some View {
+        ZStack {
+            Circle().frame(width: 20).offset(x: -13, y: 3)
+            Circle().frame(width: 28).offset(x: 0, y: -4)
+            Circle().frame(width: 18).offset(x: 13, y: 4)
+            Capsule().frame(width: 50, height: 16).offset(y: 6)
+        }
+        .foregroundStyle(BovexaTheme.Colors.white)
+        .compositingGroup()
     }
 }
 

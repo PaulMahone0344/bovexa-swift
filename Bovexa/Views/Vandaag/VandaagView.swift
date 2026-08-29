@@ -131,9 +131,11 @@ struct VandaagView: View {
             }
 
             ZStack(alignment: .topTrailing) {
+                // Links van en iets onder de avatar: op de oude plek (trailing,
+                // y 8) verdween de zon volledig achter de profielfoto.
                 VandaagHeaderArt()
                     .frame(maxWidth: .infinity, alignment: .trailing)
-                    .offset(y: 8)
+                    .offset(x: -60, y: 26)
 
                 // Je eigen foto rechtsboven, zoals in de meeste apps: één tik naar
                 // je profiel, en meteen te zien met welk account je binnen bent.
@@ -161,9 +163,9 @@ struct VandaagView: View {
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(.top, 6)
             }
-            // Even hoog als de foto: zonder dit legde de grotere avatar zich over
-            // de kaart "Volgende afspraak" heen.
-            .frame(minHeight: 80, alignment: .top)
+            // Hoog genoeg voor foto én de lager gezette tekening: zonder dit
+            // legden die zich over de kaart "Volgende afspraak" heen.
+            .frame(minHeight: 96, alignment: .top)
         }
         .padding(.horizontal, 2)
         .accessibilityElement(children: .combine)
