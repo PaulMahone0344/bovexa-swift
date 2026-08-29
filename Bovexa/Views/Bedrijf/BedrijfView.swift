@@ -6,6 +6,11 @@ import UIKit
 struct BedrijfView: View {
     @EnvironmentObject private var authStore: AuthStore
     @StateObject private var viewModel = BedrijfViewModel()
+    /// Sheet met het bestaande starten/toetreden-scherm, geopend via
+    /// "Bedrijf toevoegen" in de wissel-sheet.
+    @State private var toontNieuwBedrijf = false
+    /// Wissel-sheet: opent door op het logo op de bedrijfskaart te tikken.
+    @State private var toontWisselSheet = false
 
     private var currentUser: AgendaUser? {
         if case .loggedIn(let user) = authStore.phase { return user }
@@ -80,7 +85,11 @@ struct BedrijfView: View {
                         LoadFailedNote(surface: .background)
                     }
 
-                    BedrijfCardView(viewModel: viewModel)
+                    BedrijfCardView(
+                        viewModel: viewModel,
+                        kanWisselen: !viewModel.mijnBedrijven.isEmpty,
+                        onWissel: { toontWisselSheet = true }
+                    )
 
                     if !viewModel.members.isEmpty {
                         // Alleen accounts tellen mee: wie geen inlog heeft is een
@@ -112,11 +121,141 @@ struct BedrijfView: View {
             .refreshable {
                 await viewModel.refresh(userId: user.id, token: authStore.token ?? "")
             }
+            .sheet(isPresented: $toontWisselSheet) {
+                wisselSheet(for: user)
+            }
+            .sheet(isPresented: $toontNieuwBedrijf) {
+                nieuwBedrijfSheet(for: user)
+            }
         }
     }
 }
 
 private extension BedrijfView {
+    /// Wissel-sheet, geopend via het logo op de bedrijfskaart: één rij per
+    /// bedrijf, het actieve met vinkje, plus "Bedrijf toevoegen". Tikken op een
+    /// ander bedrijf wisselt server-side (company/switch) en laadt daarna alles
+    /// opnieuw; de overige tabs volgen vanzelf omdat elke tabwissel opnieuw laadt.
+    @ViewBuilder
+    func wisselSheet(for user: AgendaUser) -> some View {
+        VStack(alignment: .leading, spacing: BovexaTheme.Space.lg) {
+            Text("Wissel bedrijf")
+                .font(BovexaTheme.TypeStyle.title2)
+                .foregroundStyle(BovexaTheme.Colors.ink)
+
+            VStack(spacing: BovexaTheme.Space.sm) {
+                ForEach(viewModel.mijnBedrijven) { org in
+                    let isActief = org.id == user.defaultOrg
+                    Button {
+                        guard !isActief else {
+                            toontWisselSheet = false
+                            return
+                        }
+                        toontWisselSheet = false
+                        Task { await wisselNaar(org.id, user: user) }
+                    } label: {
+                        HStack(spacing: BovexaTheme.Space.md) {
+                            orgLogo(org)
+                            Text(org.name)
+                                .lineLimit(1)
+                            Spacer()
+                            if viewModel.wisselBezigOrgId == org.id {
+                                ProgressView().controlSize(.mini)
+                            } else if isActief {
+                                Image(systemName: "checkmark")
+                                    .font(.callout.weight(.bold))
+                            }
+                        }
+                        .frame(maxWidth: .infinity)
+                    }
+                    .buttonStyle(isActief ? AnyButtonStyle(.glassProminentBrand) : AnyButtonStyle(.glassSecondaryBrand))
+                    .disabled(viewModel.wisselBezigOrgId != nil)
+                    .accessibilityLabel(isActief ? "\(org.name), actief bedrijf" : "Wissel naar \(org.name)")
+                }
+
+                Button {
+                    toontWisselSheet = false
+                    toontNieuwBedrijf = true
+                } label: {
+                    Label("Bedrijf toevoegen", systemImage: "plus")
+                        .frame(maxWidth: .infinity)
+                }
+                .buttonStyle(AnyButtonStyle(.glassSecondaryBrand))
+            }
+
+            Spacer(minLength: 0)
+        }
+        .padding(BovexaTheme.Space.xl)
+        .presentationDetents([.medium])
+        .presentationBackground(.thinMaterial)
+    }
+
+    @ViewBuilder
+    func nieuwBedrijfSheet(for user: AgendaUser) -> some View {
+            NavigationStack {
+                ZStack {
+                    AppBackground()
+                    EmptyOrgView(viewModel: viewModel) {
+                        toontNieuwBedrijf = false
+                        Task {
+                            await authStore.refreshCurrentUser()
+                            await viewModel.load(userId: user.id, token: authStore.token ?? "")
+                            // Nieuw bedrijf = ook een wissel van default_org.
+                            authStore.markForeground()
+                        }
+                    }
+                }
+                .toolbar {
+                    ToolbarItem(placement: .topBarTrailing) {
+                        Button {
+                            toontNieuwBedrijf = false
+                        } label: {
+                            Image(systemName: "xmark")
+                        }
+                        .accessibilityLabel("Sluiten")
+                    }
+                }
+            }
+    }
+
+    /// Klein bedrijfslogo voor de wisselrijen. Zelfde bronnen als de grote kaart:
+    /// server-bestand als het er is, het meegeleverde Betuwe-logo als tijdelijke
+    /// uitzondering, en anders het koffertje op dezelfde maat.
+    @ViewBuilder
+    func orgLogo(_ org: OrgSummary) -> some View {
+        let maat: CGFloat = 36
+        if let bestand = org.logo, !bestand.isEmpty,
+           let url = URL(string: "\(PBEndpoint.base.absoluteString)/api/files/agenda_orgs/\(org.id)/\(bestand)") {
+            RemoteLogoView(url: url)
+                .frame(width: maat, height: maat)
+        } else if org.name.localizedCaseInsensitiveContains("Voetbalschool De Betuwe") {
+            Image("BedrijfLogoBetuwe")
+                .resizable()
+                .scaledToFit()
+                .frame(width: maat, height: maat)
+        } else {
+            RoundedRectangle(cornerRadius: BovexaTheme.Radius.sm, style: .continuous)
+                .fill(BovexaTheme.Colors.glassStrong)
+                .frame(width: maat, height: maat)
+                .overlay(
+                    Image(systemName: "briefcase.fill")
+                        .font(.system(size: 16))
+                        .foregroundStyle(BovexaTheme.Colors.accent)
+                )
+        }
+    }
+
+    func wisselNaar(_ orgId: String, user: AgendaUser) async {
+        let gelukt = await viewModel.wisselBedrijf(naar: orgId, token: authStore.token ?? "")
+        guard gelukt else { return }
+        await authStore.refreshCurrentUser()
+        await viewModel.load(userId: user.id, token: authStore.token ?? "")
+        // Vandaag, Agenda, Dagtaken en Profiel hangen aan foregroundTick; zonder
+        // deze tik bleven zij de data van het vorige bedrijf tonen tot je de app
+        // naar de achtergrond stuurde.
+        authStore.markForeground()
+    }
+
     /// Eén persoon die bij het bedrijf hoort maar geen account heeft. Geen rol-pil
     /// en geen ster: er valt niets te beheren aan iemand die niet kan inloggen.
     @ViewBuilder
@@ -145,6 +284,10 @@ private extension BedrijfView {
 /// (valkuil F: webcal-link, geen download).
 private struct BedrijfCardView: View {
     @ObservedObject var viewModel: BedrijfViewModel
+    /// Aan zodra dit account meer dan nul bedrijven kent: het logo wordt dan de
+    /// wisselknop, met een klein pijltjes-embleem als vindbaarheidshint.
+    var kanWisselen = false
+    var onWissel: () -> Void = {}
 
     var body: some View {
         GlassCard(emphasis: .hero) {
@@ -152,7 +295,20 @@ private struct BedrijfCardView: View {
                 // Het logo staat groot bovenaan en de naam eronder: dit is de kop
                 // van de tab, dus het bedrijf mag hier het beeld bepalen in plaats
                 // van als klein vierkantje naast de tekst te staan.
-                logo
+                // Geen zichtbaar wissel-embleem (keuze Ibrahim 29 aug): het logo
+                // zélf is de knop, de sheet legt uit wat er gebeurt.
+                if kanWisselen {
+                    Button {
+                        Haptics.selection()
+                        onWissel()
+                    } label: {
+                        logo
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel("Wissel bedrijf")
+                } else {
+                    logo
+                }
                 VStack(spacing: 2) {
                     Text(viewModel.org?.name ?? "Jouw bedrijf")
                         .font(BovexaTheme.TypeStyle.title2)
@@ -461,6 +617,20 @@ private struct EmptyOrgView: View {
         } else {
             Haptics.warning()
         }
+    }
+}
+
+/// Type-eraser zodat de wisselchips per staat (actief/inactief) een andere
+/// glasstijl kunnen krijgen zonder de knop twee keer uit te schrijven.
+private struct AnyButtonStyle: ButtonStyle {
+    private let make: (Configuration) -> AnyView
+
+    init<S: ButtonStyle>(_ style: S) {
+        make = { AnyView(style.makeBody(configuration: $0)) }
+    }
+
+    func makeBody(configuration: Configuration) -> some View {
+        make(configuration)
     }
 }
 

@@ -47,6 +47,13 @@ final class BedrijfViewModel: ObservableObject {
     /// Aan als de laatste ledenlijst-fetch mislukte; de vorige blijft staan.
     @Published private(set) var loadFailed = false
 
+    /// Alle bedrijven van dit account (company/mine). Meer dan één → de view
+    /// toont de wisselrij. Valt de route weg, dan blijft de laatst bekende
+    /// lijst staan via BekendeBedrijvenStore.
+    @Published private(set) var mijnBedrijven: [OrgSummary] = []
+    /// Org-id waar op dit moment naartoe gewisseld wordt (spinner op die chip).
+    @Published private(set) var wisselBezigOrgId: String?
+
     let memberColors = MemberColors()
 
     /// Mensen die bij het bedrijf horen maar geen account hebben — onder Mensen
@@ -222,8 +229,44 @@ final class BedrijfViewModel: ObservableObject {
             loadFailed = true
         }
         await laadBedrijfsContacten(userId: userId, token: token)
+        await laadMijnBedrijven(userId: userId, token: token)
         loading = false
         refreshing = false
+    }
+
+    /// company/mine: leidend voor de wisselrij; BekendeBedrijvenStore is alleen
+    /// het offline-geheugen (en de terugval als de route faalt).
+    private func laadMijnBedrijven(userId: String, token: String) async {
+        let store = BekendeBedrijvenStore.shared
+        store.prime(userId: userId)
+        do {
+            let response = try await repository.listMyOrgs(token: token)
+            mijnBedrijven = response.orgs
+            store.vervang(response.orgs)
+        } catch {
+            if mijnBedrijven.isEmpty { mijnBedrijven = store.bedrijven }
+        }
+    }
+
+    /// Maakt een ander bedrijf actief. Bij succes staat default_org op de server
+    /// al om; de view moet daarna AuthStore.refreshCurrentUser() + load() doen.
+    func wisselBedrijf(naar orgId: String, token: String) async -> Bool {
+        guard wisselBezigOrgId == nil else { return false }
+        wisselBezigOrgId = orgId
+        defer { wisselBezigOrgId = nil }
+        do {
+            _ = try await repository.switchOrg(orgId: orgId, token: token)
+            // Oude ledenlijst hoort niet even als "vorig bedrijf" te blijven staan.
+            membersResponse = nil
+            bedrijfsContacten = []
+            return true
+        } catch let error as CompanyError {
+            memberActionErrorMessage = error.message
+            return false
+        } catch {
+            memberActionErrorMessage = "Wisselen van bedrijf mislukt."
+            return false
+        }
     }
 
     /// Faalt stil, net als de ledenlijst: geen contacten is geen foutmelding waard.
