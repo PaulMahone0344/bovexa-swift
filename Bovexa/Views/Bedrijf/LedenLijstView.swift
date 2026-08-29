@@ -71,8 +71,12 @@ struct LedenLijstView: View {
                 .textInputAutocapitalization(.never)
                 .font(BovexaTheme.TypeStyle.body)
         }
-        .padding(.horizontal, BovexaTheme.Space.sm)
-        .padding(.vertical, BovexaTheme.Space.xs)
+        .padding(.horizontal, BovexaTheme.Space.md)
+        // Als duidelijke pill (keuze Ibrahim 29 aug): het veld zonk weg in het
+        // glas van de lijst en las als kale tekst in plaats van als invoerveld.
+        .frame(minHeight: 44)
+        .background(BovexaTheme.Colors.white.opacity(0.55), in: Capsule())
+        .overlay(Capsule().stroke(BovexaTheme.Colors.edge, lineWidth: 1))
     }
 
     private func rowManageable(_ member: CompanyMember) -> Bool {
