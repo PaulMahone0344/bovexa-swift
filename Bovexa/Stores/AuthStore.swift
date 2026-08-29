@@ -29,7 +29,7 @@ final class AuthStore: ObservableObject {
 
     init(
         client: PBClient = PBClient(),
-        tokenStore: TokenStore = KeychainTokenStore(),
+        tokenStore: TokenStore = TokenStores.standaard(),
         userCache: CachedUserStore = CachedUserStore(),
         notificationCenter: NotificationCenter = .default,
         reminderScheduler: NotificationScheduling = UNNotificationScheduler()
