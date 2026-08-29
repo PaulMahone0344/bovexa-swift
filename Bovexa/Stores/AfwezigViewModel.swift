@@ -231,7 +231,8 @@ final class AfwezigViewModel: ObservableObject {
     }
 
     func save(soort: MeldSoort = .afwezig) async {
-        guard canSave(soort: soort), let from else { return }
+        // canSave dekt de lege selectie al af, dus `from` hoeft hier niet meer uit.
+        guard canSave(soort: soort) else { return }
         saving = true
         defer { saving = false }
 
@@ -271,10 +272,14 @@ final class AfwezigViewModel: ObservableObject {
             }
             createdDays = 0
             onthoud(soort: soort, titel: titel, days: days, partial: partial, eventIds: nieuweIds)
+            // Bericht vóór het wissen opmaken: `wisSelectie()` leegt de selectie
+            // waar de tekst uit werd opgebouwd, en dat leverde "ingepland op 0
+            // dagen: ." op.
+            let bericht = successMessage(titel: titel, dagen: days)
             wisSelectie()
             // Planner en Editor gaven wél een succes-haptic, dit scherm niet (5b).
             Haptics.success()
-            savedAlertMessage = successMessage(titel: titel, from: from, to: to)
+            savedAlertMessage = bericht
         } catch {
             saveFailedAlert = true
         }
@@ -294,10 +299,9 @@ final class AfwezigViewModel: ObservableObject {
     /// De doorgegeven titel, niet `reason.label`: bij "Anders" zei de bevestiging
     /// letterlijk "Anders ingepland op 19 aug", terwijl de afspraak de ingevulde
     /// toelichting als titel krijgt (4m).
-    private func successMessage(titel: String, from: Date, to: Date?) -> String {
-        let dagen = range
-        if dagen.count == 1 {
-            return "\(titel) ingepland op \(shortDate(from))."
+    private func successMessage(titel: String, dagen: [Date]) -> String {
+        if let enige = dagen.first, dagen.count == 1 {
+            return "\(titel) ingepland op \(shortDate(enige))."
         }
         // Losse dagen mogen, dus het aantal noemen; "van 26 t/m 30" zou suggereren
         // dat alles ertussen er ook bij hoort.

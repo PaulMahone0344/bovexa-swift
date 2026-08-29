@@ -43,6 +43,9 @@ final class VandaagViewModel: ObservableObject {
     private let now: () -> Date
     /// Laatst geladen set, om bij een mislukte fetch niet terug te vallen op leeg.
     private var lastEvents: [AgendaEvent] = []
+    /// Ongefilterd, dus mét de toewijzingen die nog op je akkoord wachten. De
+    /// agenda toont die niet (onlyAccepted), maar de badge moet ze wél tellen.
+    private var lastAllEvents: [AgendaEvent] = []
 
     init(
         repository: EventRepository = EventRepository(), memberColors: MemberColors = MemberColors(),
@@ -116,14 +119,18 @@ final class VandaagViewModel: ObservableObject {
         await teamTasksResult
 
         let events: [AgendaEvent]
+        let alleEvents: [AgendaEvent]
         if let fetched = await eventsResult {
             let zichtbaar = fetched.onlyAccepted(for: userId)
             events = zichtbaar
+            alleEvents = fetched
             lastEvents = zichtbaar
+            lastAllEvents = fetched
             loadFailed = false
         } else {
             // Vorige set laten staan in plaats van een lege dag tonen.
             events = lastEvents
+            alleEvents = lastAllEvents
             loadFailed = true
         }
         if let members = await membersResult {
@@ -147,7 +154,9 @@ final class VandaagViewModel: ObservableObject {
         // weekstaafjes. Die cijfers gaan over hoe vol je dag is, en een vergadering
         // uit een andere agenda vult die net zo goed — anders zie je drie dingen
         // staan terwijl de teller er twee meldt.
-        pendingAssignmentCount = AssignmentHelpers.pendingCount(events, userId: userId, now: now())
+        // Op de ongefilterde set: `onlyAccepted` haalt juist de verzoeken weg die
+        // nog op je akkoord wachten, en dan telde de badge altijd nul.
+        pendingAssignmentCount = AssignmentHelpers.pendingCount(alleEvents, userId: userId, now: now())
         appointmentCount = VandaagStats.timedCount(today)
         plannedHoursText = VandaagStats.formatHours(VandaagStats.plannedHours(today))
         weekBusyCounts = VandaagStats.weekBusyCounts(combined, referenceDate: now())
