@@ -13,7 +13,7 @@ struct AppointmentCreatePayloadTests {
                 owner: "u1", org: "org1", title: "Kapper", category: .work, calendar: "work",
                 location: "", recurrence: "", klantNaam: "", klantTelefoon: "",
                 start: start, end: start.addingTimeInterval(1800), visibility: "private",
-                viewers: [], assignee: [], rawInput: "", reminderMin: 0, assigneeStatus: [:],
+                viewers: [], assignee: [], rawInput: "", reminders: [], assigneeStatus: [:],
                 source: source
             )
         }
@@ -21,7 +21,7 @@ struct AppointmentCreatePayloadTests {
             owner: "u1", org: "org1", title: "Kapper", category: .work, calendar: "work",
             location: "", recurrence: "", klantNaam: "", klantTelefoon: "",
             start: start, end: start.addingTimeInterval(1800), visibility: "private",
-            viewers: [], assignee: [], rawInput: "raw", reminderMin: 0, assigneeStatus: [:]
+            viewers: [], assignee: [], rawInput: "raw", reminders: [], assigneeStatus: [:]
         )
     }
 

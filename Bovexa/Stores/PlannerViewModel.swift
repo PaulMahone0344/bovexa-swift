@@ -273,7 +273,7 @@ final class PlannerViewModel: ObservableObject {
             for appointment in appointments.dropFirst(createdCount) {
                 let payload = AppointmentPayloadBuilder.build(
                     appointment: appointment, ownerId: userId, rawInput: rawInput.isEmpty ? appointment.title : rawInput,
-                    org: org, visibility: visibility, viewers: viewers, assignees: effectiveAssignees, reminderMin: reminderMin,
+                    org: org, visibility: visibility, viewers: viewers, assignees: effectiveAssignees, reminders: reminderMinuten,
                     label: org != nil ? label : nil, contact: contactId,
                     contactNaam: contactNaam, contactTelefoon: contactTelefoon
                 )

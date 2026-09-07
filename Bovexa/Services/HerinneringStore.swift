@@ -1,11 +1,16 @@
 import Foundation
 
-/// Onthoudt welke herinneringen bij een afspraak horen zolang de server maar één
-/// getal bewaart (`reminder_min`, zie MEERDERE-BEDRIJVEN-SERVER.txt). De eerste
-/// tijd gaat gewoon naar de server; de tijden daarnaast staan hier, zodat de app
-/// ze na een herstart nog kan plannen en bij het verwijderen van een afspraak ook
-/// weer kan afzeggen. Zodra het serverveld een lijst wordt, wint dat veld en mag
-/// dit weg.
+/// Onthoudt welke lokale meldingen er voor een afspraak op dit toestel staan.
+///
+/// Sinds het json-veld `reminders` op agenda_events bestaat (7 sep 2026) is dit
+/// NIET meer de bewaarplaats van de gekozen tijden — die komen van de server, zie
+/// `AgendaEvent.reminders`. Wat overblijft is de annuleer-index: `UNUserNotification`
+/// laat zich alleen per identifier afzeggen, en die identifiers bevatten het aantal
+/// minuten. Zonder deze lijst weet `ReminderService.cancel` niet welke extra
+/// meldingen het ooit heeft ingepland en blijven ze afgaan voor een verwijderde
+/// afspraak. Daarom blijft de store staan in plaats van dat hij weggaat: hem
+/// schrappen kost méér code (een tweede weg om identifiers terug te vinden), niet
+/// minder.
 ///
 /// Bewust geen `@MainActor`: `ReminderService` is een gewone service die ook
 /// buiten de hoofdthread gebruikt wordt.
@@ -58,10 +63,10 @@ final class HerinneringStore: @unchecked Sendable {
         defaults.removeObject(forKey: Self.key)
     }
 
-    /// Dubbele tijden en nullen eruit, klein naar groot: zo plant de app nooit
-    /// twee keer dezelfde melding en is de eerste tijd altijd de dichtstbijzijnde.
+    /// Doorgeefluik naar `ReminderOption.opschonen`, zodat bestaande aanroepers
+    /// (ReminderService, ReminderChipsView) niet hoeven te weten waar de regel woont.
     static func opschonen(_ minuten: [Int]) -> [Int] {
-        Array(Set(minuten.filter { $0 > 0 })).sorted()
+        ReminderOption.opschonen(minuten)
     }
 
     private func laad() -> [String: [Int]] {

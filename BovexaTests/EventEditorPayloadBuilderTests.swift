@@ -24,7 +24,7 @@ struct EventEditorPayloadBuilderTests {
         let payload = EventEditorPayloadBuilder.build(
             title: "  Klant Jansen  ", category: .work, start: date(9), end: date(10),
             notes: "  memo  ", klantNaam: "  Jansen  ", klantTelefoon: "  0612345678  ",
-            reminderMin: 15, assignee: [], originalEvent: originalEvent()
+            reminders: [15], assignee: [], originalEvent: originalEvent()
         )
         #expect(payload.title == "Klant Jansen")
         #expect(payload.notes == "memo")
@@ -37,7 +37,7 @@ struct EventEditorPayloadBuilderTests {
     @Test func viewersUnionAddsNewAssigneesToExistingViewers() {
         let payload = EventEditorPayloadBuilder.build(
             title: "T", category: .work, start: date(9), end: date(10), notes: "", klantNaam: "", klantTelefoon: "",
-            reminderMin: 0, assignee: ["u2"], originalEvent: originalEvent(viewers: ["u1"])
+            reminders: [], assignee: ["u2"], originalEvent: originalEvent(viewers: ["u1"])
         )
         #expect(payload.viewers == ["u1", "u2"])
     }
@@ -45,7 +45,7 @@ struct EventEditorPayloadBuilderTests {
     @Test func statusMapKeepsOwnerAcceptedAndPreservesExistingAnswers() {
         let payload = EventEditorPayloadBuilder.build(
             title: "T", category: .work, start: date(9), end: date(10), notes: "", klantNaam: "", klantTelefoon: "",
-            reminderMin: 0, assignee: ["owner", "u2", "u3"],
+            reminders: [], assignee: ["owner", "u2", "u3"],
             originalEvent: originalEvent(owner: "owner", assigneeStatus: ["u2": "declined"])
         )
         #expect(payload.assigneeStatus == ["owner": "accepted", "u2": "declined", "u3": "pending"])
@@ -54,7 +54,7 @@ struct EventEditorPayloadBuilderTests {
     @Test func withoutLabelOmitsFieldFromRequestBody() {
         let payload = EventEditorPayloadBuilder.build(
             title: "T", category: .work, start: date(9), end: date(10), notes: "", klantNaam: "", klantTelefoon: "",
-            reminderMin: 0, assignee: [], originalEvent: originalEvent()
+            reminders: [], assignee: [], originalEvent: originalEvent()
         )
         #expect(payload.requestBody["label"] == nil)
     }
@@ -62,7 +62,7 @@ struct EventEditorPayloadBuilderTests {
     @Test func chosenLabelIsIncludedInRequestBody() {
         let payload = EventEditorPayloadBuilder.build(
             title: "T", category: .work, start: date(9), end: date(10), notes: "", klantNaam: "", klantTelefoon: "",
-            reminderMin: 0, assignee: [], originalEvent: originalEvent(), label: "l1"
+            reminders: [], assignee: [], originalEvent: originalEvent(), label: "l1"
         )
         #expect(payload.requestBody["label"] as? String == "l1")
     }
@@ -70,7 +70,7 @@ struct EventEditorPayloadBuilderTests {
     @Test func removedAssigneeDropsOutOfStatusMap() {
         let payload = EventEditorPayloadBuilder.build(
             title: "T", category: .work, start: date(9), end: date(10), notes: "", klantNaam: "", klantTelefoon: "",
-            reminderMin: 0, assignee: ["owner"],
+            reminders: [], assignee: ["owner"],
             originalEvent: originalEvent(owner: "owner", assigneeStatus: ["owner": "accepted", "u2": "pending"])
         )
         #expect(payload.assigneeStatus == ["owner": "accepted"])

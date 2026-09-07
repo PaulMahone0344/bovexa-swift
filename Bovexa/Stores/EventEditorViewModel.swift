@@ -22,13 +22,13 @@ final class EventEditorViewModel: ObservableObject {
     @Published var notes: String
     @Published var klantNaam: String
     @Published var klantTelefoon: String
-    /// Alle gekozen herinneringen, gesorteerd. Meerdere tegelijk mag; de server
-    /// bewaart alleen de eerste (`reminder_min`), de rest staat in
-    /// HerinneringStore tot het serverveld een lijst wordt.
+    /// Alle gekozen herinneringen, gesorteerd. De hele lijst gaat als `reminders`
+    /// naar de server; `reminder_min` krijgt de kleinste waarde erbij, voor de
+    /// RN-app die alleen dat veld leest.
     @Published var reminderMinuten: [Int]
 
-    /// De tijd die naar de server gaat: de dichtstbijzijnde. Blijft schrijfbaar
-    /// zodat één losse tijd zetten net zo werkt als voorheen.
+    /// De dichtstbijzijnde tijd. Blijft schrijfbaar zodat één losse tijd zetten
+    /// net zo werkt als voorheen.
     var reminderMin: Int {
         get { reminderMinuten.first ?? 0 }
         set { reminderMinuten = newValue > 0 ? [newValue] : [] }
@@ -120,9 +120,9 @@ final class EventEditorViewModel: ObservableObject {
             notes = event.notes ?? ""
             klantNaam = event.klantNaam ?? ""
             klantTelefoon = event.klantTelefoon ?? ""
-            reminderMinuten = HerinneringStore.shared.minuten(voor: event.id).isEmpty
-                ? [event.reminderMin ?? 0].filter { $0 > 0 }
-                : HerinneringStore.shared.minuten(voor: event.id)
+            // De server is de bron: `reminders` valt zelf al terug op reminder_min
+            // voor afspraken van vóór dat veld.
+            reminderMinuten = event.reminders
             assignee = event.assignee
             label = event.label
             contactIds = event.contact.map { [$0] } ?? []
@@ -244,7 +244,7 @@ final class EventEditorViewModel: ObservableObject {
     private func update(event: AgendaEvent, end: Date) async -> AgendaEvent? {
         let payload = EventEditorPayloadBuilder.build(
             title: title, category: category, start: start, end: end, notes: notes,
-            klantNaam: klantNaam, klantTelefoon: klantTelefoon, reminderMin: reminderMin,
+            klantNaam: klantNaam, klantTelefoon: klantTelefoon, reminders: reminderMinuten,
             assignee: assignee, originalEvent: event, label: label, contact: contactId,
             // Zonder bedrijf staan de knoppen er niet, en dan het veld ook niet
             // aanraken: alles is dan toch privé.
@@ -275,7 +275,7 @@ final class EventEditorViewModel: ObservableObject {
             org: hasOrg ? org : nil,
             visibility: visibility,
             assignees: assignee,
-            reminderMin: reminderMin,
+            reminders: reminderMinuten,
             label: hasOrg ? label : nil,
             contact: contactId,
             klantNaam: klantNaam.trimmingCharacters(in: .whitespacesAndNewlines),

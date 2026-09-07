@@ -12,7 +12,10 @@ struct EventUpdatePayload {
     let notes: String
     let klantNaam: String
     let klantTelefoon: String
-    let reminderMin: Int
+    /// Alle gekozen herinneringen. `reminder_min` blijft daarnaast bestaan als de
+    /// kleinste waarde uit deze lijst, want de RN-app leest alleen dat ene veld.
+    let reminders: [Int]
+    var reminderMin: Int { reminders.first ?? 0 }
     let assignee: [String]
     let viewers: [String]
     let assigneeStatus: [String: String]
@@ -29,7 +32,7 @@ struct EventUpdatePayload {
 
     init(
         title: String, category: BovexaTheme.Category?, start: Date, end: Date, notes: String,
-        klantNaam: String, klantTelefoon: String, reminderMin: Int, assignee: [String],
+        klantNaam: String, klantTelefoon: String, reminders: [Int], assignee: [String],
         viewers: [String], assigneeStatus: [String: String], label: String? = nil, contact: String? = nil,
         visibility: String? = nil
     ) {
@@ -40,7 +43,7 @@ struct EventUpdatePayload {
         self.notes = notes
         self.klantNaam = klantNaam
         self.klantTelefoon = klantTelefoon
-        self.reminderMin = reminderMin
+        self.reminders = ReminderOption.opschonen(reminders)
         self.assignee = assignee
         self.viewers = viewers
         self.assigneeStatus = assigneeStatus
@@ -57,6 +60,7 @@ struct EventUpdatePayload {
             "end": PBDate.format(end),
             "notes": notes,
             "reminder_min": reminderMin,
+            "reminders": reminders,
             "assignee": assignee,
             "viewers": viewers,
             "assignee_status": assigneeStatus,

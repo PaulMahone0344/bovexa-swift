@@ -5,7 +5,7 @@ import Foundation
 enum EventEditorPayloadBuilder {
     static func build(
         title: String, category: BovexaTheme.Category?, start: Date, end: Date, notes: String,
-        klantNaam: String, klantTelefoon: String, reminderMin: Int, assignee: [String],
+        klantNaam: String, klantTelefoon: String, reminders: [Int], assignee: [String],
         originalEvent: AgendaEvent, label: String? = nil, contact: String? = nil,
         visibility: String? = nil
     ) -> EventUpdatePayload {
@@ -17,7 +17,7 @@ enum EventEditorPayloadBuilder {
             notes: notes.trimmingCharacters(in: .whitespacesAndNewlines),
             klantNaam: klantNaam.trimmingCharacters(in: .whitespacesAndNewlines),
             klantTelefoon: klantTelefoon.trimmingCharacters(in: .whitespacesAndNewlines),
-            reminderMin: reminderMin,
+            reminders: reminders,
             assignee: assignee,
             viewers: EventViewers.union(originalEvent.viewers, assignees: assignee),
             assigneeStatus: AssignmentHelpers.nextStatusMap(assignees: assignee, ownerId: originalEvent.owner, previous: originalEvent.assigneeStatus),

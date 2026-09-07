@@ -29,6 +29,11 @@ struct AgendaEvent: Decodable, Identifiable {
     let viewers: [String]
     let assignee: [String]
     let reminderMin: Int?
+    /// Alle gekozen herinneringen in minuten vooraf (json-veld `reminders`, sinds
+    /// 7 sep 2026). Ontbreekt het veld of is het leeg — oude afspraken, of de
+    /// RN-app die alleen `reminder_min` schrijft — dan staat hier alsnog die ene
+    /// tijd, zodat de rest van de app maar één lijst hoeft te kennen.
+    let reminders: [Int]
     let klantTelefoon: String?
     /// Label-id (m7, agenda_labels). Ontbreekt of verwijst niet meer naar een
     /// bestaand label: EventHelpers.eventColor valt dan netjes terug (valkuil H).
@@ -53,7 +58,8 @@ struct AgendaEvent: Decodable, Identifiable {
         assigneeStatus: [String: String], seriesId: String?, occurrenceDate: String?,
         created: Date? = nil,
         org: String? = nil, visibilityRaw: String? = nil, viewers: [String] = [],
-        assignee: [String] = [], reminderMin: Int? = nil, klantTelefoon: String? = nil,
+        assignee: [String] = [], reminderMin: Int? = nil, reminders: [Int]? = nil,
+        klantTelefoon: String? = nil,
         label: String? = nil, contact: String? = nil, expand: Expand? = nil,
         isExternal: Bool = false
     ) {
@@ -78,6 +84,9 @@ struct AgendaEvent: Decodable, Identifiable {
         self.viewers = viewers
         self.assignee = assignee
         self.reminderMin = reminderMin
+        // nil ⇒ afleiden uit reminder_min: één ingang, dus geen enkele kopie hoeft
+        // de terugval zelf nog te herhalen.
+        self.reminders = reminders ?? ReminderOption.opschonen([reminderMin ?? 0])
         self.klantTelefoon = klantTelefoon
         self.label = label
         self.contact = contact
@@ -94,7 +103,8 @@ struct AgendaEvent: Decodable, Identifiable {
             notes: notes, klantNaam: klantNaam, assigneeStatus: assigneeStatus,
             seriesId: seriesId, occurrenceDate: occurrenceDate, created: created,
             org: org, visibilityRaw: visibilityRaw, viewers: viewers,
-            assignee: assignee, reminderMin: reminderMin, klantTelefoon: klantTelefoon, label: label,
+            assignee: assignee, reminderMin: reminderMin, reminders: reminders,
+            klantTelefoon: klantTelefoon, label: label,
             contact: contact, expand: expand, isExternal: isExternal
         )
     }
@@ -108,7 +118,8 @@ struct AgendaEvent: Decodable, Identifiable {
             notes: notes, klantNaam: klantNaam, assigneeStatus: assigneeStatus,
             seriesId: seriesId, occurrenceDate: occurrenceDate, created: created,
             org: org, visibilityRaw: visibilityRaw, viewers: viewers,
-            assignee: assignee, reminderMin: reminderMin, klantTelefoon: klantTelefoon, label: label,
+            assignee: assignee, reminderMin: reminderMin, reminders: reminders,
+            klantTelefoon: klantTelefoon, label: label,
             contact: contact, expand: expand, isExternal: isExternal
         )
     }
@@ -122,7 +133,8 @@ struct AgendaEvent: Decodable, Identifiable {
             notes: notes, klantNaam: klantNaam, assigneeStatus: assigneeStatus,
             seriesId: seriesId, occurrenceDate: occurrenceDate, created: created,
             org: org, visibilityRaw: visibilityRaw, viewers: viewers,
-            assignee: assignee, reminderMin: reminderMin, klantTelefoon: klantTelefoon, label: label,
+            assignee: assignee, reminderMin: reminderMin, reminders: reminders,
+            klantTelefoon: klantTelefoon, label: label,
             contact: contact, expand: expand, isExternal: isExternal
         )
     }
@@ -136,7 +148,8 @@ struct AgendaEvent: Decodable, Identifiable {
             notes: notes, klantNaam: klantNaam, assigneeStatus: assigneeStatus,
             seriesId: seriesId, occurrenceDate: occurrenceDate, created: created,
             org: org, visibilityRaw: visibilityRaw, viewers: viewers,
-            assignee: assignee, reminderMin: reminderMin, klantTelefoon: klantTelefoon, label: label,
+            assignee: assignee, reminderMin: reminderMin, reminders: reminders,
+            klantTelefoon: klantTelefoon, label: label,
             contact: contact, expand: expand, isExternal: isExternal
         )
     }
@@ -151,7 +164,8 @@ struct AgendaEvent: Decodable, Identifiable {
             notes: notes, klantNaam: klantNaam, assigneeStatus: assigneeStatus,
             seriesId: seriesId, occurrenceDate: occurrenceDate, created: created,
             org: org, visibilityRaw: visibilityRaw, viewers: viewers,
-            assignee: assignee, reminderMin: reminderMin, klantTelefoon: klantTelefoon, label: label,
+            assignee: assignee, reminderMin: reminderMin, reminders: reminders,
+            klantTelefoon: klantTelefoon, label: label,
             contact: contact, expand: nil, isExternal: isExternal
         )
     }
@@ -168,6 +182,7 @@ struct AgendaEvent: Decodable, Identifiable {
         case visibilityRaw = "visibility"
         case viewers, assignee
         case reminderMin = "reminder_min"
+        case reminders
         case klantTelefoon = "klant_telefoon"
         case label, contact, expand
         case created
@@ -198,7 +213,12 @@ struct AgendaEvent: Decodable, Identifiable {
         visibilityRaw = Self.decodeOptional(c, .visibilityRaw)
         viewers = Self.decodeOptional(c, .viewers) ?? []
         assignee = Self.decodeAssigneeIds(c)
-        reminderMin = Self.decodeOptional(c, .reminderMin)
+        let reminderMinRaw: Int? = Self.decodeOptional(c, .reminderMin)
+        reminderMin = reminderMinRaw
+        // Het json-veld mag ontbreken, null zijn of (bij een record dat de RN-app
+        // schreef) leeg blijven; dan telt reminder_min nog steeds.
+        let lijst = ReminderOption.opschonen(Self.decodeOptional(c, .reminders) ?? [])
+        reminders = lijst.isEmpty ? ReminderOption.opschonen([reminderMinRaw ?? 0]) : lijst
         klantTelefoon = Self.decodeOptional(c, .klantTelefoon)
         label = Self.decodeOptional(c, .label)
         contact = Self.decodeOptional(c, .contact)
