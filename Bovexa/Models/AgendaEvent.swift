@@ -45,6 +45,14 @@ struct AgendaEvent: Decodable, Identifiable {
     /// 7 sep 2026). De eerste is dezelfde als `contact`: dát is de klant van de
     /// afspraak, de rest zijn medegenodigden. Leeg bij afspraken van vóór dit veld.
     let contacten: [String]
+    /// Het antwoord van de beheerder op een doorgegeven afwezigheid (tekstveld
+    /// `reactie`, sinds 7 sep 2026). Staat los van `notes`: dat blijft van de
+    /// medewerker die de afwezigheid doorgaf. Ontbreekt bij oudere records.
+    let reactie: String?
+    /// Stand van de goedkeuring: "open" / "akkoord" / "geweigerd" (select
+    /// `goedkeuring`, optioneel). Ontbreekt bij alles wat niet langs een beheerder
+    /// hoeft; `AanvraagStatus.stand` leest daarom nog steeds assignee_status.
+    let goedkeuring: String?
     let expand: Expand?
     /// Extern event (m9, valkuil B) — komt nooit uit PocketBase, alleen uit een externe
     /// agenda via EventKit. Blokkeert bewerken/verwijderen/toewijzen/zichtbaarheid/
@@ -90,7 +98,7 @@ struct AgendaEvent: Decodable, Identifiable {
         assignee: [String] = [], reminderMin: Int? = nil, reminders: [Int]? = nil,
         klantTelefoon: String? = nil,
         label: String? = nil, contact: String? = nil, contacten: [String]? = nil,
-        expand: Expand? = nil,
+        reactie: String? = nil, goedkeuring: String? = nil, expand: Expand? = nil,
         isExternal: Bool = false
     ) {
         self.id = id
@@ -123,6 +131,8 @@ struct AgendaEvent: Decodable, Identifiable {
         // nil ⇒ afleiden uit `contact`, zodat elke kopie en elke oude afspraak
         // dezelfde lijst kent zonder dat de terugval overal herhaald wordt.
         self.contacten = contacten ?? [contact].compactMap { $0 }.filter { !$0.isEmpty }
+        self.reactie = reactie
+        self.goedkeuring = goedkeuring
         self.expand = expand
         self.isExternal = isExternal
     }
@@ -138,7 +148,8 @@ struct AgendaEvent: Decodable, Identifiable {
             org: org, visibilityRaw: visibilityRaw, viewers: viewers,
             assignee: assignee, reminderMin: reminderMin, reminders: reminders,
             klantTelefoon: klantTelefoon, label: label,
-            contact: contact, contacten: contacten, expand: expand, isExternal: isExternal
+            contact: contact, contacten: contacten, reactie: reactie, goedkeuring: goedkeuring,
+            expand: expand, isExternal: isExternal
         )
     }
 
@@ -153,7 +164,8 @@ struct AgendaEvent: Decodable, Identifiable {
             org: org, visibilityRaw: visibilityRaw, viewers: viewers,
             assignee: assignee, reminderMin: reminderMin, reminders: reminders,
             klantTelefoon: klantTelefoon, label: label,
-            contact: contact, contacten: contacten, expand: expand, isExternal: isExternal
+            contact: contact, contacten: contacten, reactie: reactie, goedkeuring: goedkeuring,
+            expand: expand, isExternal: isExternal
         )
     }
 
@@ -168,7 +180,8 @@ struct AgendaEvent: Decodable, Identifiable {
             org: org, visibilityRaw: visibilityRaw, viewers: viewers,
             assignee: assignee, reminderMin: reminderMin, reminders: reminders,
             klantTelefoon: klantTelefoon, label: label,
-            contact: contact, contacten: contacten, expand: expand, isExternal: isExternal
+            contact: contact, contacten: contacten, reactie: reactie, goedkeuring: goedkeuring,
+            expand: expand, isExternal: isExternal
         )
     }
 
@@ -183,7 +196,8 @@ struct AgendaEvent: Decodable, Identifiable {
             org: org, visibilityRaw: visibilityRaw, viewers: viewers,
             assignee: assignee, reminderMin: reminderMin, reminders: reminders,
             klantTelefoon: klantTelefoon, label: label,
-            contact: contact, contacten: contacten, expand: expand, isExternal: isExternal
+            contact: contact, contacten: contacten, reactie: reactie, goedkeuring: goedkeuring,
+            expand: expand, isExternal: isExternal
         )
     }
 
@@ -203,7 +217,8 @@ struct AgendaEvent: Decodable, Identifiable {
             org: org, visibilityRaw: visibilityRaw, viewers: viewers,
             assignee: assignee, reminderMin: reminderMin, reminders: reminders,
             klantTelefoon: klantTelefoon, label: label,
-            contact: contact, contacten: contacten, expand: nil, isExternal: isExternal
+            contact: contact, contacten: contacten, reactie: reactie, goedkeuring: goedkeuring,
+            expand: nil, isExternal: isExternal
         )
     }
 
@@ -221,7 +236,7 @@ struct AgendaEvent: Decodable, Identifiable {
         case reminderMin = "reminder_min"
         case reminders
         case klantTelefoon = "klant_telefoon"
-        case label, contact, contacten, expand
+        case label, contact, contacten, reactie, goedkeuring, expand
         case created
     }
 
@@ -269,6 +284,8 @@ struct AgendaEvent: Decodable, Identifiable {
         } else {
             contacten = [contactRaw].compactMap { $0 }.filter { !$0.isEmpty }
         }
+        reactie = Self.decodeOptional(c, .reactie)
+        goedkeuring = Self.decodeOptional(c, .goedkeuring)
         expand = Self.decodeOptional(c, .expand)
         isExternal = false
     }

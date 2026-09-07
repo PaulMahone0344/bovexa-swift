@@ -72,7 +72,11 @@ final class EventRepository {
     /// Valkuil B + A: schrijft alleen JOUW sleutel in de assignee_status-map, en altijd
     /// naar het echte record-id (series-id bij een uitgeklapte herhaling).
     /// `notitie` gaat mee als de beheerder er iets bij schrijft ("kan niet, we zijn
-    /// die week met te weinig"). Leeg laten raakt het notitieveld niet aan.
+    /// die week met te weinig"). Die tekst hoort in `reactie` en niet in `notes`:
+    /// notes is van de medewerker die de afwezigheid doorgaf, en die reden mag zijn
+    /// antwoord niet overschrijven (punt 19). Leeg laten raakt het veld niet aan.
+    /// `goedkeuring` gaat er meteen bij, zodat een scherm de stand kan lezen zonder
+    /// eerst de hele assignee_status-map na te lopen (punt 18).
     func respondToAssignment(
         event: AgendaEvent, userId: String, status: String, token: String, notitie: String = ""
     ) async throws -> AgendaEvent {
@@ -81,7 +85,8 @@ final class EventRepository {
         let recordId = EventHelpers.eventRecordId(event)
         var body: [String: Any] = ["assignee_status": nextStatus]
         let schoon = notitie.trimmingCharacters(in: .whitespacesAndNewlines)
-        if !schoon.isEmpty { body["notes"] = schoon }
+        if !schoon.isEmpty { body["reactie"] = schoon }
+        if let stand = AanvraagStatus.goedkeuring(voor: status) { body["goedkeuring"] = stand }
         return try await client.updateRecord(AgendaEvent.self, collection: Self.collection, id: recordId, body: body, token: token)
     }
 }

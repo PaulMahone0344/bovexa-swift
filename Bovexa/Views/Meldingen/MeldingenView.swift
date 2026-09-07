@@ -341,10 +341,11 @@ struct MeldingenView: View {
                     .font(BovexaTheme.TypeStyle.footnote)
                     .foregroundStyle(BovexaTheme.Colors.inkSoft)
 
-                // De beheerder kan er een reden bij zetten; die staat in het
-                // notitieveld van de afspraak.
-                if let notitie = event.notes, !notitie.isEmpty {
-                    Text(notitie)
+                // De beheerder kan er een reden bij zetten; die staat sinds punt 19
+                // in `reactie`. `notes` blijft jouw eigen opmerking bij de aanvraag
+                // en hoort hier dus niet als antwoord getoond te worden.
+                if let reactie = event.reactie, !reactie.isEmpty {
+                    Text("Reactie beheerder: \(reactie)")
                         .font(BovexaTheme.TypeStyle.footnote)
                         .foregroundStyle(BovexaTheme.Colors.muted)
                         .padding(.top, 2)

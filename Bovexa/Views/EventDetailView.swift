@@ -173,6 +173,15 @@ struct EventDetailView: View {
                         .font(BovexaTheme.TypeStyle.body)
                         .foregroundStyle(BovexaTheme.Colors.inkSoft)
                 }
+
+                // Het antwoord van de beheerder op een doorgegeven afwezigheid
+                // (punt 19). Eigen regel, want het is niet van dezelfde persoon
+                // als de notitie erboven.
+                if let reactie = event.reactie, !reactie.isEmpty {
+                    Text("Reactie beheerder: \(reactie)")
+                        .font(BovexaTheme.TypeStyle.footnote)
+                        .foregroundStyle(BovexaTheme.Colors.muted)
+                }
             }
         }
     }
