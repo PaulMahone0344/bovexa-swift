@@ -7,6 +7,10 @@ struct DayView: View {
     @ObservedObject var viewModel: AgendaViewModel
     let currentUserId: String
     var onPlanAtHour: (Int, Date) -> Void = { _, _ in }
+    /// Tik op de zwevende plan-knop. De knop staat hier in de stack-wortel (en
+    /// niet om de stack heen in AgendaView), zodat een gepusht afspraak-detail
+    /// hem meeneemt in plaats van erover te zweven.
+    var onNieuweAfspraak: () -> Void = {}
 
     private var currentUserOrgId: String? {
         if case .loggedIn(let user) = authStore.phase { return user.defaultOrg }
@@ -50,6 +54,9 @@ struct DayView: View {
                     .scrollTargetBehavior(.paging)
                     .scrollPosition(id: $scrollDay)
                 }
+            }
+            .safeAreaInset(edge: .bottom) {
+                NieuweAfspraakKnop(onTap: onNieuweAfspraak)
             }
             .navigationDestination(item: $selectedEvent) { event in
                 EventDetailView(

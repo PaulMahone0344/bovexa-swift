@@ -119,6 +119,10 @@ struct LedenLijstView: View {
                     Text("Uitgenodigd")
                         .font(BovexaTheme.TypeStyle.caption)
                         .foregroundStyle(BovexaTheme.Colors.muted)
+                } else if member.isOwner {
+                    Text("Eigenaar")
+                        .font(BovexaTheme.TypeStyle.caption)
+                        .foregroundStyle(BovexaTheme.Colors.muted)
                 }
             }
 
@@ -242,7 +246,9 @@ struct LedenLijstView: View {
 
     private func nameLabel(for member: CompanyMember) -> String {
         let base = viewModel.memberColors.firstName(for: member.userId) ?? member.displayName
-        return member.isOwner ? "\(base) · eigenaar" : base
+        // "· eigenaar" achter de naam werd afgekapt ("Oubayd · eigen…"); staat
+        // nu als eigen regel eronder, zoals "Uitgenodigd".
+        return base
     }
 
     private func avatar(for member: CompanyMember) -> some View {

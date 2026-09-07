@@ -112,60 +112,63 @@ struct VandaagView: View {
         }
     }
 
-    /// Kop zoals de mockup: logo rechtsboven, daaronder de grote titel met de
-    /// datum er strak onder, en rechts de zon achter de berg. Vervangt de grote
-    /// iOS-titel — die stond altijd links bovenin en duwde het logo weg.
+    /// Kop in twee rijen. Bovenin een smalle merkstrip: het bedrijfslogo links,
+    /// je eigen foto rechts. Daaronder de grote titel met de datum, en rechts
+    /// daarvan de zon achter de berg. Eerder stonden logo én foto samen in de
+    /// rechterhoek, boven elkaar, en zat de foto óp de tekening — drie dingen
+    /// die om dezelfde hoek vochten. Nu heeft elk element zijn eigen plek.
     private var header: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            HStack {
-                Spacer()
+        VStack(alignment: .leading, spacing: BovexaTheme.Space.sm) {
+            HStack(alignment: .center) {
                 // Het bedrijfslogo is een upload van het bedrijf zelf. Een kader
                 // eromheen laat het als advertentie lezen; het blijft dus een vrij
-                // staand merkteken, alleen groter dan voorheen.
+                // staand merkteken, links uitgelijnd met de titel eronder.
                 if let logoURL = viewModel.orgLogoURL {
                     RemoteLogoView(url: logoURL)
-                        // Kleiner dan 118×24: daar hield het logo de titel eronder in
-                        // evenwicht in plaats van eronder te blijven.
-                        .frame(maxWidth: 96, maxHeight: 20)
+                        .frame(maxWidth: 110, maxHeight: 22, alignment: .leading)
                 }
-            }
 
-            ZStack(alignment: .topTrailing) {
-                // Links van en iets onder de avatar: op de oude plek (trailing,
-                // y 8) verdween de zon volledig achter de profielfoto.
-                VandaagHeaderArt()
-                    .frame(maxWidth: .infinity, alignment: .trailing)
-                    .offset(x: -60, y: 26)
+                Spacer(minLength: BovexaTheme.Space.md)
 
                 // Je eigen foto rechtsboven, zoals in de meeste apps: één tik naar
                 // je profiel, en meteen te zien met welk account je binnen bent.
+                // Witte ring plus zachte schaduw tillen de foto van de ondergrond;
+                // zonder ring liep een lichte foto in de lucht over.
                 Button {
                     Haptics.selection()
                     router.open(.profiel)
                 } label: {
-                    AvatarView(initial: profielInitiaal, url: profielFoto, size: 76)
+                    AvatarView(initial: profielInitiaal, url: profielFoto, size: 44)
+                        .overlay(Circle().stroke(BovexaTheme.Colors.white, lineWidth: 2.5))
+                        .shadow(color: BovexaTheme.Colors.ink.opacity(0.14), radius: 6, y: 3)
+                        .minTapTarget()
                 }
                 .buttonStyle(.plain)
                 .accessibilityLabel("Profiel")
-
-                VStack(alignment: .leading, spacing: 2) {
-                    Text("Vandaag")
-                        .font(.system(size: 44, weight: .bold, design: .rounded))
-                        .foregroundStyle(BovexaTheme.Colors.ink)
-
-                    // `muted` staat hier direct op de ondergrond, niet op glas:
-                    // daar is die ondergrond te verzadigd voor. `inkSoft` houdt
-                    // het rustig én leesbaar.
-                    Text(todayLine)
-                        .font(BovexaTheme.TypeStyle.subheadline)
-                        .foregroundStyle(BovexaTheme.Colors.inkSoft)
-                }
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .padding(.top, 6)
             }
-            // Hoog genoeg voor foto én de lager gezette tekening: zonder dit
-            // legden die zich over de kaart "Volgende afspraak" heen.
-            .frame(minHeight: 96, alignment: .top)
+
+            VStack(alignment: .leading, spacing: 2) {
+                Text("Vandaag")
+                    .font(.system(size: 44, weight: .bold, design: .rounded))
+                    .foregroundStyle(BovexaTheme.Colors.ink)
+                    .lineLimit(1)
+                    .fixedSize()
+
+                // `muted` staat hier direct op de ondergrond, niet op glas:
+                // daar is die ondergrond te verzadigd voor. `inkSoft` houdt
+                // het rustig én leesbaar.
+                Text(todayLine)
+                    .font(BovexaTheme.TypeStyle.subheadline)
+                    .foregroundStyle(BovexaTheme.Colors.inkSoft)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            // Tekening als overlay, niet als rijgenoot: in een HStack pakte ze
+            // vaste breedte en brak "Vandaag" af. Voet van de heuvel op de
+            // onderkant van de datumregel.
+            .overlay(alignment: .bottomTrailing) {
+                VandaagHeaderArt()
+                    .offset(y: 6)
+            }
         }
         .padding(.horizontal, 2)
         .accessibilityElement(children: .combine)

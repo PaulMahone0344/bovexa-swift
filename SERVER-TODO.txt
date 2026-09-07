@@ -143,3 +143,36 @@ VOLGORDE DIE HET MEESTE OPLEVERT
 4. C1 en C10, twee kleine velden die nu tot verkeerde gegevens leiden.
 5. De rest van blok C, per scherm.
 6. D1, als laatste — dat scherm staat uit en hindert verder niets.
+
+
+STAND 7 SEPTEMBER 2026 (Fable, na Ibrahims toestemming)
+--------------------------------------------------------
+Gedaan op de agenda-instantie (pocketbase@agenda, poort 9109), backup vooraf:
+pb_data/backups/pre_blokc_vrienden_20260907.zip.
+
+  A1  klaar 29 aug (seats 20).            A2  bevestigd 29 aug: alles via routes.
+  B1-B3 klaar 29 aug (company/mine, company/switch, dataschieding per org).
+  C1  veld `org` + `user` op agenda_contacten; list/view/update: eigenaar óf
+      lid van dat bedrijf; create/delete: alleen eigenaar. APP: fetchContacts
+      filtert nog op eigenaar; ContactOrgStore mag weg zodra de app op het
+      serverveld leest.
+  C2  was al goed (viewers-regel + maxSelect 999 op agenda_tasks).
+  C3  POST /api/agenda/company/request {companyName, note} → agenda_org_requests
+      (status open) + mail naar info@bovexa.nl. Afhandelen in het paneel.
+  C4  veld `contacten` (relatie, meerdere) op agenda_events; `user` op contacten;
+      leesregel liet viewers al door. APP stuurt nog alleen `contact`.
+  C5  was al goed (category niet verplicht).
+  C6  json-veld `reminders` op agenda_events. APP schrijft nog reminder_min.
+  C7  relatie `completed_by` op agenda_tasks. APP vult hem nog niet.
+  C8  raw_input staat gewoon op agenda_events; de app decodeert het veld niet.
+      Serverkant niets te doen.
+  C9  select `goedkeuring` (open/akkoord/geweigerd) op agenda_events, optioneel.
+  C10 tekstveld `reactie` op agenda_events. APP schrijft het antwoord nog in notes.
+  D1  agenda_vrienden + routes friends/list, /invite, /respond, /remove
+      (agenda_friends.pb.js + agenda_push_lib.js); mail bij uitnodiging, push bij
+      accepteren (best effort), nieuw account op uitgenodigd adres koppelt
+      automatisch. Getest met Ayman ↔ Youssef, alles opgeruimd.
+
+Bestanden lokaal: qawayhabase/pb_hooks/agenda_friends.pb.js, agenda_push_lib.js,
+agenda_company_request.pb.js; qawayhabase/scripts/agenda-blokc-schema-20260907.py;
+schema-backup in qawayhabase/scripts/backup-agenda-collections-20260907.jsonl.

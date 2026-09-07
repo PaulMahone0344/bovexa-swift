@@ -6,6 +6,9 @@ import SwiftUI
 /// iets in jouw agenda zetten.
 struct VriendenView: View {
     @StateObject private var viewModel: VriendenViewModel
+    /// Koppeling die op het punt staat opgeheven te worden: eerst bevestigen,
+    /// want daarna kan geen van beiden nog een afspraak naar de ander sturen.
+    @State private var teVerwijderen: Vriend?
     @Environment(\.dismiss) private var dismiss
 
     init(token: String) {
@@ -13,6 +16,9 @@ struct VriendenView: View {
     }
 
     var body: some View {
+        // Als sheet vanuit Mensen (sinds 7 sep): eigen stack voor titel en kruisje,
+        // zoals elke andere sheet in de app (M11, plak 6).
+        NavigationStack {
         ZStack {
             AppBackground()
 
@@ -33,10 +39,25 @@ struct VriendenView: View {
                 .padding(.bottom, BovexaTheme.Space.tabBarClearance)
             }
         }
-        .navigationTitle("Vrienden")
+        .navigationTitle("Gekoppelde accounts")
         .navigationBarTitleDisplayMode(.large)
+        .toolbar {
+            SheetCloseButton { dismiss() }
+        }
+        }
         .task { await viewModel.load() }
         .refreshable { await viewModel.load() }
+        .alert("Koppeling opheffen", isPresented: Binding(
+            get: { teVerwijderen != nil },
+            set: { if !$0 { teVerwijderen = nil } }
+        ), presenting: teVerwijderen) { vriend in
+            Button("Opheffen", role: .destructive) {
+                Task { await viewModel.verwijder(vriend) }
+            }
+            Button("Annuleren", role: .cancel) {}
+        } message: { vriend in
+            Text("Jij en \(vriend.naam) kunnen daarna geen afspraken meer naar elkaar sturen.")
+        }
         .alert("Gelukt", isPresented: Binding(
             get: { viewModel.bevestiging != nil },
             set: { if !$0 { viewModel.bevestiging = nil } }
@@ -171,10 +192,11 @@ struct VriendenView: View {
                                 Spacer(minLength: BovexaTheme.Space.sm)
                                 Button {
                                     Haptics.selection()
-                                    Task { await viewModel.verwijder(vriend) }
+                                    teVerwijderen = vriend
                                 } label: {
                                     Image(systemName: "trash")
                                         .foregroundStyle(BovexaTheme.Colors.danger)
+                                        .minTapTarget()
                                 }
                                 .buttonStyle(.plain)
                                 .accessibilityLabel("Koppeling met \(vriend.naam) opheffen")

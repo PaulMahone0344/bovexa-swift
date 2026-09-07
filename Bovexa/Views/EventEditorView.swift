@@ -23,6 +23,10 @@ struct EventEditorView: View {
     /// Welke van de drie rijen zijn kiezer open heeft — er past er maar één
     /// tegelijk op het scherm.
     @State private var toonKiezerVoor: TijdVeld?
+    /// Notitieveld staat dicht tot je erom vraagt: het grote lege vak maakte het
+    /// formulier een half scherm langer terwijl de meeste afspraken geen
+    /// notitie hebben. Met een bestaande notitie staat het meteen open.
+    @State private var notitieOpen = false
     private let labelRepository = LabelRepository()
     @StateObject private var viewModel: EventEditorViewModel
     @ObservedObject var labelStore: LabelStore
@@ -43,6 +47,9 @@ struct EventEditorView: View {
 
     init(
         event: AgendaEvent, currentUserId: String, token: String, members: [Member], labelStore: LabelStore,
+        // Bedrijfsnaam voor de zichtbaarheidsknop; zonder stond hier "Bedrijf"
+        // terwijl het detail eromheen "Bovexa.nl" zei.
+        companyName: String = "",
         onCancel: @escaping () -> Void, onSaved: @escaping (AgendaEvent) -> Void
     ) {
         _viewModel = StateObject(wrappedValue: EventEditorViewModel(event: event, token: token))
@@ -53,7 +60,7 @@ struct EventEditorView: View {
         self.currentUserId = currentUserId
         self.token = token
         self.org = event.org ?? ""
-        self.companyName = ""
+        self.companyName = companyName
     }
 
     /// Aanmaken (M12): zelfde formulier, gevuld vanuit de voorzet. `org` leeg ⇒ geen
@@ -102,25 +109,19 @@ struct EventEditorView: View {
                     // en bij een bedrijf maakt "Label geven…" op zo'n knop het label aan.
                     // viewModel.label blijft bestaan zodat een bestaand label niet wist.
 
-                    fieldLabel("Datum")
-                    StepperRow(value: EventHelpers.longDay(viewModel.start), minusLabel: "Dag eerder", plusLabel: "Dag later", onMinus: { viewModel.shiftDay(-1) }, onPlus: { viewModel.shiftDay(1) }, onTapValue: { toonKiezer(.datum) })
+                    // Datum, start en eind op één rij (7 sep): drie losse
+                    // stepper-rijen met elk een kopje maakten het formulier twee
+                    // schermen hoog. Tik op een pil opent de kiezer eronder.
+                    fieldLabel("Wanneer")
+                    wanneerRij
                     if toonKiezerVoor == .datum {
                         DatePicker("Datum", selection: datumBinding, displayedComponents: .date)
                             .datePickerStyle(.graphical)
                             .labelsHidden()
                             .tint(BovexaTheme.Colors.accent)
-                    }
-
-                    fieldLabel("Starttijd")
-                    StepperRow(value: EventHelpers.fmtTime(viewModel.start), minusLabel: "Kwartier eerder", plusLabel: "Kwartier later", onMinus: { viewModel.shiftStart(minutes: -15) }, onPlus: { viewModel.shiftStart(minutes: 15) }, onTapValue: { toonKiezer(.start) })
-                    if toonKiezerVoor == .start {
+                    } else if toonKiezerVoor == .start {
                         tijdKiezer(selection: startBinding)
-                    }
-
-                    // Eindtijd in plaats van duur: die moest je zelf uitrekenen.
-                    fieldLabel("Eindtijd")
-                    StepperRow(value: EventHelpers.fmtTime(viewModel.end), minusLabel: "Kwartier eerder", plusLabel: "Kwartier later", onMinus: { viewModel.changeDuration(by: -15) }, onPlus: { viewModel.changeDuration(by: 15) }, onTapValue: { toonKiezer(.eind) })
-                    if toonKiezerVoor == .eind {
+                    } else if toonKiezerVoor == .eind {
                         tijdKiezer(selection: eindBinding)
                     }
 
@@ -158,8 +159,9 @@ struct EventEditorView: View {
                         contactKiezer
                     }
 
-                    fieldLabel("Notitie")
-                    TextEditor(text: $viewModel.notes)
+                    if notitieOpen || !viewModel.notes.isEmpty {
+                        fieldLabel("Notitie")
+                        TextEditor(text: $viewModel.notes)
                         // Geen "Klaar"-knop boven het toetsenbord: die bleef in de
                         // sheet over "Toevoegen" hangen. Het toetsenbord gaat weg
                         // door te scrollen (scrollDismissesKeyboard in de sheet).
@@ -172,9 +174,27 @@ struct EventEditorView: View {
                                 .strokeBorder(BovexaTheme.Colors.edge, lineWidth: 1)
                         )
                         .clipShape(RoundedRectangle(cornerRadius: BovexaTheme.Radius.md, style: .continuous))
+                    } else {
+                        Button {
+                            Haptics.selection()
+                            withAnimation(.snappy(duration: 0.22)) { notitieOpen = true }
+                            notesFocused = true
+                        } label: {
+                            Label("Notitie toevoegen", systemImage: "plus")
+                                .font(BovexaTheme.TypeStyle.subheadline.weight(.semibold))
+                                .foregroundStyle(BovexaTheme.Colors.accent)
+                                .frame(minHeight: 44, alignment: .leading)
+                                .contentShape(Rectangle())
+                        }
+                        .buttonStyle(.plain)
+                    }
 
-                    fieldLabel("Herinnering")
-                    ReminderChipsView(minuten: $viewModel.reminderMinuten)
+                    // Kopje en chips op één regel: de chips scrollen toch al
+                    // horizontaal, dus het kopje erboven kostte alleen hoogte.
+                    HStack(alignment: .center, spacing: BovexaTheme.Space.sm) {
+                        fieldLabel("Herinnering")
+                        ReminderChipsView(minuten: $viewModel.reminderMinuten)
+                    }
 
                     // "Toegewezen aan" stond hier ook nog: bij een afspraak bepaalt
                     // de zichtbaarheid al wie hem ziet, en het contact wie het
@@ -260,6 +280,49 @@ struct EventEditorView: View {
     }
 
     private enum TijdVeld { case datum, start, eind }
+
+    /// Datum · start → eind als drie pillen. De open pil kleurt blauw, zodat te
+    /// zien is welke kiezer eronder hoort.
+    private var wanneerRij: some View {
+        HStack(spacing: BovexaTheme.Space.xs) {
+            // Tijd-pillen houden hun eigen breedte; de datum krijgt wat overblijft.
+            tijdPil(EventHelpers.shortDay(viewModel.start), veld: .datum, label: "Datum, \(EventHelpers.longDay(viewModel.start))")
+            tijdPil(EventHelpers.fmtTime(viewModel.start), veld: .start, label: "Starttijd \(EventHelpers.fmtTime(viewModel.start))")
+                .fixedSize(horizontal: true, vertical: false)
+            Image(systemName: "arrow.right")
+                .font(.system(size: 12, weight: .semibold))
+                .foregroundStyle(BovexaTheme.Colors.inkSoft)
+                .accessibilityHidden(true)
+            tijdPil(EventHelpers.fmtTime(viewModel.end), veld: .eind, label: "Eindtijd \(EventHelpers.fmtTime(viewModel.end))")
+                .fixedSize(horizontal: true, vertical: false)
+        }
+    }
+
+    private func tijdPil(_ tekst: String, veld: TijdVeld, label: String) -> some View {
+        let actief = toonKiezerVoor == veld
+        return Button {
+            Haptics.selection()
+            toonKiezer(veld)
+        } label: {
+            Text(tekst)
+                .font(BovexaTheme.TypeStyle.headline)
+                .foregroundStyle(actief ? BovexaTheme.Colors.white : BovexaTheme.Colors.ink)
+                .lineLimit(1)
+                .minimumScaleFactor(0.85)
+                .padding(.horizontal, BovexaTheme.Space.sm)
+                .frame(maxWidth: .infinity, minHeight: 46)
+                .background(actief ? AnyShapeStyle(BovexaTheme.Colors.accent) : AnyShapeStyle(BovexaTheme.Colors.glass))
+                .overlay(
+                    RoundedRectangle(cornerRadius: BovexaTheme.Radius.md, style: .continuous)
+                        .strokeBorder(BovexaTheme.Colors.edge, lineWidth: actief ? 0 : 1)
+                )
+                .clipShape(RoundedRectangle(cornerRadius: BovexaTheme.Radius.md, style: .continuous))
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(label)
+        .accessibilityHint("Opent de kiezer")
+    }
 
     private func toonKiezer(_ veld: TijdVeld) {
         withAnimation(.snappy(duration: 0.22)) {
@@ -727,64 +790,3 @@ private struct EditorFieldStyle: TextFieldStyle {
     }
 }
 
-private struct StepperRow: View {
-    let value: String
-    /// Drie steppers op één scherm; zonder eigen labels leest VoiceOver hier
-    /// drie identieke "Back/Forward"-paren voor.
-    let minusLabel: String
-    let plusLabel: String
-    let onMinus: () -> Void
-    let onPlus: () -> Void
-    /// Tik op de waarde zelf: opent de kiezer waarin je datum of tijd in één
-    /// keer instelt in plaats van er met kwartiersprongen naartoe te tikken.
-    var onTapValue: (() -> Void)?
-
-    var body: some View {
-        HStack {
-            Button(action: onMinus) {
-                Image(systemName: "chevron.left")
-                    .font(.system(size: 15, weight: .semibold))
-                    .foregroundStyle(BovexaTheme.Colors.accent)
-                    .frame(width: 44, height: 44)
-                    .contentShape(Rectangle())
-            }
-            .accessibilityLabel(minusLabel)
-            Spacer()
-            if let onTapValue {
-                Button {
-                    Haptics.selection()
-                    onTapValue()
-                } label: {
-                    Text(value)
-                        .font(BovexaTheme.TypeStyle.headline)
-                        .foregroundStyle(BovexaTheme.Colors.ink)
-                        .frame(maxWidth: .infinity, minHeight: 44)
-                        .contentShape(Rectangle())
-                }
-                .buttonStyle(.plain)
-                .accessibilityHint("Zelf invullen")
-            } else {
-                Text(value)
-                    .font(BovexaTheme.TypeStyle.headline)
-                    .foregroundStyle(BovexaTheme.Colors.ink)
-            }
-            Spacer()
-            Button(action: onPlus) {
-                Image(systemName: "chevron.right")
-                    .font(.system(size: 15, weight: .semibold))
-                    .foregroundStyle(BovexaTheme.Colors.accent)
-                    .frame(width: 44, height: 44)
-                    .contentShape(Rectangle())
-            }
-            .accessibilityLabel(plusLabel)
-        }
-        .padding(.horizontal, BovexaTheme.Space.xs)
-        .frame(minHeight: 46)
-        .background(BovexaTheme.Colors.glass)
-        .overlay(
-            RoundedRectangle(cornerRadius: BovexaTheme.Radius.md, style: .continuous)
-                .strokeBorder(BovexaTheme.Colors.edge, lineWidth: 1)
-        )
-        .clipShape(RoundedRectangle(cornerRadius: BovexaTheme.Radius.md, style: .continuous))
-    }
-}

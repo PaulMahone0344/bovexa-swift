@@ -149,6 +149,9 @@ struct ProfielView: View {
             }
             .navigationTitle("Profiel")
             .navigationBarTitleDisplayMode(.large)
+            // Bij scrollen klapt de titel in; zonder zichtbare balk stond hij
+            // dwars over de eerste rij.
+            .toolbarBackground(.visible, for: .navigationBar)
         }
         // Eén laadpad: `.task` draait al bij elke (her)verschijning.
         .task { await refresh() }

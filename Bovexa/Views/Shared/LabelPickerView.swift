@@ -154,11 +154,20 @@ struct LabelPickerView: View {
                         Circle()
                             .fill(Color(hex: option.hex))
                             .frame(width: 26, height: 26)
+                            .overlay(Circle().strokeBorder(BovexaTheme.Colors.edge, lineWidth: 1))
+
+                            // Huidige kleur: donkere ring óm de stip, met een witte kier ertussen.
+
+                            // Een witte ring óp de stip viel op de lichte ondergrond weg.
+
                             .overlay(
-                                Circle().strokeBorder(BovexaTheme.Colors.white, lineWidth: isCurrent ? 2.5 : 0)
-                            )
-                            .overlay(
-                                Circle().strokeBorder(BovexaTheme.Colors.edge, lineWidth: isCurrent ? 0 : 1)
+
+                                Circle().strokeBorder(BovexaTheme.Colors.blueDeep, lineWidth: 2)
+
+                                    .padding(-4)
+
+                                    .opacity(isCurrent ? 1 : 0)
+
                             )
                             .minTapTarget()
                     }

@@ -17,7 +17,11 @@ struct Member: Decodable, Equatable {
 
     enum CodingKeys: String, CodingKey {
         case id, userId, naam, email, avatar, role
-        case magAgendaAnderenZien = "mag_agenda_anderen_zien"
+        // De members-route stuurt camelCase (`magAgendaAnderenZien`), net als de
+        // andere velden hierboven. De snake_case-sleutel hieronder is de
+        // collectie-naam en blijft als terugval voor oudere responses.
+        case magAgendaAnderenZien
+        case magAgendaAnderenZienSnake = "mag_agenda_anderen_zien"
     }
 
     init(
@@ -45,7 +49,12 @@ struct Member: Decodable, Equatable {
         email = (try? c.decode(String.self, forKey: .email)) ?? ""
         avatar = (try? c.decode(String.self, forKey: .avatar)) ?? ""
         role = try? c.decode(CompanyRole.self, forKey: .role)
-        magAgendaAnderenZien = ((try? c.decodeIfPresent(Bool.self, forKey: .magAgendaAnderenZien)) ?? nil) ?? false
+        // Eerst camelCase (wat de route écht stuurt), dan snake_case. Tot 7 sep
+        // werd alleen snake_case gelezen, dus stond dit voor elke medewerker op
+        // false en kreeg alleen een admin de "Wie zie je"-knop.
+        let camel = (try? c.decodeIfPresent(Bool.self, forKey: .magAgendaAnderenZien)) ?? nil
+        let snake = (try? c.decodeIfPresent(Bool.self, forKey: .magAgendaAnderenZienSnake)) ?? nil
+        magAgendaAnderenZien = camel ?? snake ?? false
     }
 }
 

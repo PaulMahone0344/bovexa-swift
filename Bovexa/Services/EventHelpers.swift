@@ -106,6 +106,15 @@ enum EventHelpers {
             .first
     }
 
+    /// Korte datum voor een smalle pil: "Di 15 sep". Zelfde Nederlandse namen
+    /// als `longDay`, afgekapt, zodat er naast start- en eindtijd ruimte blijft.
+    static func shortDay(_ day: Date, calendar: Calendar = .current) -> String {
+        let comps = calendar.dateComponents([.weekday, .day, .month], from: day)
+        let weekday = String(dutchWeekdays[(comps.weekday ?? 1) - 1].prefix(2))
+        let month = String(dutchMonths[(comps.month ?? 1) - 1].prefix(3))
+        return "\(weekday) \(comps.day ?? 0) \(month)"
+    }
+
     static func longDay(_ day: Date, calendar: Calendar = .current) -> String {
         let comps = calendar.dateComponents([.weekday, .day, .month], from: day)
         let weekday = dutchWeekdays[(comps.weekday ?? 1) - 1]

@@ -45,6 +45,7 @@ struct VisibilityPickerView: View {
                     .font(BovexaTheme.TypeStyle.subheadline.weight(.bold))
                     .lineLimit(1)
                     .truncationMode(.tail)
+                    .minimumScaleFactor(0.75)
             }
             .foregroundStyle(active ? BovexaTheme.Colors.white : BovexaTheme.Colors.muted)
             .frame(maxWidth: .infinity, minHeight: 42)

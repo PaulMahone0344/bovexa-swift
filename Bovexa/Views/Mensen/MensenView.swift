@@ -7,6 +7,9 @@ import SwiftUI
 struct MensenView: View {
     @StateObject private var viewModel: MensenViewModel
     @Environment(\.dismiss) private var dismiss
+    /// Vriendenkoppelingen tussen accounts. Stond klaar sinds 26 aug en staat
+    /// sinds 7 sep in de navigatie: de routes /api/agenda/friends/* bestaan nu.
+    @State private var showVrienden = false
     /// Waar een nieuw contact bij hoort. Twee losse knoppen — één bij Privé, één
     /// bij het bedrijf — in plaats van één knop met een keuze in het formulier.
     private enum ToevoegenDoel: Identifiable {
@@ -51,6 +54,8 @@ struct MensenView: View {
                         if showSearch { searchField }
 
                         privateSection
+
+                        koppelingenRij
 
                         // Zonder bedrijf hoort hier niets te staan: een nieuwe
                         // gebruiker zonder koppeling zag een kop "COLLEGA'S" met
@@ -135,6 +140,46 @@ struct MensenView: View {
                 .strokeBorder(BovexaTheme.Colors.edge, lineWidth: 1)
         )
         .clipShape(RoundedRectangle(cornerRadius: BovexaTheme.Radius.md, style: .continuous))
+    }
+
+    /// Eén rij naar het vriendenscherm: wie mag er in jouw agenda prikken.
+    private var koppelingenRij: some View {
+        Button {
+            Haptics.selection()
+            showVrienden = true
+        } label: {
+            HStack(spacing: BovexaTheme.Space.sm) {
+                Image(systemName: "link")
+                    .font(.system(size: 16, weight: .semibold))
+                    .foregroundStyle(BovexaTheme.Colors.accent)
+                    .frame(width: 28)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Gekoppelde accounts")
+                        .font(BovexaTheme.TypeStyle.subheadline.weight(.bold))
+                        .foregroundStyle(BovexaTheme.Colors.ink)
+                    Text("Verzoeken sturen en beantwoorden")
+                        .font(BovexaTheme.TypeStyle.caption)
+                        .foregroundStyle(BovexaTheme.Colors.muted)
+                }
+                Spacer()
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundStyle(BovexaTheme.Colors.muted)
+            }
+            .padding(.horizontal, BovexaTheme.Space.md)
+            .frame(maxWidth: .infinity, minHeight: 56, alignment: .leading)
+            .background(BovexaTheme.Colors.glass)
+            .overlay(
+                RoundedRectangle(cornerRadius: BovexaTheme.Radius.md, style: .continuous)
+                    .strokeBorder(BovexaTheme.Colors.edge, lineWidth: 1)
+            )
+            .clipShape(RoundedRectangle(cornerRadius: BovexaTheme.Radius.md, style: .continuous))
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .sheet(isPresented: $showVrienden) {
+            VriendenView(token: token)
+        }
     }
 
     private var privateSection: some View {

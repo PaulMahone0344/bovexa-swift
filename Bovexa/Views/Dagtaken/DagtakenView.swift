@@ -132,7 +132,10 @@ struct DagtakenView: View {
                             // "Bovexa Logistics Tiel BV" trok beide pillen hoger (5c).
                             .lineLimit(1)
                             .truncationMode(.tail)
-                            .minimumScaleFactor(0.85)
+                            // 0.7 + voorrang: "Voetbalschool De Betuwe" paste op
+                            // 0.85 nog niet naast "Mijn".
+                            .minimumScaleFactor(0.7)
+                            .layoutPriority(option == .bedrijf ? 1 : 0)
                         Text("\(count(for: option))")
                             .font(BovexaTheme.TypeStyle.caption.weight(.bold))
                             .padding(.horizontal, 6)
@@ -142,7 +145,10 @@ struct DagtakenView: View {
                     }
                     .foregroundStyle(active ? BovexaTheme.Colors.white : BovexaTheme.Colors.muted)
                     .padding(.horizontal, BovexaTheme.Space.md)
-                    .frame(maxWidth: .infinity, minHeight: 44)
+                    // "Mijn" houdt zijn eigen breedte; de bedrijfspil krijgt de
+                    // rest — als beide even breed waren werd een lange naam
+                    // alsnog afgekapt.
+                    .frame(maxWidth: option == .mijn ? nil : .infinity, minHeight: 44)
                     .background(active ? BovexaTheme.Colors.blueDeep : BovexaTheme.Colors.glass)
                     .clipShape(Capsule())
                     .overlay(Capsule().strokeBorder(active ? BovexaTheme.Colors.blueDeep : BovexaTheme.Colors.edge, lineWidth: 1))

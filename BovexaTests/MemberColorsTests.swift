@@ -122,3 +122,27 @@ struct MemberColorsTests {
         #expect(colors.borderColorHex(owner: nil, me: "me") == nil)
     }
 }
+
+/// De members-route stuurt `magAgendaAnderenZien` in camelCase; tot 7 sep 2026
+/// las het model alleen `mag_agenda_anderen_zien` en stond het recht daardoor
+/// voor elke medewerker op false.
+struct MemberDecodingTests {
+    private func decode(_ json: String) throws -> Member {
+        try JSONDecoder().decode(Member.self, from: Data(json.utf8))
+    }
+
+    @Test func readsCamelCaseRightFromMembersRoute() throws {
+        let m = try decode(#"{"id":"m1","userId":"u1","naam":"Ayman","email":"a@b.nl","avatar":"","role":"member","magAgendaAnderenZien":true}"#)
+        #expect(m.magAgendaAnderenZien == true)
+    }
+
+    @Test func stillReadsSnakeCaseAsFallback() throws {
+        let m = try decode(#"{"id":"m1","userId":"u1","naam":"Ayman","email":"a@b.nl","avatar":"","mag_agenda_anderen_zien":true}"#)
+        #expect(m.magAgendaAnderenZien == true)
+    }
+
+    @Test func missingRightMeansFalse() throws {
+        let m = try decode(#"{"id":"m1","userId":"u1","naam":"Ayman","email":"a@b.nl","avatar":""}"#)
+        #expect(m.magAgendaAnderenZien == false)
+    }
+}

@@ -71,14 +71,12 @@ struct AgendaView: View {
                     // Long-press op een leeg uur: ook hier eerst de vraag
                     // handmatig of AI. Dag én uur gaan als voorzet mee, dus welke
                     // route je ook kiest, je begint op het aangewezen tijdstip.
-                    onPlanAtHour: { hour, day in openPlanKeuze(seed: .forHour(hour, on: day)) }
+                    onPlanAtHour: { hour, day in openPlanKeuze(seed: .forHour(hour, on: day)) },
+                    onNieuweAfspraak: { openPlanKeuze(seed: .empty) }
                 )
             } else {
                 monthOrListContent
             }
-        }
-        .safeAreaInset(edge: .bottom) {
-            NieuweAfspraakKnop { openPlanKeuze(seed: .empty) }
         }
         // Eén laadpad (zie VandaagView): `.task` herstart al bij elke terugkeer
         // naar deze tab.
@@ -240,6 +238,12 @@ struct AgendaView: View {
                     }
                 }
                 .safeAreaInset(edge: .top, spacing: 0) { persoonFilterChip }
+                // De plan-knop hoort bij de wortel van deze stack, niet om de
+                // stack heen: daar bleef hij ook boven een gepusht
+                // afspraak-detail zweven en viel hij over "Opslaan".
+                .safeAreaInset(edge: .bottom) {
+                    NieuweAfspraakKnop { openPlanKeuze(seed: .empty) }
+                }
                 // Schermhoogte als maatstaf voor de dagbalk: die mag precies de
                 // ruimte onder het maandraster vullen.
                 .onGeometryChange(for: CGFloat.self) { proxy in
