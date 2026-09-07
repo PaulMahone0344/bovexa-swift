@@ -18,10 +18,13 @@ struct EventUpdatePayloadTests {
             reminders: [15], assignee: ["u2"], viewers: ["u2"], assigneeStatus: ["u2": "pending"]
         )
         let body = payload.requestBody
+        // `contacten` zit er altijd bij, ook leeg: alleen zo komt het losmaken
+        // van alle contacten door naar de server.
         #expect(Set(body.keys) == [
             "title", "category", "start", "end", "notes", "klant_naam",
-            "klant_telefoon", "reminder_min", "reminders", "assignee", "viewers", "assignee_status",
+            "klant_telefoon", "reminder_min", "reminders", "contacten", "assignee", "viewers", "assignee_status",
         ])
+        #expect(body["contacten"] as? [String] == [])
         #expect(body["source"] == nil)
         #expect(body["title"] as? String == "Klant Jansen")
         #expect(body["category"] as? String == "work")
