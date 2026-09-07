@@ -13,7 +13,7 @@ struct AppointmentPayloadBuilderTests {
     @Test func sourceIsAlwaysNl() {
         let payload = AppointmentPayloadBuilder.build(
             appointment: appointment(), ownerId: "u1", rawInput: "raw", org: nil,
-            visibility: "private", viewers: [], assignees: [], reminderMin: 0
+            visibility: "private", viewers: [], assignees: [], reminders: []
         )
         #expect(payload.requestBody["source"] as? String == "nl")
     }
@@ -22,7 +22,7 @@ struct AppointmentPayloadBuilderTests {
         for category: BovexaTheme.Category in [.work, .focus] {
             let payload = AppointmentPayloadBuilder.build(
                 appointment: appointment(category: category), ownerId: "u1", rawInput: "raw", org: "org1",
-                visibility: "company", viewers: [], assignees: [], reminderMin: 0
+                visibility: "company", viewers: [], assignees: [], reminders: []
             )
             #expect(payload.calendar == "work")
         }
@@ -32,7 +32,7 @@ struct AppointmentPayloadBuilderTests {
         for category: BovexaTheme.Category in [.social, .body] {
             let payload = AppointmentPayloadBuilder.build(
                 appointment: appointment(category: category), ownerId: "u1", rawInput: "raw", org: "org1",
-                visibility: "private", viewers: [], assignees: [], reminderMin: 0
+                visibility: "private", viewers: [], assignees: [], reminders: []
             )
             #expect(payload.calendar == "private")
         }
@@ -41,7 +41,7 @@ struct AppointmentPayloadBuilderTests {
     @Test func withoutOrgAssigneesAreIgnoredAndVisibilityForcedPrivate() {
         let payload = AppointmentPayloadBuilder.build(
             appointment: appointment(), ownerId: "u1", rawInput: "raw", org: nil,
-            visibility: "company", viewers: ["u2"], assignees: ["u2"], reminderMin: 0
+            visibility: "company", viewers: ["u2"], assignees: ["u2"], reminders: []
         )
         #expect(payload.org == "")
         #expect(payload.visibility == "private")
@@ -53,7 +53,7 @@ struct AppointmentPayloadBuilderTests {
     @Test func withOrgVisibilityAndAssigneesAreRespected() {
         let payload = AppointmentPayloadBuilder.build(
             appointment: appointment(category: .work), ownerId: "u1", rawInput: "raw", org: "org1",
-            visibility: "company", viewers: [], assignees: ["u2"], reminderMin: 0
+            visibility: "company", viewers: [], assignees: ["u2"], reminders: []
         )
         #expect(payload.org == "org1")
         #expect(payload.visibility == "company")
@@ -64,7 +64,7 @@ struct AppointmentPayloadBuilderTests {
     @Test func assigneesAreAlwaysUnionedIntoViewersRegardlessOfVisibility() {
         let payload = AppointmentPayloadBuilder.build(
             appointment: appointment(), ownerId: "u1", rawInput: "raw", org: "org1",
-            visibility: "company", viewers: [], assignees: ["u2", "u3"], reminderMin: 0
+            visibility: "company", viewers: [], assignees: ["u2", "u3"], reminders: []
         )
         #expect(payload.viewers == ["u2", "u3"])
     }
@@ -72,7 +72,7 @@ struct AppointmentPayloadBuilderTests {
     @Test func peopleVisibilityUnionsSelectedViewersWithAssignees() {
         let payload = AppointmentPayloadBuilder.build(
             appointment: appointment(), ownerId: "u1", rawInput: "raw", org: "org1",
-            visibility: "people", viewers: ["u2"], assignees: ["u3"], reminderMin: 0
+            visibility: "people", viewers: ["u2"], assignees: ["u3"], reminders: []
         )
         #expect(payload.viewers == ["u2", "u3"])
     }
@@ -80,7 +80,7 @@ struct AppointmentPayloadBuilderTests {
     @Test func ownerAssigningSelfIsAutoAccepted() {
         let payload = AppointmentPayloadBuilder.build(
             appointment: appointment(), ownerId: "u1", rawInput: "raw", org: "org1",
-            visibility: "company", viewers: [], assignees: ["u1"], reminderMin: 0
+            visibility: "company", viewers: [], assignees: ["u1"], reminders: []
         )
         #expect(payload.assigneeStatus == ["u1": "accepted"])
     }
@@ -88,7 +88,7 @@ struct AppointmentPayloadBuilderTests {
     @Test func rawInputAndReminderMinAndOptionalFieldsPassThrough() {
         let payload = AppointmentPayloadBuilder.build(
             appointment: appointment(location: "Kantoor", recurrence: "FREQ=WEEKLY"), ownerId: "u1", rawInput: "Morgen tandarts",
-            org: "org1", visibility: "private", viewers: [], assignees: [], reminderMin: 60
+            org: "org1", visibility: "private", viewers: [], assignees: [], reminders: [60]
         )
         #expect(payload.rawInput == "Morgen tandarts")
         #expect(payload.reminderMin == 60)
@@ -99,7 +99,7 @@ struct AppointmentPayloadBuilderTests {
     @Test func missingOptionalFieldsBecomeEmptyStrings() {
         let payload = AppointmentPayloadBuilder.build(
             appointment: appointment(), ownerId: "u1", rawInput: "raw", org: "org1",
-            visibility: "private", viewers: [], assignees: [], reminderMin: 0
+            visibility: "private", viewers: [], assignees: [], reminders: []
         )
         #expect(payload.location == "")
         #expect(payload.recurrence == "")
@@ -110,7 +110,7 @@ struct AppointmentPayloadBuilderTests {
     @Test func withoutLabelOmitsFieldFromRequestBody() {
         let payload = AppointmentPayloadBuilder.build(
             appointment: appointment(), ownerId: "u1", rawInput: "raw", org: "org1",
-            visibility: "private", viewers: [], assignees: [], reminderMin: 0
+            visibility: "private", viewers: [], assignees: [], reminders: []
         )
         #expect(payload.requestBody["label"] == nil)
     }
@@ -118,7 +118,7 @@ struct AppointmentPayloadBuilderTests {
     @Test func withLabelIncludesFieldInRequestBody() {
         let payload = AppointmentPayloadBuilder.build(
             appointment: appointment(), ownerId: "u1", rawInput: "raw", org: "org1",
-            visibility: "private", viewers: [], assignees: [], reminderMin: 0, label: "l1"
+            visibility: "private", viewers: [], assignees: [], reminders: [], label: "l1"
         )
         #expect(payload.requestBody["label"] as? String == "l1")
     }
@@ -129,7 +129,7 @@ struct AppointmentPayloadBuilderTests {
         let start = Date(timeIntervalSince1970: 1_785_000_000)
         let payload = AppointmentPayloadBuilder.buildManual(
             title: "Kapper", category: .work, start: start, end: start.addingTimeInterval(1800),
-            ownerId: "u1", org: "org1", visibility: "company", assignees: [], reminderMin: 0
+            ownerId: "u1", org: "org1", visibility: "company", assignees: [], reminders: []
         )
         #expect(payload.requestBody["source"] as? String == "manual")
         #expect(payload.requestBody["raw_input"] as? String == "")
@@ -139,7 +139,7 @@ struct AppointmentPayloadBuilderTests {
         let start = Date(timeIntervalSince1970: 1_785_000_000)
         let payload = AppointmentPayloadBuilder.buildManual(
             title: "Kapper", category: .work, start: start, end: start.addingTimeInterval(1800),
-            ownerId: "u1", org: nil, visibility: "company", assignees: ["u2"], reminderMin: 0
+            ownerId: "u1", org: nil, visibility: "company", assignees: ["u2"], reminders: []
         )
         #expect(payload.org == "")
         #expect(payload.visibility == "private")
@@ -156,12 +156,12 @@ struct AppointmentPayloadBuilderTests {
         let range = AppointmentRange.range(for: proposal)
         let planner = AppointmentPayloadBuilder.build(
             appointment: proposal, ownerId: "u1", rawInput: "morgen 9 uur kapper", org: "org1",
-            visibility: "company", viewers: [], assignees: ["u2"], reminderMin: 15,
+            visibility: "company", viewers: [], assignees: ["u2"], reminders: [15],
             label: "l1", contact: "c1", contactNaam: "Jansen", contactTelefoon: "0612"
         )
         let manual = AppointmentPayloadBuilder.buildManual(
             title: "Kapper", category: .work, start: range.start, end: range.end,
-            ownerId: "u1", org: "org1", visibility: "company", assignees: ["u2"], reminderMin: 15,
+            ownerId: "u1", org: "org1", visibility: "company", assignees: ["u2"], reminders: [15],
             label: "l1", contact: "c1", klantNaam: "Jansen", klantTelefoon: "0612"
         )
 
@@ -179,7 +179,7 @@ struct AppointmentPayloadBuilderTests {
     @Test func startAndEndAreFormattedAsPocketBaseUtc() {
         let payload = AppointmentPayloadBuilder.build(
             appointment: appointment(), ownerId: "u1", rawInput: "raw", org: "org1",
-            visibility: "private", viewers: [], assignees: [], reminderMin: 0
+            visibility: "private", viewers: [], assignees: [], reminders: []
         )
         let body = payload.requestBody
         #expect((body["start"] as? String)?.hasSuffix("Z") == true)

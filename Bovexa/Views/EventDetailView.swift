@@ -161,8 +161,10 @@ struct EventDetailView: View {
                     detailRow(icon: "mappin.and.ellipse", text: location)
                 }
 
-                if let klant = ContactDisplay.naam(for: event), !klant.isEmpty {
-                    detailRow(icon: "person", text: klant)
+                // Alle gekoppelde contacten, niet alleen de klant: sinds punt 13a
+                // kun je er medegenodigden bij aanvinken.
+                ForEach(Array(ContactDisplay.namen(for: event).enumerated()), id: \.offset) { _, naam in
+                    detailRow(icon: "person", text: naam)
                 }
 
                 if let notes = event.notes, !notes.isEmpty {
@@ -170,6 +172,15 @@ struct EventDetailView: View {
                     Text(notes)
                         .font(BovexaTheme.TypeStyle.body)
                         .foregroundStyle(BovexaTheme.Colors.inkSoft)
+                }
+
+                // Het antwoord van de beheerder op een doorgegeven afwezigheid
+                // (punt 19). Eigen regel, want het is niet van dezelfde persoon
+                // als de notitie erboven.
+                if let reactie = event.reactie, !reactie.isEmpty {
+                    Text("Reactie beheerder: \(reactie)")
+                        .font(BovexaTheme.TypeStyle.footnote)
+                        .foregroundStyle(BovexaTheme.Colors.muted)
                 }
             }
         }

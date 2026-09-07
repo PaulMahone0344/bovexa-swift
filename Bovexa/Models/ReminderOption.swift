@@ -14,6 +14,14 @@ struct ReminderOption: Identifiable, Equatable {
         ReminderOption(minutes: 1440, label: "1 dag vooraf"),
     ]
 
+    /// Dubbele tijden en nullen eruit, klein naar groot. Eén plek, want zowel het
+    /// serverveld `reminders`, de lokale meldingen als de chips-rij moeten dezelfde
+    /// lijst zien; de eerste waarde is daardoor altijd de dichtstbijzijnde en dus
+    /// wat er in `reminder_min` hoort te staan.
+    static func opschonen(_ minuten: [Int]) -> [Int] {
+        Array(Set(minuten.filter { $0 > 0 })).sorted()
+    }
+
     static func label(for minutes: Int) -> String {
         if let vast = all.first(where: { $0.minutes == minutes }) { return vast.label }
         return vrijLabel(minutes: minutes)

@@ -15,12 +15,12 @@ struct EventUpdatePayloadTests {
         let payload = EventUpdatePayload(
             title: "Klant Jansen", category: .work, start: date(9), end: date(10),
             notes: "Offerte meenemen", klantNaam: "Jansen", klantTelefoon: "0612345678",
-            reminderMin: 15, assignee: ["u2"], viewers: ["u2"], assigneeStatus: ["u2": "pending"]
+            reminders: [15], assignee: ["u2"], viewers: ["u2"], assigneeStatus: ["u2": "pending"]
         )
         let body = payload.requestBody
         #expect(Set(body.keys) == [
             "title", "category", "start", "end", "notes", "klant_naam",
-            "klant_telefoon", "reminder_min", "assignee", "viewers", "assignee_status",
+            "klant_telefoon", "reminder_min", "reminders", "assignee", "viewers", "assignee_status",
         ])
         #expect(body["source"] == nil)
         #expect(body["title"] as? String == "Klant Jansen")
@@ -34,7 +34,7 @@ struct EventUpdatePayloadTests {
     @Test func requestBodyOmitsLabelWhenNotChosen() {
         let payload = EventUpdatePayload(
             title: "T", category: .focus, start: date(9), end: date(10),
-            notes: "", klantNaam: "", klantTelefoon: "", reminderMin: 0,
+            notes: "", klantNaam: "", klantTelefoon: "", reminders: [],
             assignee: [], viewers: [], assigneeStatus: [:]
         )
         #expect(payload.requestBody["label"] == nil)
@@ -43,7 +43,7 @@ struct EventUpdatePayloadTests {
     @Test func requestBodyIncludesLabelWhenChosen() {
         let payload = EventUpdatePayload(
             title: "T", category: .focus, start: date(9), end: date(10),
-            notes: "", klantNaam: "", klantTelefoon: "", reminderMin: 0,
+            notes: "", klantNaam: "", klantTelefoon: "", reminders: [],
             assignee: [], viewers: [], assigneeStatus: [:], label: "l1"
         )
         #expect(payload.requestBody["label"] as? String == "l1")
@@ -52,7 +52,7 @@ struct EventUpdatePayloadTests {
     @Test func datesAreFormattedInPocketBaseUtcFormat() {
         let payload = EventUpdatePayload(
             title: "T", category: .focus, start: date(9), end: date(10),
-            notes: "", klantNaam: "", klantTelefoon: "", reminderMin: 0,
+            notes: "", klantNaam: "", klantTelefoon: "", reminders: [],
             assignee: [], viewers: [], assigneeStatus: [:]
         )
         let body = payload.requestBody

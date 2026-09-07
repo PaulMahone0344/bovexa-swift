@@ -20,7 +20,10 @@ struct AppointmentCreatePayload {
     let viewers: [String]
     let assignee: [String]
     let rawInput: String
-    let reminderMin: Int
+    /// Alle gekozen herinneringen. `reminder_min` gaat er als kleinste waarde naast
+    /// mee, want de RN-app kent alleen dat ene veld.
+    let reminders: [Int]
+    var reminderMin: Int { reminders.first ?? 0 }
     let assigneeStatus: [String: String]
     /// PB-select met exact twee toegestane waarden: 'nl' (AI-planner) en 'manual'
     /// (handmatig formulier). 'ai' geeft een 400 — validation_invalid_value.
@@ -31,6 +34,9 @@ struct AppointmentCreatePayload {
     /// Gekozen contact-id (m8). Aanwezig ⇒ klant_naam/klant_telefoon blijven weg
     /// (valkuil D: die twee zijn alleen voor afspraken zonder contact).
     let contact: String?
+    /// Alle gekozen contacten (relatieveld `contacten`). De eerste is dezelfde als
+    /// `contact` — die blijft de klant — de rest zijn medegenodigden.
+    let contacten: [String]
     /// Notitie uit het handmatige formulier (M12). De AI-planner kent dit veld niet
     /// en laat het weg; leeg of nil ⇒ veld blijft uit de body, zodat beide takken
     /// voor dezelfde invoer dezelfde body schrijven.
@@ -39,9 +45,9 @@ struct AppointmentCreatePayload {
     init(
         owner: String, org: String, title: String, category: BovexaTheme.Category?, calendar: String,
         location: String, recurrence: String, klantNaam: String, klantTelefoon: String, start: Date, end: Date,
-        visibility: String, viewers: [String], assignee: [String], rawInput: String, reminderMin: Int,
+        visibility: String, viewers: [String], assignee: [String], rawInput: String, reminders: [Int],
         assigneeStatus: [String: String], source: String = "nl", label: String? = nil, contact: String? = nil,
-        notes: String? = nil
+        contacten: [String] = [], notes: String? = nil
     ) {
         self.owner = owner
         self.org = org
@@ -58,11 +64,12 @@ struct AppointmentCreatePayload {
         self.viewers = viewers
         self.assignee = assignee
         self.rawInput = rawInput
-        self.reminderMin = reminderMin
+        self.reminders = ReminderOption.opschonen(reminders)
         self.assigneeStatus = assigneeStatus
         self.source = source
         self.label = label
         self.contact = contact
+        self.contacten = contacten
         self.notes = notes
     }
 
@@ -83,6 +90,7 @@ struct AppointmentCreatePayload {
             "source": source,
             "raw_input": rawInput,
             "reminder_min": reminderMin,
+            "reminders": reminders,
             "assignee_status": assigneeStatus,
         ]
         // Zie EventUpdatePayload: de naam reist altijd mee, want een collega kan het
@@ -90,6 +98,7 @@ struct AppointmentCreatePayload {
         body["klant_naam"] = klantNaam
         body["klant_telefoon"] = klantTelefoon
         if let contact { body["contact"] = contact }
+        if !contacten.isEmpty { body["contacten"] = contacten }
         if let label { body["label"] = label }
         if let notes, !notes.isEmpty { body["notes"] = notes }
         return body

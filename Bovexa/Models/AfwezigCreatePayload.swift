@@ -68,6 +68,9 @@ struct AfwezigCreatePayload {
         if !assignee.isEmpty {
             body["assignee"] = assignee
             body["assignee_status"] = assigneeStatus
+            // Er moet iemand op reageren, dus de goedkeuring staat open (punt 18).
+            // Zonder beheerder valt er niets goed te keuren en blijft het veld weg.
+            body["goedkeuring"] = "open"
         }
         return body
     }

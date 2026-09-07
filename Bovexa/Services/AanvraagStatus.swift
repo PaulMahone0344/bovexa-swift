@@ -21,6 +21,17 @@ enum AanvraagStand: Equatable {
 }
 
 enum AanvraagStatus {
+    /// Wat er in het select-veld `goedkeuring` hoort te staan bij een antwoord van
+    /// de beheerder. Nil voor een status die geen antwoord is (bijvoorbeeld
+    /// "pending"), zodat het veld dan niet aangeraakt wordt.
+    static func goedkeuring(voor status: String) -> String? {
+        switch status {
+        case "accepted": return "akkoord"
+        case "declined": return "geweigerd"
+        default: return nil
+        }
+    }
+
     /// Aanvragen die jij hebt ingediend: jouw blokken met een beheerder eraan
     /// gekoppeld. Nieuwste eerst, en wat allang voorbij is valt weg.
     static func eigenAanvragen(_ events: [AgendaEvent], userId: String, now: Date = Date()) -> [AgendaEvent] {

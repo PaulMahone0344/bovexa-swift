@@ -138,7 +138,7 @@ struct EventRepositoryTests {
         let repo = makeRepository()
         let payload = EventUpdatePayload(
             title: "Nieuwe titel", category: .work, start: Date(), end: Date(),
-            notes: "", klantNaam: "", klantTelefoon: "", reminderMin: 0,
+            notes: "", klantNaam: "", klantTelefoon: "", reminders: [],
             assignee: [], viewers: [], assigneeStatus: [:]
         )
         let updated = try await repo.updateEvent(recordId: "rec1", payload: payload, token: "tok")

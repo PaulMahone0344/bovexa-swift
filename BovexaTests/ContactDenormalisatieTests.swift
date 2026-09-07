@@ -22,7 +22,7 @@ struct ContactDenormalisatieTests {
         let payload = EventUpdatePayload(
             title: "Onderhoud", category: .work, start: date(9), end: date(10),
             notes: "", klantNaam: "Bakker Jansen", klantTelefoon: "0612345678",
-            reminderMin: 0, assignee: [], viewers: [], assigneeStatus: [:], contact: "c1"
+            reminders: [], assignee: [], viewers: [], assigneeStatus: [:], contact: "c1"
         )
         let body = payload.requestBody
         #expect(body["contact"] as? String == "c1")
@@ -35,7 +35,7 @@ struct ContactDenormalisatieTests {
             owner: "u1", org: "org1", title: "Onderhoud", category: .work, calendar: "work",
             location: "", recurrence: "", klantNaam: "Bakker Jansen", klantTelefoon: "0612345678",
             start: date(9), end: date(10), visibility: "company", viewers: [], assignee: [],
-            rawInput: "raw", reminderMin: 0, assigneeStatus: [:], contact: "c1"
+            rawInput: "raw", reminders: [], assigneeStatus: [:], contact: "c1"
         )
         let body = payload.requestBody
         #expect(body["contact"] as? String == "c1")
@@ -49,7 +49,7 @@ struct ContactDenormalisatieTests {
         )
         let payload = AppointmentPayloadBuilder.build(
             appointment: appointment, ownerId: "u1", rawInput: "raw", org: "org1",
-            visibility: "company", viewers: [], assignees: [], reminderMin: 0,
+            visibility: "company", viewers: [], assignees: [], reminders: [],
             contact: "c1", contactNaam: "Bakker Jansen", contactTelefoon: "0612345678"
         )
         #expect(payload.requestBody["klant_naam"] as? String == "Bakker Jansen")

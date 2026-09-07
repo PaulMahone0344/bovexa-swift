@@ -30,7 +30,7 @@ final class PlannerViewModel: ObservableObject {
     /// Gekozen contacten op volgorde van aantikken; de eerste is de klant van de
     /// afspraak, de rest zijn medegenodigden.
     @Published var contactIds: [String] = []
-    /// Het contact dat de server kent: `agenda_events.contact` is één relatie (zie
+    /// De klant van de afspraak: `agenda_events.contact` is één relatie (zie
     /// MEERDERE-BEDRIJVEN-SERVER.txt, punt 13).
     var contactId: String? { contactIds.first }
     /// Naam/telefoon van het gekozen contact, meegeschreven als klant_naam zodat een
@@ -273,8 +273,8 @@ final class PlannerViewModel: ObservableObject {
             for appointment in appointments.dropFirst(createdCount) {
                 let payload = AppointmentPayloadBuilder.build(
                     appointment: appointment, ownerId: userId, rawInput: rawInput.isEmpty ? appointment.title : rawInput,
-                    org: org, visibility: visibility, viewers: viewers, assignees: effectiveAssignees, reminderMin: reminderMin,
-                    label: org != nil ? label : nil, contact: contactId,
+                    org: org, visibility: visibility, viewers: viewers, assignees: effectiveAssignees, reminders: reminderMinuten,
+                    label: org != nil ? label : nil, contact: contactId, contacten: contactIds,
                     contactNaam: contactNaam, contactTelefoon: contactTelefoon
                 )
                 let created = try await repository.createEvent(body: payload.requestBody, token: token)
