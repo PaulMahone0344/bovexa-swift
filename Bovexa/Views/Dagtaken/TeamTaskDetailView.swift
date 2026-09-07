@@ -162,6 +162,10 @@ struct TeamTaskDetailView: View {
                 row(icon: "person", text: TaskAuthorFormatting.label(owner: ownerName(task), created: task.created))
 
                 if let completedAt = task.completedAt {
+                    // "Gedaan door Ayman om 14:32". De naam komt sinds 7 september
+                    // uit `completed_by` op de taak zelf, dus ook bij een taak voor
+                    // het hele team staat er nu wie hem afvinkte. Is het veld leeg
+                    // (oude taak), dan blijft alleen het tijdstip over.
                     row(
                         icon: "checkmark.circle",
                         text: TaskCompletionFormatting.label(

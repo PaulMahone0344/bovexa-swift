@@ -16,6 +16,8 @@ final class MensenViewModel: ObservableObject {
     @Published var errorMessage: String?
     /// Aan als de laatste fetch mislukte; de vorige gegevens blijven staan.
     @Published private(set) var loadFailed = false
+    /// Wie er is ingelogd; bepaalt welk contact van jou is en welk van een collega.
+    private var userId: String = ""
 
 
     /// Bij het sluiten van de PersoonFormView-sheet: anders staat de fout van de
@@ -29,9 +31,6 @@ final class MensenViewModel: ObservableObject {
     /// zijn eigen kleur had — twee schermen die elkaar tegenspraken.
     let memberColors = MemberColors()
 
-    /// Zolang de server geen `org` op contacten kent, komt de indeling hiervandaan.
-    private let orgStore = ContactOrgStore.shared
-
     private let contactRepository: ContactRepository
     private let companyRepository: CompanyRepository
 
@@ -41,25 +40,38 @@ final class MensenViewModel: ObservableObject {
     }
 
     var visibleContacts: [AgendaContact] { MensenSearchHelpers.filterContacts(contacts, query: query) }
-    /// Bedrijf van een contact: het serverveld als dat gevuld is, anders wat dit
-    /// toestel onthouden heeft.
-    func orgVan(_ contact: AgendaContact) -> String {
-        contact.org.isEmpty ? orgStore.org(voor: contact.id) : contact.org
+
+    /// Bedrijf van een contact: het serverveld, en niets anders meer. Tot 7 september
+    /// stond die indeling in ContactOrgStore op het toestel omdat de server het veld
+    /// liet vallen; nu `org` bestaat, wint het record.
+    func orgVan(_ contact: AgendaContact) -> String { contact.org }
+
+    /// Privé is: van mij én zonder bedrijf. De lijst bevat sinds het serverveld ook
+    /// bedrijfscontacten van collega's — die horen niet onder "PRIVÉ", want ze zijn
+    /// niet van jou. Onder het bedrijf staat alleen wie een account heeft (besluit
+    /// 26 augustus): een naam zonder inlog is een contact, geen collega.
+    func isPrive(_ contact: AgendaContact) -> Bool {
+        contact.org.isEmpty && contact.eigenaar == userId
     }
 
-    /// Alle contacten staan in de privélijst. Onder het bedrijf hoort alleen wie
-    /// een account heeft (besluit 26 augustus): een naam zonder inlog is een
-    /// contact van jou, geen collega, en mag dus ook niet als collega opduiken bij
-    /// het delen van een afspraak.
-    var visiblePrivateContacts: [AgendaContact] { visibleContacts }
+    /// Verwijderen mag alleen de eigenaar (deleteRule op de server). Bewerken mag
+    /// wel iedereen die het contact ziet, dus dat blijft open.
+    func magVerwijderen(_ contact: AgendaContact) -> Bool {
+        contact.eigenaar == userId
+    }
+
+    var visiblePrivateContacts: [AgendaContact] { visibleContacts.filter(isPrive) }
     var visibleMembers: [CompanyMember] { MensenSearchHelpers.filterMembers(members, query: query) }
 
 
-    func load(userId: String, token: String) async {
-        orgStore.prime(userId: userId)
+    /// `defaultOrg` komt van de ingelogde gebruiker en gaat mee in de contactfetch:
+    /// de ledenlijst wordt parallel opgehaald, dus `orgId` is op dat moment nog niet
+    /// bekend en kan de filter niet voeden.
+    func load(userId: String, defaultOrg: String = "", token: String) async {
+        self.userId = userId
         loading = true
         defer { loading = false }
-        async let contactsResult = contactRepository.fetchContacts(userId: userId, token: token)
+        async let contactsResult = contactRepository.fetchContacts(userId: userId, defaultOrg: defaultOrg, token: token)
         async let membersResult = companyRepository.listMembers(token: token)
 
         if let fetched = try? await contactsResult {
@@ -89,9 +101,6 @@ final class MensenViewModel: ObservableObject {
         }
         do {
             let contact = try await contactRepository.createContact(eigenaar: userId, naam: trimmedNaam, telefoon: telefoon, notitie: notitie, org: org, token: token)
-            // De server geeft `org` (nog) niet terug: zonder deze regel stond een
-            // bedrijfspersoon meteen weer bij Privé.
-            orgStore.zet(contactId: contact.id, org: org)
             contacts = sorted(contacts + [contact])
             errorMessage = nil
             return true
@@ -121,7 +130,6 @@ final class MensenViewModel: ObservableObject {
     func deleteContact(id: String, token: String) async {
         do {
             try await contactRepository.deleteContact(id: id, token: token)
-            orgStore.vergeet(contactId: id)
             contacts = contacts.filter { $0.id != id }
         } catch {
             errorMessage = "Kon contact niet verwijderen."

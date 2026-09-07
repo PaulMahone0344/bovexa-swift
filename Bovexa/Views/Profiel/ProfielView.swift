@@ -180,7 +180,7 @@ struct ProfielView: View {
         }
         .sheet(isPresented: $showMensen) {
             if let user = currentUser {
-                MensenView(userId: user.id, token: authStore.token ?? "")
+                MensenView(userId: user.id, defaultOrg: user.defaultOrg ?? "", token: authStore.token ?? "")
             }
         }
         .sheet(isPresented: $showProfielBewerken) {

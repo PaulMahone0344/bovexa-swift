@@ -30,11 +30,15 @@ struct MensenView: View {
     @State private var bekekenMember: CompanyMember?
 
     private let userId: String
+    /// Bedrijf van de ingelogde gebruiker; bepaalt welke bedrijfscontacten de
+    /// server meestuurt (leeg = alleen de eigen contacten).
+    private let defaultOrg: String
     private let token: String
 
-    init(userId: String, token: String) {
+    init(userId: String, defaultOrg: String = "", token: String) {
         _viewModel = StateObject(wrappedValue: MensenViewModel())
         self.userId = userId
+        self.defaultOrg = defaultOrg
         self.token = token
     }
 
@@ -75,7 +79,7 @@ struct MensenView: View {
                 SheetCloseButton { dismiss() }
             }
         }
-        .task { await viewModel.load(userId: userId, token: token) }
+        .task { await viewModel.load(userId: userId, defaultOrg: defaultOrg, token: token) }
         // De fout wordt in de sheet zelf getoond (PersoonFormView.errorText): een
         // alert op dit scherm werd niet gepresenteerd zolang de sheet openstond.
         .sheet(item: $toevoegenDoel, onDismiss: { viewModel.clearError() }) { doel in
@@ -110,9 +114,12 @@ struct MensenView: View {
                 onSave: { naam, telefoon, notitie in
                     await viewModel.updateContact(id: contact.id, naam: naam, telefoon: telefoon, notitie: notitie, token: token)
                 },
-                onDelete: {
+                // Alleen de eigenaar mag wissen (deleteRule op de server). Bij het
+                // contact van een collega blijft de rode knop weg in plaats van een
+                // knop die stil faalt.
+                onDelete: viewModel.magVerwijderen(contact) ? {
                     await viewModel.deleteContact(id: contact.id, token: token)
-                },
+                } : nil,
                 errorText: viewModel.errorMessage,
                 inzetBron: .init(
                     userId: userId,
@@ -335,5 +342,5 @@ struct MensenView: View {
 }
 
 #Preview {
-    MensenView(userId: "u1", token: "tok")
+    MensenView(userId: "u1", defaultOrg: "org1", token: "tok")
 }

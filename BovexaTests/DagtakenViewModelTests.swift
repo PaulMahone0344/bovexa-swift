@@ -445,6 +445,88 @@ struct DagtakenViewModelTests {
         #expect(vm.teamTasks.first?.completedAt == nil)
     }
 
+    // MARK: - wie vinkte de taak af (completed_by)
+
+    /// Bij een taak voor het hele team staat er niemand in `viewers`; zonder
+    /// `completed_by` bleef de regel daar leeg.
+    @Test func afgevinktDoorLeestCompletedByBijTeambredeTaak() async {
+        let vm = makeViewModel()
+        URLProtocolStub.requestHandler = { _ in
+            let json = """
+            {"items":[{"id":"m1","userId":"u2","naam":"Ayman Bakkali","email":"a@bovexa.nl","avatar":""}],
+             "org":{"id":"org1","name":"Bovexa","logo":""}}
+            """.data(using: .utf8)!
+            return (200, json)
+        }
+        await vm.loadOrgInfo(token: "tok")
+
+        let taak = AgendaTask(
+            id: "t1", owner: "u1", org: "org1", title: "Taak", notes: nil, status: .klaar,
+            visibility: .company, viewers: [], created: Date(timeIntervalSince1970: 0),
+            updated: Date(timeIntervalSince1970: 0), completedAt: Date(), completedBy: "u2"
+        )
+        #expect(vm.afgevinktDoor(taak, currentUserId: "u1") == "Ayman")
+        #expect(vm.afgevinktDoor(taak, currentUserId: "u2") == "Jij")
+    }
+
+    /// Oude taken hebben het veld niet; dan blijft de oude afleiding uit `viewers`
+    /// staan in plaats van een lege regel.
+    @Test func afgevinktDoorValtTerugOpDeToegewezenPersoon() async {
+        let vm = makeViewModel()
+        let taak = AgendaTask(
+            id: "t1", owner: "u1", org: "org1", title: "Taak", notes: nil, status: .klaar,
+            visibility: .company, viewers: ["u2"], created: Date(timeIntervalSince1970: 0),
+            updated: Date(timeIntervalSince1970: 0), completedAt: Date()
+        )
+        #expect(vm.afgevinktDoor(taak, currentUserId: "u2") == "Jij")
+
+        let teambreed = AgendaTask(
+            id: "t2", owner: "u1", org: "org1", title: "Taak", notes: nil, status: .klaar,
+            visibility: .company, viewers: [], created: Date(timeIntervalSince1970: 0),
+            updated: Date(timeIntervalSince1970: 0), completedAt: Date()
+        )
+        #expect(vm.afgevinktDoor(teambreed, currentUserId: "u2") == "")
+    }
+
+    @Test func toggleTeamTaskStuurtCompletedByEnWistHemBijUitvinken() async {
+        let vm = makeViewModel()
+        URLProtocolStub.requestHandler = { _ in
+            let json = """
+            {"items":[{"id":"t1","owner":"u1","org":"org1","title":"Taak","notes":"","status":"open",
+             "visibility":"company","viewers":[],"created":"2026-07-24 09:00:00.000Z","updated":"2026-07-24 09:00:00.000Z"}],
+             "page":1,"perPage":200,"totalItems":1,"totalPages":1}
+            """.data(using: .utf8)!
+            return (200, json)
+        }
+        await vm.loadTeamTasks(org: "org1", token: "tok")
+        let task = vm.teamTasks.first!
+
+        URLProtocolStub.requestHandler = { request in
+            let body = try! JSONSerialization.jsonObject(with: self.bodyData(from: request)) as! [String: Any]
+            #expect(body["completed_by"] as? String == "u3")
+            let json = """
+            {"id":"t1","owner":"u1","org":"org1","title":"Taak","notes":"","status":"klaar","completed_by":"u3",
+             "completed_at":"\(body["completed_at"] as? String ?? "")",
+             "visibility":"company","viewers":[],"created":"2026-07-24 09:00:00.000Z","updated":"2026-07-24 09:00:00.000Z"}
+            """.data(using: .utf8)!
+            return (200, json)
+        }
+        await vm.toggleTeamTask(task, userId: "u3", token: "tok")
+        #expect(vm.teamTasks.first?.completedBy == "u3")
+
+        URLProtocolStub.requestHandler = { request in
+            let body = try! JSONSerialization.jsonObject(with: self.bodyData(from: request)) as! [String: Any]
+            #expect(body["completed_by"] as? String == "")
+            let json = """
+            {"id":"t1","owner":"u1","org":"org1","title":"Taak","notes":"","status":"open","completed_by":"",
+             "visibility":"company","viewers":[],"created":"2026-07-24 09:00:00.000Z","updated":"2026-07-24 09:00:00.000Z"}
+            """.data(using: .utf8)!
+            return (200, json)
+        }
+        await vm.toggleTeamTask(vm.teamTasks.first!, userId: "u3", token: "tok")
+        #expect(vm.teamTasks.first?.completedBy == nil)
+    }
+
     @Test func toggleTeamTaskRollsBackOnServerFailure() async {
         let vm = makeViewModel()
         URLProtocolStub.requestHandler = { _ in
