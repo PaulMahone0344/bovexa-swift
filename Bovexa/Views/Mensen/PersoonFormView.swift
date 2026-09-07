@@ -109,7 +109,10 @@ struct PersoonFormView: View {
                                 }
                         }
 
-                        if case .edit = mode {
+                        // Geen onDelete betekent: dit contact is niet van jou
+                        // (bedrijfscontact van een collega). Dan hoort de knop er
+                        // ook niet te staan.
+                        if case .edit = mode, onDelete != nil {
                             // Frame ín het label, kleur uit de stijl: buiten de
                             // Button deden breedte, font en kleur niets (M11 1c).
                             Button(role: .destructive) {

@@ -40,27 +40,21 @@ struct ContactPickerView: View {
     @State private var createError: String?
     @State private var loadFailed = false
 
-    /// Zolang de server het veld `org` niet kent staat de indeling lokaal — zelfde
-    /// bron als het scherm Mensen (zie MEERDERE-BEDRIJVEN-SERVER.txt, punt 10).
-    private let orgStore = ContactOrgStore.shared
-
     /// Contacten die bij de gekozen zichtbaarheid horen. Een gekozen contact blijft
     /// altijd staan, ook als je daarna van Privé naar het bedrijf wisselt: anders
     /// verdwijnt de naam die er al in stond zonder dat iemand dat vroeg.
     ///
-    /// Privé toont ál je contacten, net als het scherm Mensen (besluit 26 augustus:
-    /// iedereen staat in je privélijst, ook wie daarnaast bij een bedrijf hoort).
-    /// Stond hier de org-filter, dan miste je onder Privé de helft van je eigen
-    /// namen zonder dat het scherm vertelde waarom.
+    /// Privé toont ál je eigen contacten, net als het scherm Mensen (besluit
+    /// 26 augustus: iedereen staat in je privélijst, ook wie daarnaast bij een
+    /// bedrijf hoort). Wat een collega heeft aangemaakt hoort daar niet bij — dat
+    /// is geen privécontact van jou — dus dat filtert op eigenaar.
     private var zichtbareContacten: [AgendaContact] {
-        if org.isEmpty { return contacts }
-        return contacts.filter { contact in
-            selectedContactIds.contains(contact.id) || orgVan(contact) == org
+        if org.isEmpty {
+            return contacts.filter { selectedContactIds.contains($0.id) || $0.eigenaar == userId }
         }
-    }
-
-    private func orgVan(_ contact: AgendaContact) -> String {
-        contact.org.isEmpty ? orgStore.org(voor: contact.id) : contact.org
+        return contacts.filter { contact in
+            selectedContactIds.contains(contact.id) || contact.org == org
+        }
     }
 
     /// Wat er dichtgeklapt in de rij staat: de gekozen namen, anders de oude losse
@@ -82,7 +76,6 @@ struct ContactPickerView: View {
             }
         }
         .task {
-            orgStore.prime(userId: userId)
             await loadContacts()
         }
     }
@@ -161,7 +154,10 @@ struct ContactPickerView: View {
     }
 
     private func loadContacts() async {
-        if let fetched = try? await contactRepository.fetchContacts(userId: userId, token: token) {
+        // `org` is hier het bedrijf van de afspraak, en dat is óf leeg (privé) óf
+        // het bedrijf van de ingelogde gebruiker. Bij een bedrijfsafspraak komen zo
+        // ook de contacten van collega's mee; bij privé alleen de eigen.
+        if let fetched = try? await contactRepository.fetchContacts(userId: userId, defaultOrg: org, token: token) {
             contacts = fetched
             loadFailed = false
         } else {
@@ -284,8 +280,6 @@ struct ContactPickerView: View {
                 eigenaar: userId, naam: naam, telefoon: newTelefoon.trimmingCharacters(in: .whitespacesAndNewlines),
                 notitie: "", org: org.isEmpty ? nil : org, token: token
             )
-            // Server geeft `org` nog niet terug; de indeling komt van het toestel.
-            orgStore.zet(contactId: created.id, org: org)
             contacts.append(created)
             contacts.sort { $0.naam.localizedCaseInsensitiveCompare($1.naam) == .orderedAscending }
             selectedContactIds.append(created.id)

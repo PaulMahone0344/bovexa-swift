@@ -65,19 +65,14 @@ final class BedrijfViewModel: ObservableObject {
     private let favoritesStore: FavoritesStore
     private let aanvraagStore: BedrijfAanvraagStore
     private let contactRepository: ContactRepository
-    private let contactOrgStore: ContactOrgStore
 
     init(
         repository: CompanyRepository = CompanyRepository(),
         favoritesStore: FavoritesStore = FavoritesStore(),
         aanvraagStore: BedrijfAanvraagStore = BedrijfAanvraagStore(),
-        contactRepository: ContactRepository = ContactRepository(),
-        contactOrgStore: ContactOrgStore? = nil
+        contactRepository: ContactRepository = ContactRepository()
     ) {
         self.contactRepository = contactRepository
-        // Niet als standaardwaarde in de signatuur: ContactOrgStore hangt aan de
-        // hoofdthread en die mag daar niet worden aangemaakt.
-        self.contactOrgStore = contactOrgStore ?? ContactOrgStore()
         self.repository = repository
         self.favoritesStore = favoritesStore
         self.aanvraagStore = aanvraagStore
@@ -275,12 +270,10 @@ final class BedrijfViewModel: ObservableObject {
             bedrijfsContacten = []
             return
         }
-        contactOrgStore.prime(userId: userId)
-        guard let contacten = try? await contactRepository.fetchContacts(userId: userId, token: token) else { return }
-        bedrijfsContacten = contacten.filter { contact in
-            let org = contact.org.isEmpty ? contactOrgStore.org(voor: contact.id) : contact.org
-            return org == orgId
-        }
+        // `defaultOrg` mee: zonder dat levert de server alleen de eigen contacten,
+        // en dan miste het bedrijf de contacten die een collega had aangemaakt.
+        guard let contacten = try? await contactRepository.fetchContacts(userId: userId, defaultOrg: orgId, token: token) else { return }
+        bedrijfsContacten = contacten.filter { $0.org == orgId }
     }
 
     func refresh(userId: String, token: String) async {

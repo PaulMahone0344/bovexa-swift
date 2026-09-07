@@ -5,8 +5,10 @@ import Foundation
 /// als afspraak op de server; alleen "dit heb ík doorgegeven, en waarom" is daar
 /// niet uit terug te lezen — `raw_input` komt niet mee in `AgendaEvent`.
 ///
-/// Tijdelijk, net als `HerinneringStore` en `ContactOrgStore`: zodra de server een
-/// eigen collectie voor beschikbaarheid heeft, wint die en mag dit weg.
+/// Tijdelijk, net als `HerinneringStore`: zodra de server een eigen collectie voor
+/// beschikbaarheid heeft, wint die en mag dit weg. `ContactOrgStore` deed hetzelfde
+/// voor de bedrijfsindeling van contacten en is op 7 september vervallen, omdat het
+/// veld `org` er nu op de server staat.
 @MainActor
 final class BeschikbaarheidStore: ObservableObject {
     static let shared = BeschikbaarheidStore()

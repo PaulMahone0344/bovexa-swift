@@ -58,6 +58,35 @@ struct ContactRepositoryTests {
         _ = try await repo.fetchContacts(userId: "u1", token: "tok")
     }
 
+    @Test func fetchContactsMetDefaultOrgLeestOokBedrijfscontactenVanCollegas() async throws {
+        URLProtocolStub.requestHandler = { request in
+            let components = URLComponents(url: request.url!, resolvingAgainstBaseURL: false)!
+            #expect(components.queryItems?.first { $0.name == "filter" }?.value == "eigenaar = \"u1\" || org = \"org1\"")
+            let json = """
+            {"items":[{"id":"c1","eigenaar":"u2","naam":"Karim","telefoon":"","notitie":"","org":"org1"}],
+             "page":1,"perPage":200,"totalItems":1,"totalPages":1}
+            """.data(using: .utf8)!
+            return (200, json)
+        }
+        let repo = makeRepository()
+        let contacts = try await repo.fetchContacts(userId: "u1", defaultOrg: "org1", token: "tok")
+        #expect(contacts.map(\.org) == ["org1"])
+    }
+
+    @Test func fetchContactsZonderDefaultOrgVraagtGeenOrgOp() async throws {
+        URLProtocolStub.requestHandler = { request in
+            let components = URLComponents(url: request.url!, resolvingAgainstBaseURL: false)!
+            let filter = components.queryItems?.first { $0.name == "filter" }?.value
+            #expect(filter?.contains("org =") == false)
+            let json = """
+            {"items":[],"page":1,"perPage":200,"totalItems":0,"totalPages":1}
+            """.data(using: .utf8)!
+            return (200, json)
+        }
+        let repo = makeRepository()
+        _ = try await repo.fetchContacts(userId: "u1", defaultOrg: "", token: "tok")
+    }
+
     // MARK: - createContact
 
     @Test func createContactPostsNaamTelefoonEnNotitie() async throws {
@@ -94,6 +123,22 @@ struct ContactRepositoryTests {
         let repo = makeRepository()
         let contact = try await repo.updateContact(id: "c1", naam: "Karim B.", telefoon: "", notitie: "", token: "tok")
         #expect(contact.naam == "Karim B.")
+    }
+
+    /// Zou `org` meegaan, dan verhuisde een bedrijfscontact bij elke wijziging naar
+    /// Privé en zagen de collega's hem niet meer.
+    @Test func updateContactLaatOrgOngemoeid() async throws {
+        URLProtocolStub.requestHandler = { request in
+            let body = try! JSONSerialization.jsonObject(with: self.bodyData(from: request)) as! [String: Any]
+            #expect(body["org"] == nil)
+            let json = """
+            {"id":"c1","eigenaar":"u1","naam":"Karim","telefoon":"","notitie":"","org":"org1"}
+            """.data(using: .utf8)!
+            return (200, json)
+        }
+        let repo = makeRepository()
+        let contact = try await repo.updateContact(id: "c1", naam: "Karim", telefoon: "", notitie: "", token: "tok")
+        #expect(contact.org == "org1")
     }
 
     // MARK: - deleteContact
