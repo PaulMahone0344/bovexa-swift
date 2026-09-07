@@ -25,6 +25,10 @@ struct EventUpdatePayload {
     /// Gekozen contact-id (m8). Aanwezig ⇒ klant_naam/klant_telefoon blijven weg
     /// (valkuil D: die twee zijn alleen voor afspraken zonder contact).
     let contact: String?
+    /// Alle gekozen contacten (relatieveld `contacten`). De eerste is dezelfde als
+    /// `contact` — die blijft de klant — de rest zijn medegenodigden. Gaat altijd
+    /// mee, ook leeg, zodat het losmaken van een contact ook echt doorkomt.
+    let contacten: [String]
     /// Wie de afspraak mag zien. Nil laat het veld weg: alleen het bewerkscherm van
     /// een bedrijfsafspraak toont die knoppen, en zonder bedrijf is er niets te
     /// kiezen. Viewers gaan hierboven al mee, dus die blijven kloppen.
@@ -34,7 +38,7 @@ struct EventUpdatePayload {
         title: String, category: BovexaTheme.Category?, start: Date, end: Date, notes: String,
         klantNaam: String, klantTelefoon: String, reminders: [Int], assignee: [String],
         viewers: [String], assigneeStatus: [String: String], label: String? = nil, contact: String? = nil,
-        visibility: String? = nil
+        contacten: [String] = [], visibility: String? = nil
     ) {
         self.title = title
         self.category = category
@@ -49,6 +53,7 @@ struct EventUpdatePayload {
         self.assigneeStatus = assigneeStatus
         self.label = label
         self.contact = contact
+        self.contacten = contacten
         self.visibility = visibility
     }
 
@@ -72,6 +77,7 @@ struct EventUpdatePayload {
         body["klant_naam"] = klantNaam
         body["klant_telefoon"] = klantTelefoon
         if let contact { body["contact"] = contact }
+        body["contacten"] = contacten
         if let label { body["label"] = label }
         if let visibility { body["visibility"] = visibility }
         return body

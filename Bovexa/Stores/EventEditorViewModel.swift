@@ -38,9 +38,8 @@ final class EventEditorViewModel: ObservableObject {
     /// Gekozen contacten op volgorde van aantikken. De eerste is de klant van de
     /// afspraak (klant_naam/klant_telefoon); de rest zijn medegenodigden.
     @Published var contactIds: [String] = []
-    /// Het contact dat de server kent: `agenda_events.contact` is één relatie. De
-    /// extra genodigden staan tot die kant volgt naast de afspraak op het toestel
-    /// (zie MEERDERE-BEDRIJVEN-SERVER.txt, punt 13).
+    /// De klant van de afspraak: `agenda_events.contact` is één relatie en houdt de
+    /// eerste keuze vast. De hele lijst gaat daarnaast als `contacten` mee (punt 13a).
     var contactId: String? { contactIds.first }
     /// Alleen in create-modus in beeld: bij bewerken wijzig je de zichtbaarheid in
     /// het afspraak-detail. Zonder org negeert de payload-bouwer deze keuze.
@@ -125,7 +124,8 @@ final class EventEditorViewModel: ObservableObject {
             reminderMinuten = event.reminders
             assignee = event.assignee
             label = event.label
-            contactIds = event.contact.map { [$0] } ?? []
+            // `contacten` valt zelf al terug op het ene contact van een oude afspraak.
+            contactIds = event.contacten
             // Overnemen wat de afspraak al is: het bewerkscherm toont de knoppen nu
             // ook, en dan moet de huidige keuze aanstaan in plaats van altijd Privé.
             visibility = event.visibilityRaw ?? "private"
@@ -245,7 +245,7 @@ final class EventEditorViewModel: ObservableObject {
         let payload = EventEditorPayloadBuilder.build(
             title: title, category: category, start: start, end: end, notes: notes,
             klantNaam: klantNaam, klantTelefoon: klantTelefoon, reminders: reminderMinuten,
-            assignee: assignee, originalEvent: event, label: label, contact: contactId,
+            assignee: assignee, originalEvent: event, label: label, contact: contactId, contacten: contactIds,
             // Zonder bedrijf staan de knoppen er niet, en dan het veld ook niet
             // aanraken: alles is dan toch privé.
             visibility: org.isEmpty ? nil : visibility
@@ -278,6 +278,7 @@ final class EventEditorViewModel: ObservableObject {
             reminders: reminderMinuten,
             label: hasOrg ? label : nil,
             contact: contactId,
+            contacten: contactIds,
             klantNaam: klantNaam.trimmingCharacters(in: .whitespacesAndNewlines),
             klantTelefoon: klantTelefoon.trimmingCharacters(in: .whitespacesAndNewlines),
             notes: notes.trimmingCharacters(in: .whitespacesAndNewlines)

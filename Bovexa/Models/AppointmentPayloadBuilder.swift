@@ -28,6 +28,8 @@ enum AppointmentPayloadBuilder {
         reminders: [Int],
         label: String? = nil,
         contact: String? = nil,
+        /// Alle aangevinkte contacten; `contact` is de eerste daarvan.
+        contacten: [String] = [],
         /// Naam en telefoon van het gekozen contact: die winnen van wat de planner
         /// uit de zin haalde, en gaan als klant_naam mee zodat een collega de klant
         /// blijft zien (het contact zelf is privé en niet uitleesbaar voor hem).
@@ -52,6 +54,7 @@ enum AppointmentPayloadBuilder {
             reminders: reminders,
             label: label,
             contact: contact,
+            contacten: contacten,
             source: "nl",
             rawInput: rawInput
         )
@@ -74,6 +77,8 @@ enum AppointmentPayloadBuilder {
         reminders: [Int],
         label: String? = nil,
         contact: String? = nil,
+        /// Alle aangevinkte contacten; `contact` is de eerste daarvan.
+        contacten: [String] = [],
         klantNaam: String = "",
         klantTelefoon: String = "",
         notes: String = ""
@@ -95,6 +100,7 @@ enum AppointmentPayloadBuilder {
             reminders: reminders,
             label: label,
             contact: contact,
+            contacten: contacten,
             source: "manual",
             rawInput: "",
             notes: notes
@@ -121,6 +127,7 @@ enum AppointmentPayloadBuilder {
         reminders: [Int],
         label: String?,
         contact: String?,
+        contacten: [String],
         source: String,
         rawInput: String,
         notes: String = ""
@@ -154,6 +161,7 @@ enum AppointmentPayloadBuilder {
             source: source,
             label: label,
             contact: contact,
+            contacten: contacten,
             notes: notes.isEmpty ? nil : notes
         )
     }

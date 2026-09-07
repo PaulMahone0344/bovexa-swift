@@ -7,6 +7,7 @@ enum EventEditorPayloadBuilder {
         title: String, category: BovexaTheme.Category?, start: Date, end: Date, notes: String,
         klantNaam: String, klantTelefoon: String, reminders: [Int], assignee: [String],
         originalEvent: AgendaEvent, label: String? = nil, contact: String? = nil,
+        contacten: [String] = [],
         visibility: String? = nil
     ) -> EventUpdatePayload {
         EventUpdatePayload(
@@ -23,6 +24,7 @@ enum EventEditorPayloadBuilder {
             assigneeStatus: AssignmentHelpers.nextStatusMap(assignees: assignee, ownerId: originalEvent.owner, previous: originalEvent.assigneeStatus),
             label: label,
             contact: contact,
+            contacten: contacten,
             visibility: visibility
         )
     }

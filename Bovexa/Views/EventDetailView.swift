@@ -161,8 +161,10 @@ struct EventDetailView: View {
                     detailRow(icon: "mappin.and.ellipse", text: location)
                 }
 
-                if let klant = ContactDisplay.naam(for: event), !klant.isEmpty {
-                    detailRow(icon: "person", text: klant)
+                // Alle gekoppelde contacten, niet alleen de klant: sinds punt 13a
+                // kun je er medegenodigden bij aanvinken.
+                ForEach(Array(ContactDisplay.namen(for: event).enumerated()), id: \.offset) { _, naam in
+                    detailRow(icon: "person", text: naam)
                 }
 
                 if let notes = event.notes, !notes.isEmpty {

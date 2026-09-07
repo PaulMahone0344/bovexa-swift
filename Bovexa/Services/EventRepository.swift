@@ -17,7 +17,7 @@ final class EventRepository {
         }
 
         let items = try await client.getFullList(
-            AgendaEvent.self, collection: "agenda_events", filter: filter, sort: "start", expand: "contact", token: token
+            AgendaEvent.self, collection: "agenda_events", filter: filter, sort: "start", expand: "contact,contacten", token: token
         )
         return RecurrenceExpander.expand(items.excludingDeclined(for: userId))
     }
@@ -25,7 +25,7 @@ final class EventRepository {
     /// Eigen afspraken (incl. herhalingen uitgeklapt) — voor de dubbele-boeking-check.
     func fetchOwnEvents(userId: String, token: String) async throws -> [AgendaEvent] {
         let items = try await client.getFullList(
-            AgendaEvent.self, collection: "agenda_events", filter: "owner = \"\(userId)\"", sort: "start", expand: "contact", token: token
+            AgendaEvent.self, collection: "agenda_events", filter: "owner = \"\(userId)\"", sort: "start", expand: "contact,contacten", token: token
         )
         return RecurrenceExpander.expand(items)
     }

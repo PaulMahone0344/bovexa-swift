@@ -41,6 +41,10 @@ struct AgendaEvent: Decodable, Identifiable {
     /// Contact-id (m8, agenda_contacten). Ontbreekt bij oude afspraken (valkuil D):
     /// ContactDisplay valt dan terug op klantNaam/klantTelefoon.
     let contact: String?
+    /// Alle gekoppelde contacten (relatieveld `contacten`, meerdere, sinds
+    /// 7 sep 2026). De eerste is dezelfde als `contact`: dát is de klant van de
+    /// afspraak, de rest zijn medegenodigden. Leeg bij afspraken van vóór dit veld.
+    let contacten: [String]
     let expand: Expand?
     /// Extern event (m9, valkuil B) — komt nooit uit PocketBase, alleen uit een externe
     /// agenda via EventKit. Blokkeert bewerken/verwijderen/toewijzen/zichtbaarheid/
@@ -49,6 +53,31 @@ struct AgendaEvent: Decodable, Identifiable {
 
     struct Expand: Decodable, Equatable {
         let contact: AgendaContact?
+        /// PocketBase geeft een meervoudige relatie als array terug, maar een oudere
+        /// server (of een aangepaste maxSelect) kan er één los object van maken —
+        /// allebei toestaan, want dit is puur weergave.
+        let contacten: [AgendaContact]
+
+        init(contact: AgendaContact?, contacten: [AgendaContact] = []) {
+            self.contact = contact
+            self.contacten = contacten
+        }
+
+        enum CodingKeys: String, CodingKey {
+            case contact, contacten
+        }
+
+        init(from decoder: Decoder) throws {
+            let c = try decoder.container(keyedBy: CodingKeys.self)
+            contact = (try? c.decodeIfPresent(AgendaContact.self, forKey: .contact)) ?? nil
+            if let lijst = (try? c.decodeIfPresent([AgendaContact].self, forKey: .contacten)) ?? nil {
+                contacten = lijst
+            } else if let een = (try? c.decodeIfPresent(AgendaContact.self, forKey: .contacten)) ?? nil {
+                contacten = [een]
+            } else {
+                contacten = []
+            }
+        }
     }
 
     init(
@@ -60,7 +89,8 @@ struct AgendaEvent: Decodable, Identifiable {
         org: String? = nil, visibilityRaw: String? = nil, viewers: [String] = [],
         assignee: [String] = [], reminderMin: Int? = nil, reminders: [Int]? = nil,
         klantTelefoon: String? = nil,
-        label: String? = nil, contact: String? = nil, expand: Expand? = nil,
+        label: String? = nil, contact: String? = nil, contacten: [String]? = nil,
+        expand: Expand? = nil,
         isExternal: Bool = false
     ) {
         self.id = id
@@ -90,6 +120,9 @@ struct AgendaEvent: Decodable, Identifiable {
         self.klantTelefoon = klantTelefoon
         self.label = label
         self.contact = contact
+        // nil ⇒ afleiden uit `contact`, zodat elke kopie en elke oude afspraak
+        // dezelfde lijst kent zonder dat de terugval overal herhaald wordt.
+        self.contacten = contacten ?? [contact].compactMap { $0 }.filter { !$0.isEmpty }
         self.expand = expand
         self.isExternal = isExternal
     }
@@ -105,7 +138,7 @@ struct AgendaEvent: Decodable, Identifiable {
             org: org, visibilityRaw: visibilityRaw, viewers: viewers,
             assignee: assignee, reminderMin: reminderMin, reminders: reminders,
             klantTelefoon: klantTelefoon, label: label,
-            contact: contact, expand: expand, isExternal: isExternal
+            contact: contact, contacten: contacten, expand: expand, isExternal: isExternal
         )
     }
 
@@ -120,7 +153,7 @@ struct AgendaEvent: Decodable, Identifiable {
             org: org, visibilityRaw: visibilityRaw, viewers: viewers,
             assignee: assignee, reminderMin: reminderMin, reminders: reminders,
             klantTelefoon: klantTelefoon, label: label,
-            contact: contact, expand: expand, isExternal: isExternal
+            contact: contact, contacten: contacten, expand: expand, isExternal: isExternal
         )
     }
 
@@ -135,7 +168,7 @@ struct AgendaEvent: Decodable, Identifiable {
             org: org, visibilityRaw: visibilityRaw, viewers: viewers,
             assignee: assignee, reminderMin: reminderMin, reminders: reminders,
             klantTelefoon: klantTelefoon, label: label,
-            contact: contact, expand: expand, isExternal: isExternal
+            contact: contact, contacten: contacten, expand: expand, isExternal: isExternal
         )
     }
 
@@ -150,14 +183,18 @@ struct AgendaEvent: Decodable, Identifiable {
             org: org, visibilityRaw: visibilityRaw, viewers: viewers,
             assignee: assignee, reminderMin: reminderMin, reminders: reminders,
             klantTelefoon: klantTelefoon, label: label,
-            contact: contact, expand: expand, isExternal: isExternal
+            contact: contact, contacten: contacten, expand: expand, isExternal: isExternal
         )
     }
 
-    /// Kopie met ander contact — voor optimistische UI-updates bij het kiezen van
-    /// een contact in EventEditor (m8). `expand` wordt niet meegenomen: de server
-    /// stuurt die pas terug bij de volgende fetch met `expand=contact`.
-    func withContact(_ contact: String?) -> AgendaEvent {
+    /// Kopie met andere contacten — voor optimistische UI-updates bij het kiezen in
+    /// EventEditor (m8). De eerste blijft de klant (`contact`). `expand` wordt niet
+    /// meegenomen: de server stuurt die pas terug bij de volgende fetch.
+    func withContacts(_ contacten: [String]) -> AgendaEvent {
+        withContact(contacten.first, contacten: contacten)
+    }
+
+    func withContact(_ contact: String?, contacten: [String]? = nil) -> AgendaEvent {
         AgendaEvent(
             id: id, owner: owner, calendar: calendar, category: category, title: title,
             start: start, end: end, allDay: allDay, recurrence: recurrence, location: location,
@@ -166,7 +203,7 @@ struct AgendaEvent: Decodable, Identifiable {
             org: org, visibilityRaw: visibilityRaw, viewers: viewers,
             assignee: assignee, reminderMin: reminderMin, reminders: reminders,
             klantTelefoon: klantTelefoon, label: label,
-            contact: contact, expand: nil, isExternal: isExternal
+            contact: contact, contacten: contacten, expand: nil, isExternal: isExternal
         )
     }
 
@@ -184,7 +221,7 @@ struct AgendaEvent: Decodable, Identifiable {
         case reminderMin = "reminder_min"
         case reminders
         case klantTelefoon = "klant_telefoon"
-        case label, contact, expand
+        case label, contact, contacten, expand
         case created
     }
 
@@ -221,7 +258,17 @@ struct AgendaEvent: Decodable, Identifiable {
         reminders = lijst.isEmpty ? ReminderOption.opschonen([reminderMinRaw ?? 0]) : lijst
         klantTelefoon = Self.decodeOptional(c, .klantTelefoon)
         label = Self.decodeOptional(c, .label)
-        contact = Self.decodeOptional(c, .contact)
+        let contactRaw: String? = Self.decodeOptional(c, .contact)
+        contact = contactRaw
+        // Ontbreekt het veld (of stuurt de server nog een los id), dan blijft het
+        // bij het ene contact dat er al was.
+        if let lijst: [String] = Self.decodeOptional(c, .contacten), !lijst.isEmpty {
+            contacten = lijst.filter { !$0.isEmpty }
+        } else if let een: String = Self.decodeOptional(c, .contacten), !een.isEmpty {
+            contacten = [een]
+        } else {
+            contacten = [contactRaw].compactMap { $0 }.filter { !$0.isEmpty }
+        }
         expand = Self.decodeOptional(c, .expand)
         isExternal = false
     }
