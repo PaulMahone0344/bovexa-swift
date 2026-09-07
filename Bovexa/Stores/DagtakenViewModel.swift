@@ -122,14 +122,22 @@ final class DagtakenViewModel: ObservableObject {
         teamTasks.filter { TaskPermissions.isGerichtAan(userId, task: $0) }
     }
 
-    /// Wie de taak heeft afgevinkt, voor de regel onder de titel. De server houdt
-    /// alleen bij wannéér het gebeurde, dus dit werkt zolang de taak aan één
-    /// persoon is toegewezen — zie MEERDERE-BEDRIJVEN-SERVER.txt (completed_by).
-    /// Bij een teambrede taak valt er niets te herleiden en blijft dit leeg.
+    /// Wie de taak heeft afgevinkt, voor de regel onder de titel. `completed_by`
+    /// staat sinds 7 september op de server en is de enige bron die ook bij een
+    /// teambrede taak klopt. Oudere taken hebben dat veld niet; daar valt de app
+    /// terug op de toegewezen persoon, en alleen als dat er precies één is.
+    /// Lukt ook dat niet, dan blijft dit leeg en staat er alleen een tijdstip.
     func afgevinktDoor(_ task: AgendaTask, currentUserId: String) -> String {
+        if let wie = task.completedBy {
+            return naamVan(wie, currentUserId: currentUserId)
+        }
         let toegewezen = task.viewers.filter { $0 != task.owner }
         guard toegewezen.count == 1, let wie = toegewezen.first else { return "" }
-        return wie == currentUserId ? "Jij" : (memberColors.firstName(for: wie) ?? "Collega")
+        return naamVan(wie, currentUserId: currentUserId)
+    }
+
+    private func naamVan(_ userId: String, currentUserId: String) -> String {
+        userId == currentUserId ? "Jij" : (memberColors.firstName(for: userId) ?? "Collega")
     }
 
     /// "Jan, Piet" voor een toegewezen taak; "Jij" als jij het bent. Leeg bij een
@@ -194,15 +202,21 @@ final class DagtakenViewModel: ObservableObject {
         guard TaskPermissions.canToggle(task, userId: userId) else { return }
         let previousStatus = task.status
         let previousCompletedAt = task.completedAt
+        let previousCompletedBy = task.completedBy
         let nextStatus: TaskStatus = task.status == .klaar ? .open : .klaar
         let nextCompletedAt: Date? = nextStatus == .klaar ? Date() : nil
-        applyTeamTaskStatus(id: task.id, status: nextStatus, completedAt: nextCompletedAt)
+        // Wie afvinkt hoort erbij te staan, ook bij een taak voor het hele team;
+        // uitvinken maakt allebei de velden weer leeg.
+        let nextCompletedBy: String? = nextStatus == .klaar ? userId : nil
+        applyTeamTaskStatus(id: task.id, status: nextStatus, completedAt: nextCompletedAt, completedBy: nextCompletedBy)
 
         do {
-            let updated = try await taskRepository.setStatus(id: task.id, status: nextStatus, completedAt: nextCompletedAt, token: token)
-            applyTeamTaskStatus(id: task.id, status: updated.status, completedAt: updated.completedAt)
+            let updated = try await taskRepository.setStatus(
+                id: task.id, status: nextStatus, completedAt: nextCompletedAt, completedBy: nextCompletedBy, token: token
+            )
+            applyTeamTaskStatus(id: task.id, status: updated.status, completedAt: updated.completedAt, completedBy: updated.completedBy)
         } catch {
-            applyTeamTaskStatus(id: task.id, status: previousStatus, completedAt: previousCompletedAt)
+            applyTeamTaskStatus(id: task.id, status: previousStatus, completedAt: previousCompletedAt, completedBy: previousCompletedBy)
         }
     }
 
@@ -233,8 +247,8 @@ final class DagtakenViewModel: ObservableObject {
         }
     }
 
-    private func applyTeamTaskStatus(id: String, status: TaskStatus, completedAt: Date?) {
-        teamTasks = teamTasks.map { $0.id == id ? $0.withStatus(status, completedAt: completedAt) : $0 }
+    private func applyTeamTaskStatus(id: String, status: TaskStatus, completedAt: Date?, completedBy: String?) {
+        teamTasks = teamTasks.map { $0.id == id ? $0.withStatus(status, completedAt: completedAt, completedBy: completedBy) : $0 }
     }
 
     func submit(userId: String, org: String?, token: String) async {

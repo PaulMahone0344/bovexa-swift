@@ -209,6 +209,39 @@ struct TaskRepositoryTests {
         _ = try await repo.setStatus(id: "t1", status: .open, token: "tok")
     }
 
+    /// Bij een taak voor het hele team is `completed_by` het enige spoor van wie
+    /// hem afvinkte.
+    @Test func setStatusStuurtCompletedByMee() async throws {
+        URLProtocolStub.requestHandler = { request in
+            let body = try! JSONSerialization.jsonObject(with: self.bodyData(from: request)) as! [String: Any]
+            #expect(body["completed_by"] as? String == "u1")
+            let json = """
+            {"id":"t1","owner":"u1","org":"","title":"Taak","notes":"","status":"klaar","completed_by":"u1",
+             "visibility":"company","viewers":[],"created":"2026-07-24 09:00:00.000Z","updated":"2026-07-24 09:00:00.000Z"}
+            """.data(using: .utf8)!
+            return (200, json)
+        }
+        let repo = makeRepository()
+        let updated = try await repo.setStatus(id: "t1", status: .klaar, completedAt: Date(), completedBy: "u1", token: "tok")
+        #expect(updated.completedBy == "u1")
+    }
+
+    /// Een relatie wist PocketBase met een lege tekst, niet met null.
+    @Test func setStatusZonderCompletedByStuurtLegeTekstOmTeWissen() async throws {
+        URLProtocolStub.requestHandler = { request in
+            let body = try! JSONSerialization.jsonObject(with: self.bodyData(from: request)) as! [String: Any]
+            #expect(body["completed_by"] as? String == "")
+            let json = """
+            {"id":"t1","owner":"u1","org":"","title":"Taak","notes":"","status":"open","completed_by":"",
+             "visibility":"company","viewers":[],"created":"2026-07-24 09:00:00.000Z","updated":"2026-07-24 09:00:00.000Z"}
+            """.data(using: .utf8)!
+            return (200, json)
+        }
+        let repo = makeRepository()
+        let updated = try await repo.setStatus(id: "t1", status: .open, token: "tok")
+        #expect(updated.completedBy == nil)
+    }
+
     // MARK: - deleteTask
 
     @Test func deleteTaskSendsDeleteToRecordId() async throws {

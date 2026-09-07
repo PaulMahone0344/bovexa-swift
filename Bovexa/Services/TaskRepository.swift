@@ -37,10 +37,14 @@ final class TaskRepository {
     }
 
     /// completedAt: het tijdstip van afvinken (m8) — nil wist het veld weer bij uitvinken.
+    /// completedBy: wie het deed (relatie naar agenda_users, sinds 7 september). Bij
+    /// een taak voor het hele team is dat het enige spoor; uit `viewers` valt daar
+    /// niets te herleiden. Een lege relatie wist PocketBase met "", niet met null.
     @discardableResult
-    func setStatus(id: String, status: TaskStatus, completedAt: Date? = nil, token: String) async throws -> AgendaTask {
+    func setStatus(id: String, status: TaskStatus, completedAt: Date? = nil, completedBy: String? = nil, token: String) async throws -> AgendaTask {
         var body: [String: Any] = ["status": status.rawValue]
         body["completed_at"] = completedAt.map(PBDate.format) ?? NSNull()
+        body["completed_by"] = completedBy ?? ""
         return try await client.updateRecord(AgendaTask.self, collection: Self.collection, id: id, body: body, token: token)
     }
 
